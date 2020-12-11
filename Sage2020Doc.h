@@ -4,10 +4,12 @@
 
 
 #pragma once
+#include "FileVersionDiff.h"
+#include "FileVersionInstance.h"
+#include <memory>
+#include <vector>
 
-
-class CSage2020Doc : public CDocument
-{
+class CSage2020Doc : public CDocument {
 protected: // create from serialization only
 	CSage2020Doc() noexcept;
 	DECLARE_DYNCREATE(CSage2020Doc)
@@ -45,4 +47,7 @@ protected:
 	// Helper function that sets search content for a Search Handler
 	void SetSearchContent(const CString& value);
 #endif // SHARED_HANDLERS
+
+	std::vector<FileVersionDiff> file_diffs_;
+	std::unique_ptr<CFileVersionInstance> file_version_instance_;
 };

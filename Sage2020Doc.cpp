@@ -10,9 +10,10 @@
 #include "Sage2020.h"
 #endif
 
-#include "Sage2020Doc.h"
-
+#include <codecvt>
+#include "GitDiffReader.h"
 #include <propkey.h>
+#include "Sage2020Doc.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -62,7 +63,10 @@ void CSage2020Doc::Serialize(CArchive& ar)
 	}
 	else
 	{
-		// TODO: add loading code here
+    auto path = ar.GetFile()->GetFilePath();
+    std::wstring_convert<std::codecvt_utf8<wchar_t>> myconv;
+    CGitDiffReader git_reader{myconv.to_bytes(path)};
+    file_diffs_ = git_reader.GetDiffs();
 	}
 }
 

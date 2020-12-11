@@ -277,6 +277,7 @@ void CMainFrame::SetDockingWindowIcons(BOOL bHiColorIcons)
 	m_wndProperties.SetIcon(hPropertiesBarIcon, FALSE);
 }
 
+#if OUTLOOK_BAR
 BOOL CMainFrame::CreateOutlookBar(CMFCOutlookBar& bar, UINT uiID, CMFCShellTreeCtrl& tree, CCalendarBar& calendar, int nInitialWidth)
 {
 	bar.SetMode2003();
@@ -331,6 +332,7 @@ BOOL CMainFrame::CreateOutlookBar(CMFCOutlookBar& bar, UINT uiID, CMFCShellTreeC
 
 	return TRUE;
 }
+#endif
 
 // CMainFrame diagnostics
 

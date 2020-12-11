@@ -177,6 +177,7 @@ void CFileView::OnProperties()
 
 void CFileView::OnFileOpen()
 {
+	assert(false);
 	// TODO: Add your command handler code here
 }
 

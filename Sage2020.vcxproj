@@ -91,8 +91,9 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;_WINDOWS;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING;WIN32;_WINDOWS;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -137,7 +138,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING;WIN32;_WINDOWS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
@@ -184,7 +185,11 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="calendarbar.h" />
+    <ClInclude Include="FileVersionDiff.h" />
+    <ClInclude Include="GitDiffReader.h" />
+    <ClInclude Include="FileVersionInstance.h" />
     <ClInclude Include="ClassView.h" />
+    <ClInclude Include="LineTokenizer.h" />
     <ClInclude Include="FileView.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="MainFrm.h" />
@@ -200,7 +205,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="calendarbar.cpp" />
+    <ClCompile Include="FileVersionDiff.cpp" />
+    <ClCompile Include="GitDiffReader.cpp" />
+    <ClCompile Include="FileVersionInstance.cpp" />
     <ClCompile Include="ClassView.cpp" />
+    <ClCompile Include="LineTokenizer.cpp" />
     <ClCompile Include="FileView.cpp" />
     <ClCompile Include="MainFrm.cpp" />
     <ClCompile Include="OutputWnd.cpp" />

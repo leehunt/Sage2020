@@ -3,19 +3,27 @@
 //
 
 #pragma once
-#include "FileView.h"
-#include "ClassView.h"
-#include "OutputWnd.h"
-#include "PropertiesWnd.h"
-#include "CalendarBar.h"
-#include "Resource.h"
-
 #define FILE_VIEW_UI 0
 #define CLASS_VIEW_UI 0
 #define OUTPUT_PANE 0
 #define OUTLOOK_BAR 0
 #define SHELL_TREE_CONTROL 0
 #define CALENDAR_BAR 0
+
+#if FILE_VIEW_UI
+#include "FileView.h"
+#endif
+#if CLASS_VIEW_UI
+#include "ClassView.h"
+#endif
+#if OUTPUT_PANE
+#include "OutputWnd.h"
+#endif
+#include "PropertiesWnd.h"
+#if CALENDAR_BAR
+#include "CalendarBar.h"
+#endif
+#include "Resource.h"
 
 class COutlookBar : public CMFCOutlookBar
 {
@@ -84,13 +92,17 @@ protected:
 
 	BOOL CreateDockingWindows();
 	void SetDockingWindowIcons(BOOL bHiColorIcons);
+#if OUTLOOK_BAR 
+#if CALENDAR_BAR
 	BOOL CreateOutlookBar(CMFCOutlookBar& bar, UINT uiID, CMFCShellTreeCtrl& tree, CCalendarBar& calendar, int nInitialWidth);
+#endif
 
 	int FindFocusedOutlookWnd(CMFCOutlookBarTabCtrl** ppOutlookWnd);
 
 	CMFCOutlookBarTabCtrl* FindOutlookParent(CWnd* pWnd);
 	CMFCOutlookBarTabCtrl* m_pCurrOutlookWnd;
 	CMFCOutlookBarPane*    m_pCurrOutlookPage;
+#endif
 };
 
 
