@@ -93,21 +93,21 @@ enum class tkCH : int {
 };
 
 // NOTE: these two structures must have the first four elements the same!
-typedef struct {
+struct TOK {
   enum TK tk;
   char* szVal;
   char* pchEnd;
   char chSav;  // internal: saved character replaced with NIL
   enum TK tkPrev;
-} TOK;
+};
 
-typedef struct {
+struct CHTOK {
   enum tkCH tkch;
   const char* szVal;
   char* pchEnd;
   char chSav;  // internal: saved character replaced with NIL
   enum tkCH tkchPrev;
-} CHTOK;
+};
 
 BOOL FGetTokDirect(TOK* ptok);
 BOOL FGetTok(TOK* ptok);
