@@ -12,6 +12,7 @@
 
 #include <codecvt>
 #include "GitDiffReader.h"
+#include "GitFileReader.h"
 #include <propkey.h>
 #include "Sage2020Doc.h"
 
@@ -65,8 +66,14 @@ void CSage2020Doc::Serialize(CArchive& ar)
 	{
     auto path = ar.GetFile()->GetFilePath();
     std::wstring_convert<std::codecvt_utf8<wchar_t>> myconv;
-    CGitDiffReader git_reader{myconv.to_bytes(path)};
-    file_diffs_ = git_reader.GetDiffs();
+    GitDiffReader git_diff_reader{myconv.to_bytes(path)};
+    file_diffs_ = git_diff_reader.GetDiffs();
+
+		if (file_diffs_.size() > 0) {
+      GitFileReader git_file_reader{file_diffs_[0].diff_tree_.new_hash_string};
+			file_version_instance_ =
+					std::make_unique<FileVersionInstance>(std::move(git_file_reader.GetLines()));
+    }
 	}
 }
 

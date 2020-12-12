@@ -6,12 +6,15 @@ struct FileVersionLine {
   std::string line;
   int age;
 };
-class CFileVersionInstance {
+class FileVersionInstance {
  public:
-   CFileVersionInstance(std::filesystem::path path, int version) {
-
+   FileVersionInstance(std::deque<std::string>& lines) {
+    for (auto& line : lines) {
+      FileVersionLine file_version_line = {std::move(line), 0};
+      file_lines_.push_back(std::move(file_version_line));
+    }
   }
-  virtual ~CFileVersionInstance() {}
+  virtual ~FileVersionInstance() {}
 
  private:
    std::deque<FileVersionLine> file_lines_;

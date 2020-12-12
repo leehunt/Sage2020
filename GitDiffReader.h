@@ -3,10 +3,10 @@
 #include "FileVersionDiff.h"
 
 struct TOK;
-class CGitDiffReader {
+class GitDiffReader {
  public:
-  CGitDiffReader(const std::filesystem::path& file_path);
-  virtual ~CGitDiffReader();
+  GitDiffReader(const std::filesystem::path& file_path);
+  virtual ~GitDiffReader();
 
   std::vector<FileVersionDiff> GetDiffs();
 

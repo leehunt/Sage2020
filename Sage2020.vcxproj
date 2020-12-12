@@ -189,6 +189,7 @@
     <ClInclude Include="GitDiffReader.h" />
     <ClInclude Include="FileVersionInstance.h" />
     <ClInclude Include="ClassView.h" />
+    <ClInclude Include="GitFileReader.h" />
     <ClInclude Include="LineTokenizer.h" />
     <ClInclude Include="FileView.h" />
     <ClInclude Include="framework.h" />
@@ -209,6 +210,7 @@
     <ClCompile Include="GitDiffReader.cpp" />
     <ClCompile Include="FileVersionInstance.cpp" />
     <ClCompile Include="ClassView.cpp" />
+    <ClCompile Include="GitFileReader.cpp" />
     <ClCompile Include="LineTokenizer.cpp" />
     <ClCompile Include="FileView.cpp" />
     <ClCompile Include="MainFrm.cpp" />

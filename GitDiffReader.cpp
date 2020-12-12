@@ -46,7 +46,7 @@ static std::string GetTextToEndOfLine(TOK* ptok) {
   return text;
 }
 
-bool CGitDiffReader::FReadCommit(TOK* ptok) {
+bool GitDiffReader::FReadCommit(TOK* ptok) {
   if (ptok->tk != TK::tkWORD)
     return false;
   assert(!strcmp(ptok->szVal, "commit"));
@@ -63,7 +63,7 @@ bool CGitDiffReader::FReadCommit(TOK* ptok) {
   return true;
 }
 
-bool CGitDiffReader::FReadTree(TOK* ptok) {
+bool GitDiffReader::FReadTree(TOK* ptok) {
   if (ptok->tk != TK::tkWORD)
     return false;
   assert(!strcmp(ptok->szVal, "tree"));
@@ -75,7 +75,7 @@ bool CGitDiffReader::FReadTree(TOK* ptok) {
   return true;
 }
 
-bool CGitDiffReader::FReadParent(TOK* ptok) {
+bool GitDiffReader::FReadParent(TOK* ptok) {
   if (ptok->tk != TK::tkWORD)
     return false;
   assert(!strcmp(ptok->szVal, "parent"));
@@ -87,7 +87,7 @@ bool CGitDiffReader::FReadParent(TOK* ptok) {
   return true;
 }
 
-bool CGitDiffReader::FReadAuthor(TOK* ptok) {
+bool GitDiffReader::FReadAuthor(TOK* ptok) {
   if (ptok->tk != TK::tkWORD)
     return false;
   assert(!strcmp(ptok->szVal, "author"));
@@ -99,7 +99,7 @@ bool CGitDiffReader::FReadAuthor(TOK* ptok) {
   return true;
 }
 
-bool CGitDiffReader::FReadCommitter(TOK* ptok) {
+bool GitDiffReader::FReadCommitter(TOK* ptok) {
   if (ptok->tk != TK::tkWORD)
     return false;
   assert(!strcmp(ptok->szVal, "committer"));
@@ -111,7 +111,7 @@ bool CGitDiffReader::FReadCommitter(TOK* ptok) {
   return true;
 }
 
-bool CGitDiffReader::FReadDiff(TOK* ptok) {
+bool GitDiffReader::FReadDiff(TOK* ptok) {
   if (ptok->tk != TK::tkWORD)
     return false;
   assert(!strcmp(ptok->szVal, "diff"));
@@ -123,7 +123,7 @@ bool CGitDiffReader::FReadDiff(TOK* ptok) {
   return true;
 }
 
-bool CGitDiffReader::FReadIndex(TOK* ptok) {
+bool GitDiffReader::FReadIndex(TOK* ptok) {
   if (ptok->tk != TK::tkWORD)
     return false;
   assert(!strcmp(ptok->szVal, "index"));
@@ -135,7 +135,7 @@ bool CGitDiffReader::FReadIndex(TOK* ptok) {
   return true;
 }
 
-bool CGitDiffReader::FReadComment(TOK* ptok) {
+bool GitDiffReader::FReadComment(TOK* ptok) {
   if (ptok->tk != TK::tkWSPC)
     return false;
 
@@ -182,13 +182,30 @@ rewrites.
 <sha1> is shown as all 0’s if a file is new on the filesystem and it is out of
 sync with the index.
 */
-bool CGitDiffReader::FReadGitDiffTreeColon(TOK* ptok) {
+bool GitDiffReader::FReadGitDiffTreeColon(TOK* ptok) {
   if (ptok->tk != TK::tkCOLON)
     return false;
 
   if (!FGetTok(ptok))
     return false;
-  current_diff_->diff_tree_ = GetTextToEndOfLine(ptok);
+
+  // e.g. "100644 100644 285ecec5de92e c90011667b640 M chrome/app/chrome_exe.rc"
+  auto diff_tree_line = GetTextToEndOfLine(ptok);
+  int num_args = sscanf_s(
+      diff_tree_line.c_str(), "%o %o %s %s %c %s",
+      &current_diff_->diff_tree_.old_mode,  // %o
+      &current_diff_->diff_tree_.new_mode,  // %o
+      current_diff_->diff_tree_.old_hash_string, // %s
+      std::size(current_diff_->diff_tree_.old_hash_string), // %s len
+      current_diff_->diff_tree_.new_hash_string, // %s
+      std::size(current_diff_->diff_tree_.new_hash_string), // %s len
+      &current_diff_->diff_tree_.action, // %c
+      sizeof(current_diff_->diff_tree_.action), // %c len
+      current_diff_->diff_tree_.file_path, // %s
+      std::size(current_diff_->diff_tree_.file_path) // %s len
+  );
+  if (num_args != 6)
+    return false;
 
   return true;
 }
@@ -213,7 +230,7 @@ bool CGitDiffReader::FReadGitDiffTreeColon(TOK* ptok) {
 // N.b. There are (number of parents + 1) @ characters in the chunk header for
 // combined diff format. E.g.:
 //@@@ <from-file-range> <from-file-range> <to-file-range> @@@
-bool CGitDiffReader::FReadHunkHeader(TOK* ptok) {
+bool GitDiffReader::FReadHunkHeader(TOK* ptok) {
   if (ptok->tk != TK::tkATSIGN)
     return false;
 
@@ -295,7 +312,7 @@ bool CGitDiffReader::FReadHunkHeader(TOK* ptok) {
   return true;
 }
 
-bool CGitDiffReader::FReadAddLine(TOK* ptok) {
+bool GitDiffReader::FReadAddLine(TOK* ptok) {
   if (ptok->tk != TK::tkPLUS)
     return false;
   if (!FGetTok(ptok))
@@ -318,7 +335,7 @@ bool CGitDiffReader::FReadAddLine(TOK* ptok) {
   return true;
 }
 
-bool CGitDiffReader::FReadRemoveLine(TOK* ptok) {
+bool GitDiffReader::FReadRemoveLine(TOK* ptok) {
   if (ptok->tk != TK::tkMINUS)
     return false;
   if (!FGetTok(ptok))
@@ -341,7 +358,7 @@ bool CGitDiffReader::FReadRemoveLine(TOK* ptok) {
   return true;
 }
 
-bool CGitDiffReader::FParseNamedLine(TOK* ptok) {
+bool GitDiffReader::FParseNamedLine(TOK* ptok) {
   if (ptok->tk != TK::tkWORD)
     return false;
 
@@ -363,7 +380,7 @@ bool CGitDiffReader::FParseNamedLine(TOK* ptok) {
 
   return true;
 }
-bool CGitDiffReader::ProcessLogLine(char* line) {
+bool GitDiffReader::ProcessLogLine(char* line) {
   bool is_done = false;
   TOK tok;
   AttachTokToLine(&tok, line);
@@ -412,7 +429,7 @@ LDone:
   return !is_done;
 }
 
-CGitDiffReader::CGitDiffReader(const std::filesystem::path& file_path)
+GitDiffReader::GitDiffReader(const std::filesystem::path& file_path)
     : current_diff_(nullptr) {
   std::string command =
       std::string(kGitDiffCommand) + std::string(file_path.u8string());
@@ -422,9 +439,9 @@ CGitDiffReader::CGitDiffReader(const std::filesystem::path& file_path)
   ProcessDiffLines(git_stream.get());
 }
 
-CGitDiffReader::~CGitDiffReader() {}
+GitDiffReader::~GitDiffReader() {}
 
-void CGitDiffReader::ProcessDiffLines(FILE* stream) {
+void GitDiffReader::ProcessDiffLines(FILE* stream) {
   char stream_line[1024];
   while (fgets(stream_line, std::size(stream_line), stream)) {
     if (!ProcessLogLine(stream_line))
@@ -432,6 +449,6 @@ void CGitDiffReader::ProcessDiffLines(FILE* stream) {
   }
 }
 
-std::vector<FileVersionDiff> CGitDiffReader::GetDiffs() {
+std::vector<FileVersionDiff> GitDiffReader::GetDiffs() {
   return diffs_;
 }

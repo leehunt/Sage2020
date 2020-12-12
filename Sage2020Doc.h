@@ -49,5 +49,5 @@ protected:
 #endif // SHARED_HANDLERS
 
 	std::vector<FileVersionDiff> file_diffs_;
-	std::unique_ptr<CFileVersionInstance> file_version_instance_;
+	std::unique_ptr<FileVersionInstance> file_version_instance_;
 };
