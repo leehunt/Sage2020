@@ -1,4 +1,6 @@
 #include "pch.h"
+
+#include <cassert>
 #include "LineTokenizer.h"
 
 #define CCH_MAX_MACRO 1024
@@ -226,7 +228,7 @@ LNextTok:
   if (!fRet)
     goto LDone;
 
-  switch (ptok->tk) {
+  switch ((tkCH)ptok->tk) {
     case tkCH::uWSPACE_IND:
     case tkCH::uTAB_IND:
       goto LNextTok;
