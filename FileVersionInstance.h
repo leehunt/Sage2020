@@ -16,6 +16,8 @@ class FileVersionInstance {
   }
   virtual ~FileVersionInstance() {}
 
+  const std::deque<FileVersionLine>& GetLines() const { return file_lines_; }
+
  private:
    std::deque<FileVersionLine> file_lines_;
 };

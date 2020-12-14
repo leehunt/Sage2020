@@ -196,13 +196,13 @@ bool GitDiffReader::FReadGitDiffTreeColon(TOK* ptok) {
       &current_diff_->diff_tree_.old_mode,  // %o
       &current_diff_->diff_tree_.new_mode,  // %o
       current_diff_->diff_tree_.old_hash_string, // %s
-      std::size(current_diff_->diff_tree_.old_hash_string), // %s len
+      (unsigned)std::size(current_diff_->diff_tree_.old_hash_string), // %s len
       current_diff_->diff_tree_.new_hash_string, // %s
-      std::size(current_diff_->diff_tree_.new_hash_string), // %s len
+      (unsigned)std::size(current_diff_->diff_tree_.new_hash_string),  // %s len
       &current_diff_->diff_tree_.action, // %c
-      sizeof(current_diff_->diff_tree_.action), // %c len
+      (unsigned)sizeof(current_diff_->diff_tree_.action),              // %c len
       current_diff_->diff_tree_.file_path, // %s
-      std::size(current_diff_->diff_tree_.file_path) // %s len
+      (unsigned)std::size(current_diff_->diff_tree_.file_path) // %s len
   );
   if (num_args != 6)
     return false;
@@ -443,7 +443,7 @@ GitDiffReader::~GitDiffReader() {}
 
 void GitDiffReader::ProcessDiffLines(FILE* stream) {
   char stream_line[1024];
-  while (fgets(stream_line, std::size(stream_line), stream)) {
+  while (fgets(stream_line, (int)std::size(stream_line), stream)) {
     if (!ProcessLogLine(stream_line))
       break;
   }

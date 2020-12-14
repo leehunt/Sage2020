@@ -16,7 +16,7 @@ struct FileVersionDiffTree {
   int new_mode;
   char new_hash_string[14];
   char action;
-  char file_path[MAX_PATH];
+  char file_path[FILENAME_MAX];
 };
 struct FileVersionDiff {
   std::vector<FileVersionDiffHunk> hunks_;

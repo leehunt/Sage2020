@@ -16,7 +16,7 @@ GitFileReader::~GitFileReader() {}
 
 void GitFileReader::ProcessFileLines(FILE* stream) {
   char stream_line[1024];
-  while (fgets(stream_line, std::size(stream_line), stream)) {
+  while (fgets(stream_line, (int)std::size(stream_line), stream)) {
     lines_.push_back(stream_line);
   }
 }
