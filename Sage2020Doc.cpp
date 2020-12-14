@@ -71,8 +71,11 @@ void CSage2020Doc::Serialize(CArchive& ar)
 
 		if (file_diffs_.size() > 0) {
       GitFileReader git_file_reader{file_diffs_[0].diff_tree_.new_hash_string};
+      int commit_sequence_num = static_cast<int>(file_diffs_.size());
 			file_version_instance_ =
-					std::make_unique<FileVersionInstance>(std::move(git_file_reader.GetLines()));
+                            std::make_unique<FileVersionInstance>(
+                                std::move(git_file_reader.GetLines()),
+                                commit_sequence_num);
     }
 	}
 }

@@ -2,19 +2,23 @@
 #include <deque>
 #include <filesystem>
 
+#include "FileVersionDiff.h"
+
 struct FileVersionLine {
   std::string line;
   int age;
+
+  bool operator==(const FileVersionLine& other) const {
+    return age == other.age && line == other.line;
+  }
 };
 class FileVersionInstance {
  public:
-   FileVersionInstance(std::deque<std::string>& lines) {
-    for (auto& line : lines) {
-      FileVersionLine file_version_line = {std::move(line), 0};
-      file_lines_.push_back(std::move(file_version_line));
-    }
-  }
+  FileVersionInstance();
+  FileVersionInstance(std::deque<std::string>& lines, int commit_sequence_num);
   virtual ~FileVersionInstance() {}
+
+  void AddHunk(const FileVersionDiffHunk& hunk, int commit_sequence_num);
 
   const std::deque<FileVersionLine>& GetLines() const { return file_lines_; }
 

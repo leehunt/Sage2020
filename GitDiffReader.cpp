@@ -1,12 +1,12 @@
 #include "pch.h"
 
-#include "GitDiffReader.h"
+#include <stdio.h>
 #include <cassert>
 #include <functional>
-#include "LineTokenizer.h"
 #include <map>
-#include <stdio.h>
 #include <string>
+#include "GitDiffReader.h"
+#include "LineTokenizer.h"
 
 constexpr char kGitDiffCommand[] =
     "git --no-pager log -p -U0 --raw --no-color --pretty=raw -- ";
@@ -36,12 +36,13 @@ static std::string GetTextToEndOfLine(TOK* ptok) {
       break;
   }
 
-  char chSav = ptok->szVal[0];
-  ptok->szVal[0] = L'\0';
+  // Keep any '\n', but ensure the string is terminated.
+  char chSav = ptok->szVal[1];
+  ptok->szVal[1] = L'\0';
 
   text = szStart;
 
-  ptok->szVal[0] = chSav;
+  ptok->szVal[1] = chSav;
 
   return text;
 }
@@ -142,7 +143,7 @@ bool GitDiffReader::FReadComment(TOK* ptok) {
   if (!FGetTok(ptok))
     return false;
   current_diff_->comment_.append(GetTextToEndOfLine(ptok));
- 
+
   return true;
 }
 
@@ -193,16 +194,16 @@ bool GitDiffReader::FReadGitDiffTreeColon(TOK* ptok) {
   auto diff_tree_line = GetTextToEndOfLine(ptok);
   int num_args = sscanf_s(
       diff_tree_line.c_str(), "%o %o %s %s %c %s",
-      &current_diff_->diff_tree_.old_mode,  // %o
-      &current_diff_->diff_tree_.new_mode,  // %o
-      current_diff_->diff_tree_.old_hash_string, // %s
-      (unsigned)std::size(current_diff_->diff_tree_.old_hash_string), // %s len
-      current_diff_->diff_tree_.new_hash_string, // %s
+      &current_diff_->diff_tree_.old_mode,                             // %o
+      &current_diff_->diff_tree_.new_mode,                             // %o
+      current_diff_->diff_tree_.old_hash_string,                       // %s
+      (unsigned)std::size(current_diff_->diff_tree_.old_hash_string),  // %s len
+      current_diff_->diff_tree_.new_hash_string,                       // %s
       (unsigned)std::size(current_diff_->diff_tree_.new_hash_string),  // %s len
-      &current_diff_->diff_tree_.action, // %c
+      &current_diff_->diff_tree_.action,                               // %c
       (unsigned)sizeof(current_diff_->diff_tree_.action),              // %c len
-      current_diff_->diff_tree_.file_path, // %s
-      (unsigned)std::size(current_diff_->diff_tree_.file_path) // %s len
+      current_diff_->diff_tree_.file_path,                             // %s
+      (unsigned)std::size(current_diff_->diff_tree_.file_path)         // %s len
   );
   if (num_args != 6)
     return false;
@@ -315,14 +316,15 @@ bool GitDiffReader::FReadHunkHeader(TOK* ptok) {
 bool GitDiffReader::FReadAddLine(TOK* ptok) {
   if (ptok->tk != TK::tkPLUS)
     return false;
-  if (!FGetTok(ptok))
+  // N.b. ensure we get direct tokens here else we'll trim any leading
+  // whitespace.
+  if (!FGetTokDirect(ptok))
     return false;
 
   // If size() == 0, this is due to the '+++' or '---' line
   if (current_diff_->hunks_.size() > 0) {
     current_diff_->hunks_.back().add_lines_.push_back(GetTextToEndOfLine(ptok));
-  }
-  else {
+  } else {
     if (ptok->tk != TK::tkPLUS)
       return false;
 
