@@ -211,10 +211,12 @@ bool GitDiffReader::FReadGitDiffTreeColon(TOK* ptok) {
   return true;
 }
 
-// Example:
+// https://en.wikipedia.org/wiki/Diff (Unified Format)
 //@@ <from-file-range> <to-file-range> @@
 //
 // Add line:
+// @@ -l,s +l,s @@ optional section heading
+// E.g.:
 //@@ -65,0 +66 @@ IDR_MAINFRAME           ICON "theme\google_chrome\chrome.ico"
 //+IDR_MAINFRAME_2         ICON "theme\google_chrome\chrome2.ico"
 //
