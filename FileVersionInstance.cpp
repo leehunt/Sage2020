@@ -85,7 +85,7 @@ void FileVersionInstance::RemoveHunk(const FileVersionDiffHunk& hunk,
                 FileVersionLineInfo{commit_id});
 #if _DEBUG
     for (auto line_num = hunk.add_location_;
-         line_num < hunk.add_location_ + hunk.add_line_count_; line_num++) {
+         line_num < hunk.add_location_ + hunk.remove_line_count_; line_num++) {
       assert(GetLineInfo(line_num).commit_id == commit_id);
     }
 #endif

@@ -29,10 +29,10 @@ class FileVersionInstance {
                   const std::string& commit_id);
 
   const std::deque<std::string>& GetLines() const { return file_lines_; }
+
   const LineToFileVersionLineInfo& GetLinesInfo() const {
     return file_lines_info_;
   }
-
   const FileVersionLineInfo& GetLineInfo(int line_num) const {
     return file_lines_info_[line_num - 1];
   }

@@ -342,7 +342,7 @@ bool GitDiffReader::FReadAddLine(TOK* ptok) {
 bool GitDiffReader::FReadRemoveLine(TOK* ptok) {
   if (ptok->tk != TK::tkMINUS)
     return false;
-  if (!FGetTok(ptok))
+  if (!FGetTokDirect(ptok))
     return false;
 
   // If size() == 0, this is due to the '+++' or '---' line
