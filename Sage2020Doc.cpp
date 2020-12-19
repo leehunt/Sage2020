@@ -58,11 +58,27 @@ void CSage2020Doc::Serialize(CArchive& ar) {
     GitDiffReader git_diff_reader{myconv.to_bytes(path)};
     file_diffs_ = git_diff_reader.GetDiffs();
 
+    // TODO: create 'FileVersionInstanceEditor' class.
     if (file_diffs_.size() > 0) {
-      GitFileReader git_file_reader{file_diffs_[0].diff_tree_.new_hash_string};
-      file_version_instance_ = std::make_unique<FileVersionInstance>(
-          std::move(git_file_reader.GetLines()),
-          file_diffs_[0].diff_tree_.new_hash_string);
+      if (file_diffs_.back().diff_tree_.action != 'A') {
+        // if the first commit is not an add, then get the file at that point.
+        std::string initial_file_id =
+            file_diffs_.back().diff_tree_.new_hash_string;
+        GitFileReader git_file_reader{initial_file_id};
+        file_version_instance_ = std::make_unique<FileVersionInstance>(
+            std::move(git_file_reader.GetLines()), file_diffs_.back().commit_);
+      } else {
+        file_version_instance_ = std::make_unique<FileVersionInstance>();
+      }
+      // Sythethesize FileVersionInstance from diffs, going from first diff
+      // (the last recorded in the git log) forward.
+      for (auto it = file_diffs_.crbegin(); it != file_diffs_.crend(); it++) {
+        auto prev_commit_count = file_version_instance_->GetCommitCount();
+        file_version_instance_->PushDiff(*it);
+        auto current_commit_count = file_version_instance_->GetCommitCount();
+        assert(current_commit_count == prev_commit_count + 1);
+      }
+      assert(file_version_instance_->GetCommitCount() == file_diffs_.size());
     }
   }
 }

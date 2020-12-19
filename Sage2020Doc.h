@@ -2,52 +2,62 @@
 // Sage2020Doc.h : interface of the CSage2020Doc class
 //
 
-
 #pragma once
-#include "FileVersionDiff.h"
-#include "FileVersionInstance.h"
 #include <memory>
 #include <vector>
+#include "FileVersionDiff.h"
+#include "FileVersionInstance.h"
 
 class CSage2020Doc : public CDocument {
-protected: // create from serialization only
-	CSage2020Doc() noexcept;
-	DECLARE_DYNCREATE(CSage2020Doc)
+ protected:  // create from serialization only
+  CSage2020Doc() noexcept;
+  DECLARE_DYNCREATE(CSage2020Doc)
 
-// Attributes
-public:
+  // Attributes
+ public:
+  FileVersionInstance* GetFileVersionInstance() const {
+    return file_version_instance_ ? file_version_instance_.get() : nullptr;
+  }
 
-// Operations
-public:
+  const size_t GetFileVersionInstanceSize() const {
+    if (!file_version_instance_)
+      return 0;
+    return file_version_instance_->GetLines().size();
+  }
 
-// Overrides
-public:
-	virtual BOOL OnNewDocument();
-	virtual void Serialize(CArchive& ar);
+  const std::vector<FileVersionDiff>& GetFileDiffs() const {
+    return file_diffs_;
+  }
+
+  // Operations
+ public:
+  // Overrides
+ public:
+  virtual BOOL OnNewDocument();
+  virtual void Serialize(CArchive& ar);
 #ifdef SHARED_HANDLERS
-	virtual void InitializeSearchContent();
-	virtual void OnDrawThumbnail(CDC& dc, LPRECT lprcBounds);
-#endif // SHARED_HANDLERS
+  virtual void InitializeSearchContent();
+  virtual void OnDrawThumbnail(CDC& dc, LPRECT lprcBounds);
+#endif  // SHARED_HANDLERS
 
-// Implementation
-public:
-	virtual ~CSage2020Doc();
+  // Implementation
+ public:
+  virtual ~CSage2020Doc();
 #ifdef _DEBUG
-	virtual void AssertValid() const;
-	virtual void Dump(CDumpContext& dc) const;
+  virtual void AssertValid() const;
+  virtual void Dump(CDumpContext& dc) const;
 #endif
 
-protected:
-
-// Generated message map functions
-protected:
-	DECLARE_MESSAGE_MAP()
+ protected:
+  // Generated message map functions
+ protected:
+  DECLARE_MESSAGE_MAP()
 
 #ifdef SHARED_HANDLERS
-	// Helper function that sets search content for a Search Handler
-	void SetSearchContent(const CString& value);
-#endif // SHARED_HANDLERS
+  // Helper function that sets search content for a Search Handler
+  void SetSearchContent(const CString& value);
+#endif  // SHARED_HANDLERS
 
-	std::vector<FileVersionDiff> file_diffs_;
-	std::unique_ptr<FileVersionInstance> file_version_instance_;
+  std::vector<FileVersionDiff> file_diffs_;
+  std::unique_ptr<FileVersionInstance> file_version_instance_;
 };

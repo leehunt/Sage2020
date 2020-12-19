@@ -4,6 +4,24 @@
 #include "../GitDiffReader.h"
 #include "../GitFileReader.h"
 
+// Gtest 'friend' forwarders.
+class GitDiffReaderTest : public testing::Test {
+ public:
+  static void AddHunk(FileVersionInstance& this_ref, const FileVersionDiffHunk& hunk,
+               const std::string& commit_id) {
+    this_ref.FileVersionInstance::AddHunk(hunk, commit_id);
+   }
+  static void RemoveHunk(FileVersionInstance& this_ref, const FileVersionDiffHunk& hunk,
+               const std::string& commit_id) {
+     this_ref.FileVersionInstance::RemoveHunk(hunk, commit_id);
+   }
+
+  static const LineToFileVersionLineInfo& GetLinesInfo(
+      FileVersionInstance& this_ref) {
+    return this_ref.GetLinesInfo();
+  }
+};
+
 TEST(GitDiffReaderTest, LoadAndCompareWithFile) {
   std::filesystem::path file_path = __FILE__;
   GitDiffReader git_diff_reader(file_path.filename());
@@ -14,9 +32,7 @@ TEST(GitDiffReaderTest, LoadAndCompareWithFile) {
   // last recorded in the git log) forward.
   FileVersionInstance file_version_instance;
   for (auto it = diffs.crbegin(); it != diffs.crend(); it++) {
-    for (auto& hunk : it->hunks_) {
-      file_version_instance.AddHunk(hunk, it->commit_);
-    }
+    file_version_instance.PushDiff(*it);
   }
 
   std::string latest_file_id = diffs.front().diff_tree_.new_hash_string;
@@ -31,17 +47,19 @@ TEST(GitDiffReaderTest, LoadAndCompareWithFile) {
         file_version_instance_loaded->GetLines()[i];
     const auto& file_version_line_from_diffs =
         file_version_instance.GetLines()[i];
-    EXPECT_EQ(file_version_line_loaded, file_version_line_from_diffs);
+    EXPECT_STREQ(file_version_line_loaded.c_str(),
+                 file_version_line_from_diffs.c_str());
   }
 
   // Now go backwards down to nothing.
   for (auto it = diffs.cbegin(); it != diffs.cend(); it++) {
     for (auto itHunk = it->hunks_.crbegin(); itHunk != it->hunks_.crend();
          ++itHunk) {
-      file_version_instance.RemoveHunk(*itHunk, it->commit_);
+      GitDiffReaderTest::RemoveHunk(file_version_instance, *itHunk,
+                                    it->commit_);
     }
   }
 
   EXPECT_EQ(file_version_instance.GetLines().size(), 0);
-  EXPECT_EQ(file_version_instance.GetLinesInfo().size(), 0);
+  EXPECT_EQ(GitDiffReaderTest::GetLinesInfo(file_version_instance).size(), 0);
 }

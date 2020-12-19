@@ -3,50 +3,125 @@
 //
 
 #pragma once
+#include "Sage2020ViewDocListener.h"
 
+class CSage2020View : public CScrollView, public Sage2020ViewDocListener {
+ protected:  // create from serialization only
+  CSage2020View() noexcept;
+  DECLARE_DYNCREATE(CSage2020View)
 
-class CSage2020View : public CView
-{
-protected: // create from serialization only
-	CSage2020View() noexcept;
-	DECLARE_DYNCREATE(CSage2020View)
+  // Attributes
+ public:
+  CSage2020Doc* GetDocument() const;
 
-// Attributes
-public:
-	CSage2020Doc* GetDocument() const;
+  // Operations
+ public:
+  void FindAndSelectString(LPCTSTR szFind,
+                           bool fScroll,
+                           bool fBackward = false,
+                           bool* pfWraparound = NULL);
+  void FindAndSelectVersion(bool fCurVer,
+                            bool fBackwards = false,
+                            bool* pfWraparound = NULL);
 
-// Operations
-public:
+  void SetCaseSensitive(bool fCaseSensitive) {
+    m_fCaseSensitive = fCaseSensitive;
+  }
+  bool GetCaseSensitive() const { return m_fCaseSensitive; }
 
-// Overrides
-public:
-	virtual void OnDraw(CDC* pDC);  // overridden to draw this view
-	virtual BOOL PreCreateWindow(CREATESTRUCT& cs);
-protected:
-	virtual BOOL OnPreparePrinting(CPrintInfo* pInfo);
-	virtual void OnBeginPrinting(CDC* pDC, CPrintInfo* pInfo);
-	virtual void OnEndPrinting(CDC* pDC, CPrintInfo* pInfo);
+  void SetHighlightAll(bool fHighlightAll) { m_fHighlightAll = fHighlightAll; }
+  bool GetHighlightAll() const { return m_fHighlightAll; }
 
-// Implementation
-public:
-	virtual ~CSage2020View();
+  // Overrides
+ protected:
+  virtual BOOL PreCreateWindow(CREATESTRUCT& cs);
+  virtual void OnInitialUpdate();
+  virtual void OnDraw(CDC* pDC);  // overridden to draw this view
+  virtual BOOL OnScroll(UINT nScrollCode, UINT nPos, BOOL bDoScroll = TRUE);
+  virtual BOOL OnScrollBy(CSize sizeScroll, BOOL bDoScroll);
+
+  // Implementation
+  void SetCustomFont();
+  void UpdateScrollSizes(int dx);
+  static COLORREF CrBackgroundForVersion(int nVer, int nVerMax);
+
+  virtual void DocEditNotification(int iLine, int cLine);  // REVIEW: virtual?
+  virtual void DocVersionChangedNotification(int nVer);    // REVIEW: virtual?
+
+  virtual BOOL OnPreparePrinting(CPrintInfo* pInfo);
+  virtual void OnBeginPrinting(CDC* pDC, CPrintInfo* pInfo);
+  virtual void OnEndPrinting(CDC* pDC, CPrintInfo* pInfo);
+
+  // Implementation
+ public:
+  virtual ~CSage2020View();
 #ifdef _DEBUG
-	virtual void AssertValid() const;
-	virtual void Dump(CDumpContext& dc) const;
+  virtual void AssertValid() const;
+  virtual void Dump(CDumpContext& dc) const;
 #endif
 
-protected:
+ protected:
+  CSize m_sizChar;
+  CSize m_sizPage;
+  CSize m_sizAll;
 
-// Generated message map functions
-protected:
-	afx_msg void OnFilePrintPreview();
-	afx_msg void OnRButtonUp(UINT nFlags, CPoint point);
-	afx_msg void OnContextMenu(CWnd* pWnd, CPoint point);
-	DECLARE_MESSAGE_MAP()
+  int m_iSelStart;
+  int m_iSelEnd;
+
+  bool m_fLeftMouseDown;
+  int m_iMouseDown;
+
+  CString m_strSearchLast;
+  CPoint m_ptSearchLast;
+  bool m_fCaseSensitive;
+  bool m_fHighlightAll;
+
+  CSage2020Doc* m_pDocListened;
+
+  CFont m_font;
+
+  const FileVersionInstance* m_currentFileVersionInstance;
+  
+  // Generated message map functions
+ protected:
+  afx_msg void OnFilePrintPreview();
+
+  afx_msg void OnContextMenu(CWnd* pWnd, CPoint point);
+
+  afx_msg BOOL OnEraseBkgnd(CDC* pDC);
+
+  afx_msg void OnSize(UINT nType, int cx, int cy);
+
+  afx_msg void OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags);
+
+  afx_msg void OnRButtonUp(UINT nFlags, CPoint point);
+
+  afx_msg void OnMouseMove(UINT nFlags, CPoint point);
+
+  afx_msg void OnLButtonDown(UINT nFlags, CPoint point);
+  afx_msg void OnLButtonUp(UINT nFlags, CPoint point);
+
+  afx_msg void OnEditCopy(CCmdUI* pCmdUI);
+  afx_msg void OnEditCopy();
+
+  afx_msg void OnGotoDlg();  // REVIEW: place this in MainFrm.h
+
+  afx_msg void OnJumpToChangeVersion(CCmdUI* pCmdUI);
+  afx_msg void OnJumpToChangeVersion();
+
+  afx_msg void OnUpdatePropertiesPaneGrid(CCmdUI* pCmdUI);
+
+  afx_msg void OnUpdateVersionsTree(CCmdUI* pCmdUI);
+
+  afx_msg void OnUpdateStatusLineNumber(CCmdUI* pCmdUI);
+
+  DECLARE_MESSAGE_MAP()
+ public:
+  afx_msg BOOL OnMouseWheel(UINT nFlags, short zDelta, CPoint pt);
 };
 
 #ifndef _DEBUG  // debug version in Sage2020View.cpp
-inline CSage2020Doc* CSage2020View::GetDocument() const
-   { return reinterpret_cast<CSage2020Doc*>(m_pDocument); }
+inline CSage2020Doc* CSage2020View::GetDocument() const {
+  return reinterpret_cast<CSage2020Doc*>(m_pDocument);
+}
 #endif
-

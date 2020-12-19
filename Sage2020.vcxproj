@@ -187,7 +187,6 @@
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="calendarbar.h" />
     <ClInclude Include="FileVersionDiff.h" />
     <ClInclude Include="GitDiffReader.h" />
     <ClInclude Include="FileVersionInstance.h" />
@@ -201,9 +200,9 @@
     <ClInclude Include="Resource.h" />
     <ClInclude Include="Sage2020.h" />
     <ClInclude Include="Sage2020Doc.h" />
+    <ClInclude Include="Sage2020ViewDocListener.h" />
     <ClInclude Include="Sage2020View.h" />
     <ClInclude Include="targetver.h" />
-    <ClInclude Include="ViewTree.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="FileVersionDiff.cpp" />
@@ -222,6 +221,7 @@
     <ClCompile Include="PropertiesWnd.cpp" />
     <ClCompile Include="Sage2020.cpp" />
     <ClCompile Include="Sage2020Doc.cpp" />
+    <ClCompile Include="Sage2020ViewDocListener.cpp" />
     <ClCompile Include="Sage2020View.cpp" />
     <ClCompile Include="ViewTree.cpp" />
   </ItemGroup>
