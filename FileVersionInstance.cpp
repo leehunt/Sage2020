@@ -3,124 +3,52 @@
 #include <cassert>
 #include "FileVersionInstance.h"
 
-FileVersionInstance::FileVersionInstance() {}
+FileVersionInstance::FileVersionInstance() : commit_index_(-1) {}
 
 FileVersionInstance::FileVersionInstance(std::deque<std::string>& lines,
-                                         const std::string& commit_id) {
-  AddLineInfo(1, static_cast<int>(lines.size()),
-              FileVersionLineInfo{GetCommitIndex(commit_id)});
+                                         const std::string& commit_id)
+    : commit_index_(0), commit_id_(commit_id) {
+  AddLineInfo(1, static_cast<int>(lines.size()), commit_index_);
   for (auto& line : lines) {
     file_lines_.push_back(std::move(line));
   }
 }
 
-void FileVersionInstance::PushDiff(const FileVersionDiff& diff) {
-  for (auto& hunk : diff.hunks_) {
-    AddHunk(hunk, diff.commit_);
+void FileVersionInstance::AddLineInfo(int line_num,
+                                      int line_count,
+                                      const FileVersionLineInfo& info) {
+  assert(line_num > 0);
+  assert(line_count > 0);
+  if (line_count == 0)
+    return;
+  for (auto line_num_cur = line_num; line_num_cur < line_num + line_count;
+       line_num_cur++) {
+    file_lines_info_.insert(file_lines_info_.begin() + (line_num_cur - 1),
+                            info);
   }
+
+#if 0
+    // There must always be at least a single 'end' info record (with an empty string commit_id).
+    // 1. Preserve any info from [0, line_num).
+    //    This automatically is done by the file_lines_info_.
+    // 2. Add info from [line_num, line_num + line_count).
+    //    a. add to file_lines_info_[line_num]
+    //    b. ensure that file_lines_info_[line_num + line_count] = itLower.info
+    // 3. Preserve any info from [line_num, end).
+    // 4. Move out end record as necessary.
+    auto itLower = file_lines_info_.lower_bound(line_num);
+    file_lines_info_[line_num + line_count] = itLower->second;
+    file_lines_info_[line_num] = info;
+    for (auto it = file_lines_info_.rbegin(); it.base() != itLower; ) {
+      ++it;
+      auto node_handle = file_lines_info_.extract(it.base());
+      node_handle.key() += line_count;
+      file_lines_info_.insert(std::move(node_handle));
+    }
+#endif  // 0
 }
 
-void FileVersionInstance::PopDiff(const FileVersionDiff& diff) {
-  for (auto it = diff.hunks_.crbegin(); it != diff.hunks_.crend(); it++) {
-    RemoveHunk(*it, diff.commit_);
-  }
-}
-
-void FileVersionInstance::AddHunk(const FileVersionDiffHunk& hunk,
-                                  const std::string& commit_id) {
-  // Remove lines.  N.b. Remove must be done first to get correct line
-  // locations. Yes, using |add_location_| seems odd, but the add_location
-  // tracks the new position of any adds/removed done by previous hunks in the
-  // diff.
-  if (hunk.remove_line_count_ > 0) {
-    // This is tricky.  The 'add_location' is where to add in the 'to'
-    // lines are found if diffs are added sequentially (which is how we use
-    // AddHunk).  However if there is no add lines to replace the removed lines,
-    // then the 'add_location' is shifted down by one because that line no
-    // longer exists in the 'to' file.
-    auto remove_location_index =
-        hunk.add_line_count_ ? hunk.add_location_ - 1 : hunk.add_location_;
-    assert(std::equal(
-        file_lines_.begin() + remove_location_index,
-        file_lines_.begin() + remove_location_index + hunk.remove_line_count_,
-        hunk.remove_lines_.begin()));
-    file_lines_.erase(
-        file_lines_.begin() + remove_location_index,
-        file_lines_.begin() + remove_location_index + hunk.remove_line_count_);
-
-    RemoveLineInfo(remove_location_index, hunk.remove_line_count_);
-  }
-
-  auto file_version_line_info = FileVersionLineInfo{GetCommitIndex(commit_id)};
-  
-  // Add lines.
-  if (hunk.add_line_count_ > 0) {
-    auto it_insert = file_lines_.begin() + (hunk.add_location_ - 1);
-    for (const auto& line : hunk.add_lines_) {
-      // REVIEW: Consider moving line data to/from hunk array and
-      // FileVersionInstance.
-      it_insert = file_lines_.insert(it_insert, line);
-      ++it_insert;
-    }
-    // Add line info
-    AddLineInfo(hunk.add_location_, hunk.add_line_count_,
-                std::move(file_version_line_info));
-#if _DEBUG
-    for (auto line_num = hunk.add_location_;
-         line_num < hunk.add_location_ + hunk.add_line_count_; line_num++) {
-      assert(GetCommitFromIndex(GetLineInfo(line_num).commit_index()) ==
-             commit_id);
-    }
-#endif
-  }
-}
-
-void FileVersionInstance::RemoveHunk(const FileVersionDiffHunk& hunk,
-                                     const std::string& commit_id) {
-  // Remove lines by removing the "added" lines.
-  // N.b. Remove must be done first to get correct line locations.
-  // Yes, using |add_location_| seems odd, but the add_location tracks the
-  // new position of any adds/removed done by previous hunks in the diff.
-  if (hunk.add_line_count_ > 0) {
-    assert(std::equal(
-        file_lines_.begin() + (hunk.add_location_ - 1),
-        file_lines_.begin() + (hunk.add_location_ - 1 + hunk.add_line_count_),
-        hunk.add_lines_.begin()));
-    file_lines_.erase(
-        file_lines_.begin() + (hunk.add_location_ - 1),
-        file_lines_.begin() + (hunk.add_location_ - 1 + hunk.add_line_count_));
-
-    RemoveLineInfo(hunk.add_location_, hunk.add_line_count_);
-  }
-
-  auto file_version_line_info = FileVersionLineInfo{GetCommitIndex(commit_id)};
-
-  // Add lines by adding the "removed" lines.
-  if (hunk.remove_line_count_ > 0) {
-    // This is tricky.  The 'add_location' is where to add in the 'to'
-    // lines are found if diffs are removed sequentially in reverse (which is
-    // how we use RemoveHunk).  However if there is no add lines to replace the
-    // removed lines, then the 'add_location' is shifted down by one because
-    // that line no longer exists in the 'to' file.
-    auto add_location_index =
-        hunk.add_line_count_ ? hunk.add_location_ - 1 : hunk.add_location_;
-    auto it_insert = file_lines_.begin() + add_location_index;
-    for (const auto& line : hunk.remove_lines_) {
-      // REVIEW: Consider moving line data to/from hunk array and
-      // FileVersionInstance.
-      it_insert = file_lines_.insert(it_insert, line);
-      ++it_insert;
-    }
-    // Add line info
-    AddLineInfo(add_location_index, hunk.remove_line_count_,
-                std::move(file_version_line_info));
-#if _DEBUG
-    for (auto line_index = add_location_index;
-         line_index < add_location_index + hunk.remove_line_count_;
-         line_index++) {
-      assert(GetCommitFromIndex(GetLineInfo(line_index).commit_index()) ==
-             commit_id);
-    }
-#endif
-  }
+void FileVersionInstance::RemoveLineInfo(int line_num, int line_count) {
+  auto itBegin = file_lines_info_.begin() + (line_num - 1);
+  file_lines_info_.erase(itBegin, itBegin + line_count);
 }

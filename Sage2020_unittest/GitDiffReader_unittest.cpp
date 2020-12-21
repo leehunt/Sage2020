@@ -1,20 +1,21 @@
 #include "pch.h"
 
 #include "../FileVersionInstance.h"
+#include "../FileVersionInstanceEditor.h"
 #include "../GitDiffReader.h"
 #include "../GitFileReader.h"
 
 // Gtest 'friend' forwarders.
 class GitDiffReaderTest : public testing::Test {
  public:
-  static void AddHunk(FileVersionInstance& this_ref, const FileVersionDiffHunk& hunk,
-               const std::string& commit_id) {
-    this_ref.FileVersionInstance::AddHunk(hunk, commit_id);
-   }
-  static void RemoveHunk(FileVersionInstance& this_ref, const FileVersionDiffHunk& hunk,
-               const std::string& commit_id) {
-     this_ref.FileVersionInstance::RemoveHunk(hunk, commit_id);
-   }
+  static void AddHunk(FileVersionInstanceEditor& this_ref,
+                      const FileVersionDiffHunk& hunk) {
+    this_ref.FileVersionInstanceEditor::AddHunk(hunk);
+  }
+  static void RemoveHunk(FileVersionInstanceEditor& this_ref,
+                         const FileVersionDiffHunk& hunk) {
+    this_ref.FileVersionInstanceEditor::RemoveHunk(hunk);
+  }
 
   static const LineToFileVersionLineInfo& GetLinesInfo(
       FileVersionInstance& this_ref) {
@@ -31,8 +32,9 @@ TEST(GitDiffReaderTest, LoadAndCompareWithFile) {
   // Sythethesize FileVersionInstance from diffs, going from first diff (the
   // last recorded in the git log) forward.
   FileVersionInstance file_version_instance;
+  FileVersionInstanceEditor editor(file_version_instance);
   for (auto it = diffs.crbegin(); it != diffs.crend(); it++) {
-    file_version_instance.PushDiff(*it);
+    editor.AddDiff(*it);
   }
 
   std::string latest_file_id = diffs.front().diff_tree_.new_hash_string;
@@ -55,8 +57,7 @@ TEST(GitDiffReaderTest, LoadAndCompareWithFile) {
   for (auto it = diffs.cbegin(); it != diffs.cend(); it++) {
     for (auto itHunk = it->hunks_.crbegin(); itHunk != it->hunks_.crend();
          ++itHunk) {
-      GitDiffReaderTest::RemoveHunk(file_version_instance, *itHunk,
-                                    it->commit_);
+      GitDiffReaderTest::RemoveHunk(editor, *itHunk);
     }
   }
 

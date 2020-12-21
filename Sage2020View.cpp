@@ -15,6 +15,8 @@
 #include "Sage2020Doc.h"
 #include "Sage2020View.h"
 
+#include "FIleVersionInstanceEditor.h"
+
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -268,12 +270,12 @@ void CSage2020View::OnDraw(CDC* pDC) {
 
   const int yScrollPos = -cptViewport.y;
   assert(yScrollPos == GetDeviceScrollPosition().y);
-  const int nVerCur = file_version_instance != NULL
-      ? static_cast<int>(file_version_instance->GetCommitCount())
-                          : 0;
-  const int cLine = file_version_instance != NULL
-                        ? static_cast<int>(file_version_instance->GetLines().size())
-                        : 0;
+  const auto& diffs = pDoc->GetFileDiffs();
+  const int nVerMax = static_cast<int>(diffs.size() - 1);
+  const int cLine =
+      file_version_instance != NULL
+          ? static_cast<int>(file_version_instance->GetLines().size())
+          : 0;
   const int cchFind = m_strSearchLast.GetLength();
   for (int y = yScrollPos / m_sizChar.cy * m_sizChar.cy;
        y < rcClient.bottom + yScrollPos; y += m_sizChar.cy) {
@@ -284,11 +286,12 @@ void CSage2020View::OnDraw(CDC* pDC) {
       break;
 
     // set colors
-    int nVer = file_version_instance != NULL
-        ? static_cast<int>(
-              file_version_instance->GetLineInfo(i + 1).commit_index())
-                      : 0;
-    COLORREF crBack = CrBackgroundForVersion(nVer, nVerCur);
+    int nVer =
+        file_version_instance != NULL
+            ? static_cast<int>(
+                  file_version_instance->GetLineInfo(i + 1).commit_index())
+            : 0;
+    COLORREF crBack = CrBackgroundForVersion(nVer, nVerMax);
     COLORREF crFore = RGB(0x00, 0x00, 0x00);
     if (m_iSelStart <= i && i <= m_iSelEnd) {
       crBack = ~crBack & 0x00FFFFFF;
@@ -424,8 +427,7 @@ BOOL CSage2020View::OnScroll(UINT nScrollCode, UINT nPos, BOOL bDoScroll) {
           if (::GetScrollInfo(GetSafeHwnd(), SB_HORZ, &si))
             nPos = si.nTrackPos;
         }
-      }
-      break;
+      } break;
     }
   }
 
@@ -752,20 +754,21 @@ BOOL CSage2020View::OnMouseWheel(UINT nFlags, short zDelta, CPoint pt) {
       auto file_version_instance = pDoc->GetFileVersionInstance();
 
       if (file_version_instance != nullptr) {
-        const size_t diffs_applied = file_version_instance->GetCommitCount();
-        const size_t diffs_total = pDoc->GetFileDiffs().size();
+        const size_t diffs_applied =
+            file_version_instance->GetCommitIndex() + 1;
+        const auto& diffs = pDoc->GetFileDiffs();
+        const size_t diffs_total = diffs.size();
+        FileVersionInstanceEditor editor(*file_version_instance);
         if (zDelta < 0) {
           // Add Diff
           if (diffs_applied < diffs_total) {
-            file_version_instance->PushDiff(
-                pDoc->GetFileDiffs()[diffs_total - diffs_applied - 1]);
+            editor.AddDiff(diffs[diffs_total - diffs_applied - 1]);
             pDoc->UpdateAllViews(NULL);  // NULL - also update this view
           }
         } else if (zDelta > 0) {
           // Remove diff
           if (diffs_applied > 0) {
-            file_version_instance->PopDiff(
-                pDoc->GetFileDiffs()[diffs_total - diffs_applied]);
+            editor.RemoveDiff(diffs[diffs_total - diffs_applied]);
             pDoc->UpdateAllViews(NULL);  // NULL - also update this view
           }
         }

@@ -188,6 +188,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="FileVersionDiff.h" />
+    <ClInclude Include="FIleVersionInstanceEditor.h" />
     <ClInclude Include="GitDiffReader.h" />
     <ClInclude Include="FileVersionInstance.h" />
     <ClInclude Include="GitFileReader.h" />
@@ -206,6 +207,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="FileVersionDiff.cpp" />
+    <ClCompile Include="FIleVersionInstanceEditor.cpp" />
     <ClCompile Include="GitDiffReader.cpp" />
     <ClCompile Include="FileVersionInstance.cpp" />
     <ClCompile Include="GitFileReader.cpp" />
