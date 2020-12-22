@@ -234,10 +234,9 @@ void CSage2020View::OnDraw(CDC* pDC) {
     return;
 
   if (m_pDocListened != pDoc) {
-    // TODO
-    // if (m_pDocListened != NULL)
-    // m_pDocListened->RemoveDocListener(*this);
-    // pDoc->AddDocListener(*this);
+    if (m_pDocListened != NULL)
+      m_pDocListened->RemoveDocListener(*this);
+    pDoc->AddDocListener(*this);
 
     m_pDocListened = pDoc;
   }
@@ -252,24 +251,23 @@ void CSage2020View::OnDraw(CDC* pDC) {
   CPoint cptOld = cptViewport;
   auto file_version_instance = pDoc->GetFileVersionInstance();
   if (m_currentFileVersionInstance != file_version_instance) {
-    // TODO
-    // if (m_currentFileVersionInstance != NULL)
-    //  m_pfilerepLast->SetViewOrg(cptViewport);
+    pDoc->viewport_origin() = cptViewport;
     if (file_version_instance != nullptr) {
-      // recalc for possible updated pDoc->FilerepRead().CLine()
+      // recalc for possible updated cLine
       UpdateScrollSizes(rcClient.bottom);
 
-      // ScrollToPosition(pfilerep->GetViewOrg());
+      ScrollToPosition(pDoc->viewport_origin());
 
       pDC->SetViewportOrg(-GetDeviceScrollPosition());
-      cptViewport = pDC->GetViewportOrg();
+      pDoc->viewport_origin() = pDC->GetViewportOrg();
     }
 
     m_currentFileVersionInstance = file_version_instance;
   }
 
   const int yScrollPos = -cptViewport.y;
-  assert(yScrollPos == GetDeviceScrollPosition().y);
+  const CPoint device_scroll_pos = GetDeviceScrollPosition();
+  assert(yScrollPos == device_scroll_pos.y);
   const auto& diffs = pDoc->GetFileDiffs();
   const int nVerMax = static_cast<int>(diffs.size() - 1);
   const int cLine =
@@ -531,8 +529,13 @@ void CSage2020View::DocEditNotification(int iLine, int cLine) {
 }
 
 void CSage2020View::DocVersionChangedNotification(int nVer) {
-  if (nVer == 0)
+  if (nVer == -1) {
     m_currentFileVersionInstance = NULL;
+
+    CSage2020Doc* pDoc = GetDocument();
+    if (pDoc != NULL)
+      pDoc->viewport_origin() = CPoint();
+  }
 }
 
 // CSimpleAgeViewerView message handlers
@@ -758,7 +761,8 @@ BOOL CSage2020View::OnMouseWheel(UINT nFlags, short zDelta, CPoint pt) {
             file_version_instance->GetCommitIndex() + 1;
         const auto& diffs = pDoc->GetFileDiffs();
         const size_t diffs_total = diffs.size();
-        FileVersionInstanceEditor editor(*file_version_instance);
+        FileVersionInstanceEditor editor(*file_version_instance,
+                                         pDoc->GetListenerHead());
         if (zDelta < 0) {
           // Add Diff
           if (diffs_applied < diffs_total) {

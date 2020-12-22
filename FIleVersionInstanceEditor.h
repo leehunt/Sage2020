@@ -3,11 +3,14 @@
 #include "FileVersionInstance.h"
 
 class GitDiffReaderTest;
+class Sage2020ViewDocListener;
 
 class FileVersionInstanceEditor {
  public:
-  FileVersionInstanceEditor(FileVersionInstance& file_version_instance)
-      : file_version_instance_(file_version_instance) {}
+  FileVersionInstanceEditor(FileVersionInstance& file_version_instance,
+                            Sage2020ViewDocListener* listener_head)
+      : file_version_instance_(file_version_instance),
+        listener_head_(listener_head) {}
 
   void AddDiff(const FileVersionDiff& diff);
   void RemoveDiff(const FileVersionDiff& diff);
@@ -18,5 +21,6 @@ class FileVersionInstanceEditor {
 
  private:
   FileVersionInstance& file_version_instance_;
+  Sage2020ViewDocListener* listener_head_;
   friend GitDiffReaderTest;
 };

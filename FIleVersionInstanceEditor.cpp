@@ -1,18 +1,33 @@
 #include "pch.h"
 
 #include "FileVersionInstanceEditor.h"
+#include "Sage2020ViewDocListener.h"
 
 void FileVersionInstanceEditor::AddDiff(const FileVersionDiff& diff) {
   for (auto& hunk : diff.hunks_) {
     AddHunk(hunk);
   }
+  assert(file_version_instance_.commit_index_ >= -1);
   file_version_instance_.commit_index_++;
+  assert(file_version_instance_.commit_index_ >= 0);
+
+  if (listener_head_ != nullptr) {
+    listener_head_->NotifyAllListenersOfVersionChange(
+        file_version_instance_.commit_index_);
+  }
 }
 
 void FileVersionInstanceEditor::RemoveDiff(const FileVersionDiff& diff) {
+  assert(file_version_instance_.commit_index_ >= 0);
   file_version_instance_.commit_index_--;
+  assert(file_version_instance_.commit_index_ >= -1);
   for (auto it = diff.hunks_.crbegin(); it != diff.hunks_.crend(); it++) {
     RemoveHunk(*it);
+  }
+  
+  if (listener_head_ != nullptr) {
+    listener_head_->NotifyAllListenersOfVersionChange(
+        file_version_instance_.commit_index_);
   }
 }
 
@@ -67,6 +82,12 @@ void FileVersionInstanceEditor::AddHunk(const FileVersionDiffHunk& hunk) {
     }
 #endif
   }
+
+  if (listener_head_ != nullptr) {
+    listener_head_->NotifyAllListenersOfEdit(
+        hunk.add_line_count_ ? hunk.add_location_ - 1 : hunk.add_location_,
+        hunk.add_line_count_ - hunk.remove_line_count_);
+  }
 }
 
 void FileVersionInstanceEditor::RemoveHunk(const FileVersionDiffHunk& hunk) {
@@ -111,16 +132,23 @@ void FileVersionInstanceEditor::RemoveHunk(const FileVersionDiffHunk& hunk) {
     }
     // Add line info
     file_version_instance_.AddLineInfo(add_location_index,
-                                      hunk.remove_line_count_,
-                std::move(file_version_line_info));
+                                       hunk.remove_line_count_,
+                                       std::move(file_version_line_info));
 #if _DEBUG
     for (auto line_index = add_location_index;
          line_index < add_location_index + hunk.remove_line_count_;
          line_index++) {
-    //  assert(file_version_instance_.GetCommitFromIndex(
-    //          file_version_instance_.GetLineInfo(line_index).commit_index()) ==
-    //         commit_id);
+      //  assert(file_version_instance_.GetCommitFromIndex(
+      //          file_version_instance_.GetLineInfo(line_index).commit_index())
+      //          ==
+      //         commit_id);
     }
 #endif
+  }
+
+  if (listener_head_ != nullptr) {
+    listener_head_->NotifyAllListenersOfEdit(
+        hunk.add_line_count_ ? hunk.add_location_ - 1 : hunk.add_location_,
+        hunk.add_line_count_ - hunk.remove_line_count_);
   }
 }

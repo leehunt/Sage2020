@@ -17,6 +17,7 @@
 #include "GitDiffReader.h"
 #include "GitFileReader.h"
 #include "Sage2020Doc.h"
+#include "Sage2020ViewDocListener.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -32,7 +33,7 @@ END_MESSAGE_MAP()
 
 // CSage2020Doc construction/destruction
 
-CSage2020Doc::CSage2020Doc() noexcept {
+CSage2020Doc::CSage2020Doc() noexcept : m_pDocListenerHead(nullptr) {
   // TODO: add one-time construction code here
 }
 
@@ -71,7 +72,7 @@ void CSage2020Doc::Serialize(CArchive& ar) {
         file_version_instance_ = std::make_unique<FileVersionInstance>();
       }
 
-      FileVersionInstanceEditor editor(*file_version_instance_.get());
+      FileVersionInstanceEditor editor(*file_version_instance_.get(), nullptr);
 
       // Sythethesize FileVersionInstance from diffs, going from first diff
       // (the last recorded in the git log) forward.
@@ -80,6 +81,18 @@ void CSage2020Doc::Serialize(CArchive& ar) {
       }
     }
   }
+}
+
+void CSage2020Doc::AddDocListener(Sage2020ViewDocListener& listener) {
+  m_pDocListenerHead = listener.LinkListener(m_pDocListenerHead);
+
+  assert(m_pDocListenerHead == &listener);
+}
+
+void CSage2020Doc::RemoveDocListener(Sage2020ViewDocListener& listener) {
+  m_pDocListenerHead = listener.UnlinkListener(m_pDocListenerHead);
+
+  assert(m_pDocListenerHead != &listener);
 }
 
 #ifdef SHARED_HANDLERS

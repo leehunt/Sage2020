@@ -32,7 +32,7 @@ TEST(GitDiffReaderTest, LoadAndCompareWithFile) {
   // Sythethesize FileVersionInstance from diffs, going from first diff (the
   // last recorded in the git log) forward.
   FileVersionInstance file_version_instance;
-  FileVersionInstanceEditor editor(file_version_instance);
+  FileVersionInstanceEditor editor(file_version_instance, nullptr);
   for (auto it = diffs.crbegin(); it != diffs.crend(); it++) {
     editor.AddDiff(*it);
   }

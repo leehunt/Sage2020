@@ -8,6 +8,8 @@
 #include "FileVersionDiff.h"
 #include "FileVersionInstance.h"
 
+class Sage2020ViewDocListener;
+
 class CSage2020Doc : public CDocument {
  protected:  // create from serialization only
   CSage2020Doc() noexcept;
@@ -29,6 +31,13 @@ class CSage2020Doc : public CDocument {
     return file_diffs_;
   }
 
+  Sage2020ViewDocListener* GetListenerHead() const {
+    return m_pDocListenerHead;
+  }
+
+  // View state
+  CPoint& viewport_origin() { return viewport_origin_; }
+
   // Operations
  public:
   // Overrides
@@ -48,6 +57,9 @@ class CSage2020Doc : public CDocument {
   virtual void Dump(CDumpContext& dc) const;
 #endif
 
+	void AddDocListener(Sage2020ViewDocListener& listener);
+  void RemoveDocListener(Sage2020ViewDocListener& listener);
+
  protected:
   // Generated message map functions
  protected:
@@ -60,4 +72,8 @@ class CSage2020Doc : public CDocument {
 
   std::vector<FileVersionDiff> file_diffs_;
   std::unique_ptr<FileVersionInstance> file_version_instance_;
+  
+  CPoint viewport_origin_;
+
+  Sage2020ViewDocListener* m_pDocListenerHead;
 };
