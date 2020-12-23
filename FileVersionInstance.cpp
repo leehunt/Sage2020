@@ -8,7 +8,8 @@ FileVersionInstance::FileVersionInstance() : commit_index_(-1) {}
 FileVersionInstance::FileVersionInstance(std::deque<std::string>& lines,
                                          const std::string& commit_id)
     : commit_index_(0), commit_id_(commit_id) {
-  AddLineInfo(1, static_cast<int>(lines.size()), commit_index_);
+  AddLineInfo(1, static_cast<int>(lines.size()),
+              FileVersionLineInfo(commit_index_));
   for (auto& line : lines) {
     file_lines_.push_back(std::move(line));
   }
@@ -51,4 +52,15 @@ void FileVersionInstance::AddLineInfo(int line_num,
 void FileVersionInstance::RemoveLineInfo(int line_num, int line_count) {
   auto itBegin = file_lines_info_.begin() + (line_num - 1);
   file_lines_info_.erase(itBegin, itBegin + line_count);
+}
+
+std::set<FileVersionLineInfo> FileVersionInstance::GetVersionsFromLines(
+    int iStart,
+    int iEnd) const {
+  std::set<FileVersionLineInfo> line_info;
+  for (int iLine = iStart; iLine < iEnd; iLine++) {
+    line_info.insert(GetLineInfo(iLine));
+  }
+
+  return line_info;
 }

@@ -45,6 +45,8 @@ class CSage2020View : public CScrollView, public Sage2020ViewDocListener {
   void UpdateScrollSizes(int dx);
   static COLORREF CrBackgroundForVersion(int nVer, int nVerMax);
 
+  // REVIEW: MFC has 'CView::OnUpdate' that should be used to update /
+  // invalidate the View (but NOT draw) in response to Doc updates.
   virtual void DocEditNotification(int iLine, int cLine);  // REVIEW: virtual?
   virtual void DocVersionChangedNotification(int nVer);    // REVIEW: virtual?
 
@@ -81,7 +83,7 @@ class CSage2020View : public CScrollView, public Sage2020ViewDocListener {
   CFont m_font;
 
   const FileVersionInstance* m_currentFileVersionInstance;
-  
+
   // Generated message map functions
  protected:
   afx_msg void OnFilePrintPreview();

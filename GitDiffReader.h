@@ -8,7 +8,7 @@ class GitDiffReader {
   GitDiffReader(const std::filesystem::path& file_path);
   virtual ~GitDiffReader();
 
-  std::vector<FileVersionDiff> GetDiffs();
+  const std::vector<FileVersionDiff>& GetDiffs();
 
  private:
   void ProcessDiffLines(FILE* stream);

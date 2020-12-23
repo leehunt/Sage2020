@@ -60,6 +60,8 @@ class CSage2020Doc : public CDocument {
 	void AddDocListener(Sage2020ViewDocListener& listener);
   void RemoveDocListener(Sage2020ViewDocListener& listener);
 
+  afx_msg void OnUpdatePropertiesPaneGrid(CCmdUI* pCmdUI);
+
  protected:
   // Generated message map functions
  protected:

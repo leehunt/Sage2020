@@ -3,6 +3,7 @@
 #include <deque>
 #include <filesystem>
 #include <map>
+#include <set>
 
 class FileVersionInstanceEditor;
 class GitDiffReaderTest;
@@ -10,10 +11,16 @@ class FileVersionInstanceTest;
 
 class FileVersionLineInfo {
  public:
-  FileVersionLineInfo(size_t commit_index) : commit_index_(commit_index) {}
+  FileVersionLineInfo(size_t commit_index) : commit_index_(commit_index) {
+    assert(static_cast<int>(commit_index) != -1);
+  }
 
   bool operator==(const FileVersionLineInfo& other) const {
     return commit_index_ == other.commit_index_;
+  }
+
+  bool operator<(const FileVersionLineInfo& other) const {
+    return commit_index_ < other.commit_index_;
   }
 
   const size_t commit_index() const { return commit_index_; };
@@ -37,8 +44,11 @@ class FileVersionInstance {
 
   const std::deque<std::string>& GetLines() const { return file_lines_; }
 
-  const FileVersionLineInfo& GetLineInfo(int line_num) const {
-    return file_lines_info_[line_num - 1];
+  std::set<FileVersionLineInfo> GetVersionsFromLines(int iStart,
+                                                     int iEnd) const;
+
+  const FileVersionLineInfo& GetLineInfo(int line_index) const {
+    return file_lines_info_[line_index];
   }
 
  private:

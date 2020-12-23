@@ -4,12 +4,13 @@
 #include "Sage2020ViewDocListener.h"
 
 void FileVersionInstanceEditor::AddDiff(const FileVersionDiff& diff) {
-  for (auto& hunk : diff.hunks_) {
-    AddHunk(hunk);
-  }
   assert(file_version_instance_.commit_index_ >= -1);
   file_version_instance_.commit_index_++;
   assert(file_version_instance_.commit_index_ >= 0);
+
+  for (auto& hunk : diff.hunks_) {
+    AddHunk(hunk);
+  }
 
   if (listener_head_ != nullptr) {
     listener_head_->NotifyAllListenersOfVersionChange(
@@ -21,6 +22,7 @@ void FileVersionInstanceEditor::RemoveDiff(const FileVersionDiff& diff) {
   assert(file_version_instance_.commit_index_ >= 0);
   file_version_instance_.commit_index_--;
   assert(file_version_instance_.commit_index_ >= -1);
+  
   for (auto it = diff.hunks_.crbegin(); it != diff.hunks_.crend(); it++) {
     RemoveHunk(*it);
   }
@@ -29,6 +31,29 @@ void FileVersionInstanceEditor::RemoveDiff(const FileVersionDiff& diff) {
     listener_head_->NotifyAllListenersOfVersionChange(
         file_version_instance_.commit_index_);
   }
+}
+
+bool FileVersionInstanceEditor::GoToIndex(
+    size_t commit_index,
+    const std::vector<FileVersionDiff>& diffs) {
+  if (!diffs.size())
+    return false;
+
+  if (commit_index >= diffs.size())
+    commit_index = diffs.size() - 1;
+
+  bool edited = false;
+  while (file_version_instance_.commit_index_ > static_cast<int>(commit_index)) {
+    RemoveDiff(diffs[file_version_instance_.commit_index_]);
+    edited = true;
+  }
+  while (file_version_instance_.commit_index_ <
+         static_cast<int>(commit_index)) {
+    AddDiff(diffs[file_version_instance_.commit_index_ + 1]);
+    edited = true;
+  }
+
+  return edited;
 }
 
 void FileVersionInstanceEditor::AddHunk(const FileVersionDiffHunk& hunk) {
@@ -149,6 +174,6 @@ void FileVersionInstanceEditor::RemoveHunk(const FileVersionDiffHunk& hunk) {
   if (listener_head_ != nullptr) {
     listener_head_->NotifyAllListenersOfEdit(
         hunk.add_line_count_ ? hunk.add_location_ - 1 : hunk.add_location_,
-        hunk.add_line_count_ - hunk.remove_line_count_);
+        hunk.remove_line_count_ - hunk.add_line_count_);
   }
 }

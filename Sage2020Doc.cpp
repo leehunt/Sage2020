@@ -16,6 +16,7 @@
 #include <codecvt>
 #include "GitDiffReader.h"
 #include "GitFileReader.h"
+#include "PropertiesWnd.h"  // REVIEW: this is icky
 #include "Sage2020Doc.h"
 #include "Sage2020ViewDocListener.h"
 
@@ -29,6 +30,8 @@
 IMPLEMENT_DYNCREATE(CSage2020Doc, CDocument)
 
 BEGIN_MESSAGE_MAP(CSage2020Doc, CDocument)
+ON_UPDATE_COMMAND_UI(IDR_PROPERTIES_GRID,
+                     &CSage2020Doc::OnUpdatePropertiesPaneGrid)
 END_MESSAGE_MAP()
 
 // CSage2020Doc construction/destruction
@@ -58,26 +61,35 @@ void CSage2020Doc::Serialize(CArchive& ar) {
     auto path = ar.GetFile()->GetFilePath();
     std::wstring_convert<std::codecvt_utf8<wchar_t>> myconv;
     GitDiffReader git_diff_reader{myconv.to_bytes(path)};
+    // Sythethesize FileVersionInstance from diffs, going from first diff
+    // (the last recorded in the git log) forward.
+#if 0
+    // We'd like to do this, but MSVC 2019 CRT seems to have a bug and says
+    // "cannot seek value-initialized vector iterator".
+    std::reverse_copy(git_diff_reader.GetDiffs().cbegin(),
+                      git_diff_reader.GetDiffs().cend(), file_diffs_.begin());
+#else
     file_diffs_ = git_diff_reader.GetDiffs();
+    std::reverse(file_diffs_.begin(), file_diffs_.end());
+#endif
 
     if (file_diffs_.size() > 0) {
-      if (file_diffs_.back().diff_tree_.action != 'A') {
+      if (file_diffs_.front().diff_tree_.action != 'A') {
         // if the first commit is not an add, then get the file at that point.
         std::string initial_file_id =
-            file_diffs_.back().diff_tree_.new_hash_string;
+            file_diffs_.front().diff_tree_.new_hash_string;
         GitFileReader git_file_reader{initial_file_id};
         file_version_instance_ = std::make_unique<FileVersionInstance>(
-            std::move(git_file_reader.GetLines()), file_diffs_.back().commit_);
+            std::move(git_file_reader.GetLines()), file_diffs_.front().commit_);
       } else {
         file_version_instance_ = std::make_unique<FileVersionInstance>();
       }
 
-      FileVersionInstanceEditor editor(*file_version_instance_.get(), nullptr);
+      FileVersionInstanceEditor editor(*file_version_instance_.get(),
+                                       m_pDocListenerHead);
 
-      // Sythethesize FileVersionInstance from diffs, going from first diff
-      // (the last recorded in the git log) forward.
-      for (auto it = file_diffs_.crbegin(); it != file_diffs_.crend(); it++) {
-        editor.AddDiff(*it);
+      for (const auto& diff : file_diffs_) {
+        editor.AddDiff(diff);
       }
     }
   }
@@ -93,6 +105,62 @@ void CSage2020Doc::RemoveDocListener(Sage2020ViewDocListener& listener) {
   m_pDocListenerHead = listener.UnlinkListener(m_pDocListenerHead);
 
   assert(m_pDocListenerHead != &listener);
+}
+
+void CSage2020Doc::OnUpdatePropertiesPaneGrid(CCmdUI* pCmdUI) {
+  // Update document-based properties (e.g. currently displayed version)
+  CWnd* pWndT = CWnd::FromHandlePermanent(*pCmdUI->m_pOther);
+  ASSERT_VALID(pWndT);
+
+  CMFCPropertyGridCtrl* pGrid = static_cast<CMFCPropertyGridCtrl*>(pWndT);
+  ASSERT_VALID(pGrid);
+  if (pGrid == NULL)
+    return;
+
+  CMFCPropertyGridProperty* pPropVersionHeader = pGrid->GetProperty(0);
+  ASSERT_VALID(pPropVersionHeader);
+  if (pPropVersionHeader == NULL)
+    return;
+
+  CMFCPropertyGridProperty* pPropVersion = pPropVersionHeader->GetSubItem(0);
+  ASSERT_VALID(pPropVersion);
+  if (pPropVersion == NULL)
+    return;
+
+  auto file_version_instance = GetFileVersionInstance();
+  if (file_version_instance != NULL) {
+    const auto& diffs = GetFileDiffs();
+    int nVerMax = static_cast<int>(diffs.size());
+    pPropVersion->EnableSpinControl(TRUE, 0, nVerMax);
+    pPropVersion->Enable(TRUE);
+
+    if (pPropVersion->GetValue().iVal !=
+        file_version_instance->GetCommitIndex()) {
+      if (pPropVersion->IsModified()) {
+        FileVersionInstanceEditor editor(*file_version_instance,
+                                         m_pDocListenerHead);
+        if (editor.GoToIndex(pPropVersion->GetValue().iVal, diffs)) {
+          pPropVersion->SetOriginalValue(COleVariant(
+              (long)file_version_instance->GetCommitIndex(), VT_I4));
+          pPropVersion->ResetOriginalValue();  // clears modified flag
+          UpdateAllViews(NULL);
+        }
+      }
+
+      pPropVersion->SetValue(
+          COleVariant((long)file_version_instance->GetCommitIndex(), VT_I4));
+
+      CPropertiesWnd::UpdateGridBlock(
+          file_version_instance->GetCommitIndex(),
+          file_version_instance->GetCommitIndex() != -1
+              ? &diffs[file_version_instance->GetCommitIndex()]
+              : nullptr,
+          pPropVersionHeader, nVerMax, false /*fUpdateVersionConttrol*/);
+    }
+  } else {
+    pPropVersion->EnableSpinControl(FALSE);
+    pPropVersion->Enable(FALSE);
+  }
 }
 
 #ifdef SHARED_HANDLERS

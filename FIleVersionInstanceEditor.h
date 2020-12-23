@@ -15,6 +15,8 @@ class FileVersionInstanceEditor {
   void AddDiff(const FileVersionDiff& diff);
   void RemoveDiff(const FileVersionDiff& diff);
 
+  bool GoToIndex(size_t commit_index, const std::vector<FileVersionDiff>& diffs);
+
  private:
   void AddHunk(const FileVersionDiffHunk& hunk);
   void RemoveHunk(const FileVersionDiffHunk& hunk);

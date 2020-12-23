@@ -12,6 +12,7 @@
 #include "Sage2020.h"
 #endif
 
+#include "PropertiesWnd.h"
 #include "Sage2020Doc.h"
 #include "Sage2020View.h"
 
@@ -36,6 +37,8 @@ ON_WM_LBUTTONDOWN()
 ON_WM_LBUTTONUP()
 ON_WM_RBUTTONDOWN()
 ON_WM_RBUTTONUP()
+ON_UPDATE_COMMAND_UI(IDR_PROPERTIES_GRID,
+                     &CSage2020View::OnUpdatePropertiesPaneGrid)
 
 // Standard printing commands
 ON_COMMAND(ID_FILE_PRINT, &CScrollView::OnFilePrint)
@@ -279,7 +282,8 @@ void CSage2020View::OnDraw(CDC* pDC) {
        y < rcClient.bottom + yScrollPos; y += m_sizChar.cy) {
     int i = y / m_sizChar.cy;
 
-    assert(i < cLine || cLine == 0);
+    // REVIEW: Not sure why rcClient.bottom would track cLine * m_sizChar.cy 's height.
+    //assert(i < cLine || cLine == 0);
     if (i >= cLine)
       break;
 
@@ -287,7 +291,7 @@ void CSage2020View::OnDraw(CDC* pDC) {
     int nVer =
         file_version_instance != NULL
             ? static_cast<int>(
-                  file_version_instance->GetLineInfo(i + 1).commit_index())
+                  file_version_instance->GetLineInfo(i).commit_index())
             : 0;
     COLORREF crBack = CrBackgroundForVersion(nVer, nVerMax);
     COLORREF crFore = RGB(0x00, 0x00, 0x00);
@@ -403,8 +407,7 @@ BOOL CSage2020View::OnScroll(UINT nScrollCode, UINT nPos, BOOL bDoScroll) {
             nPos = si.nTrackPos;
         }
         nPos = si.nTrackPos;
-      }
-      break;
+      } break;
     }
   } else if (HIBYTE(wScroll) == 0xFF)
   /* fHoriz */
@@ -453,6 +456,60 @@ BOOL CSage2020View::OnScrollBy(CSize sizeScroll, BOOL bDoScroll) {
   }
 
   return __super::OnScrollBy(sizeScroll, bDoScroll);
+}
+
+void CSage2020View::OnUpdatePropertiesPaneGrid(CCmdUI* pCmdUI) {
+  // Update selection-based properties (e.g. currently displayed change)
+  CWnd* pWndT = CWnd::FromHandlePermanent(*pCmdUI->m_pOther);
+  ASSERT_VALID(pWndT);
+  CSage2020Doc* pDoc = GetDocument();
+  ASSERT_VALID(pDoc);
+  if (pDoc == NULL)
+    return;
+
+  CMFCPropertyGridCtrl* pGrid = static_cast<CMFCPropertyGridCtrl*>(pWndT);
+  ASSERT_VALID(pGrid);
+  if (pGrid == NULL)
+    return;
+
+  pCmdUI->m_bContinueRouting = TRUE;  // ensure that we route to doc
+
+  if (m_iSelStart <= -1) {
+    CPropertiesWnd::EnsureItems(*pGrid, 0 /*cItem*/);
+    return;
+  }
+
+  assert(m_iSelEnd != -1);
+  const auto file_version_instance = pDoc->GetFileVersionInstance();
+
+  std::set<FileVersionLineInfo> version_line_info_set;
+  if (file_version_instance != NULL) {
+    version_line_info_set = file_version_instance->GetVersionsFromLines(
+        m_iSelStart, m_iSelEnd + 1);
+  }
+
+  CPropertiesWnd::EnsureItems(*pGrid, static_cast<int>(version_line_info_set.size()));
+
+  const auto& diffs = pDoc->GetFileDiffs();
+
+  int iVers = 0;
+  for (const auto& version_line_info : version_line_info_set) {
+    CMFCPropertyGridProperty* pPropVersionHeader =
+        pGrid->GetProperty(1 + iVers);
+    ASSERT_VALID(pPropVersionHeader);
+    if (pPropVersionHeader == NULL)
+      return;
+    int nVerSel = static_cast<int>(version_line_info.commit_index());
+
+    const FileVersionDiff* file_version_diff =
+        nVerSel != -1 ? &diffs[nVerSel] : NULL;
+
+    CPropertiesWnd::UpdateGridBlock(
+        nVerSel, file_version_diff, pPropVersionHeader,
+        static_cast<int>(diffs.size()), true /*fUpdateVersionControl*/);
+
+    iVers++;
+  }
 }
 
 void CSage2020View::DocEditNotification(int iLine, int cLine) {
@@ -757,22 +814,22 @@ BOOL CSage2020View::OnMouseWheel(UINT nFlags, short zDelta, CPoint pt) {
       auto file_version_instance = pDoc->GetFileVersionInstance();
 
       if (file_version_instance != nullptr) {
-        const size_t diffs_applied =
-            file_version_instance->GetCommitIndex() + 1;
+        const size_t commit_index =
+            file_version_instance->GetCommitIndex();
         const auto& diffs = pDoc->GetFileDiffs();
         const size_t diffs_total = diffs.size();
         FileVersionInstanceEditor editor(*file_version_instance,
                                          pDoc->GetListenerHead());
         if (zDelta < 0) {
           // Add Diff
-          if (diffs_applied < diffs_total) {
-            editor.AddDiff(diffs[diffs_total - diffs_applied - 1]);
+          if (commit_index + 1 < diffs_total) {
+            editor.AddDiff(diffs[commit_index + 1]);
             pDoc->UpdateAllViews(NULL);  // NULL - also update this view
           }
         } else if (zDelta > 0) {
           // Remove diff
-          if (diffs_applied > 0) {
-            editor.RemoveDiff(diffs[diffs_total - diffs_applied]);
+          if (commit_index > 0) {
+            editor.RemoveDiff(diffs[commit_index]);
             pDoc->UpdateAllViews(NULL);  // NULL - also update this view
           }
         }
