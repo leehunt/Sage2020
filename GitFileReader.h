@@ -1,5 +1,4 @@
 #pragma once
-#include <filesystem>
 #include <deque>
 #include <string>
 
@@ -12,6 +11,6 @@ class GitFileReader {
 
   std::deque<std::string>& GetLines() { return lines_; }
 
-  private:
-    std::deque<std::string> lines_;
+ private:
+  std::deque<std::string> lines_;
 };

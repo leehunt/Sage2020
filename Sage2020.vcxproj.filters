@@ -66,6 +66,9 @@
     <ClInclude Include="FIleVersionInstanceEditor.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="GitFileStreamCache.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Sage2020.cpp">
@@ -111,6 +114,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="FIleVersionInstanceEditor.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GitFileStreamCache.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -218,5 +224,6 @@
     <None Include="res\Sage2020.rc2">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="cpp.hint" />
   </ItemGroup>
 </Project>

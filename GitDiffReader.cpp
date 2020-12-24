@@ -6,26 +6,11 @@
 #include <map>
 #include <string>
 #include "GitDiffReader.h"
+#include "GitFileStreamCache.h"
 #include "LineTokenizer.h"
 
 constexpr char kGitDiffCommand[] =
     "git --no-pager log -p -U0 --raw --no-color --pretty=raw -- ";
-
-enum class Directive {
-  tkCommit,
-  tkTree,
-  tkParent,
-  tkAuthor,
-  tkCommitter,
-  tkColonEndCommitter,
-  tkDiff,
-  tkIndex,
-  tk3Minus,
-  tk3Plus,
-  tk2At,
-  tkPlus,
-  tkEnd
-};
 
 static std::string GetTextToEndOfLine(TOK* ptok) {
   std::string text;
@@ -437,10 +422,42 @@ GitDiffReader::GitDiffReader(const std::filesystem::path& file_path)
     : current_diff_(nullptr) {
   std::string command =
       std::string(kGitDiffCommand) + std::string(file_path.u8string());
-  std::unique_ptr<FILE, decltype(&_pclose)> git_stream(
+  std::unique_ptr<FILE, decltype(&_pclose)> git_popen_stream(
       _popen(command.c_str(), "r"), &_pclose);
 
-  ProcessDiffLines(git_stream.get());
+  FILE* stream = git_popen_stream.get();
+
+  // Check if it is in the cache.
+  fpos_t pos;
+  if (fgetpos(stream, &pos))
+    return;
+  char header_line[1024];
+  if (!fgets(header_line, (int)std::size(header_line), stream))
+    return;
+  if (fsetpos(stream, &pos))
+    return;
+
+  file_stream_cache_ = std::make_unique<GitFileStreamCache>();
+
+  // Format: "commit <sha1>".
+  auto sha1 = strrchr(header_line, ' ');
+  if (!sha1)
+    return;
+  // Skip space.
+  sha1++;
+  auto len = strlen(sha1);
+  if (sha1[len - 1] == '\n')
+    sha1[len - 1] = '\0';
+  auto cache_stream = file_stream_cache_->GetStream(file_path, sha1);
+
+  if (cache_stream.get()) {
+    if (cache_stream)
+      ProcessDiffLines(cache_stream.get());
+  } else {
+    auto file_stream = file_stream_cache_->SaveStream(stream, file_path, sha1);
+    if (file_stream)
+      ProcessDiffLines(file_stream.get());
+  }
 }
 
 GitDiffReader::~GitDiffReader() {}

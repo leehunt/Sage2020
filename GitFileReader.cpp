@@ -1,8 +1,9 @@
 #include "pch.h"
+
+#include <memory>
 #include "GitFileReader.h"
 
-constexpr char kGitShowCommand[] =
-    "git --no-pager show ";
+constexpr char kGitShowCommand[] = "git --no-pager show ";
 
 GitFileReader::GitFileReader(const std::string& hash) {
   std::string command = std::string(kGitShowCommand) + hash;

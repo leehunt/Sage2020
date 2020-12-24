@@ -95,7 +95,7 @@ BOOL CSage2020App::InitInstance()
 	// Change the registry key under which our settings are stored
 	// TODO: You should modify this string to be something appropriate
 	// such as the name of your company or organization
-	SetRegistryKey(_T("Local AppWizard-Generated Applications"));
+	SetRegistryKey(_T("Sage2020"));
 	LoadStdProfileSettings(4);  // Load standard INI file options (including MRU)
 
 

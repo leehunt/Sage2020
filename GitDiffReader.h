@@ -1,6 +1,9 @@
 #pragma once
 #include <filesystem>
 #include "FileVersionDiff.h"
+#include "GitFileReader.h"
+
+class GitFileStreamCache;
 
 struct TOK;
 class GitDiffReader {
@@ -30,4 +33,6 @@ class GitDiffReader {
 
   FileVersionDiff* current_diff_;
   std::vector<FileVersionDiff> diffs_;
+
+  std::unique_ptr<GitFileStreamCache> file_stream_cache_;
 };

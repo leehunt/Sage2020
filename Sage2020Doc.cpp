@@ -61,17 +61,13 @@ void CSage2020Doc::Serialize(CArchive& ar) {
     auto path = ar.GetFile()->GetFilePath();
     std::wstring_convert<std::codecvt_utf8<wchar_t>> myconv;
     GitDiffReader git_diff_reader{myconv.to_bytes(path)};
+
     // Sythethesize FileVersionInstance from diffs, going from first diff
     // (the last recorded in the git log) forward.
-#if 0
-    // We'd like to do this, but MSVC 2019 CRT seems to have a bug and says
-    // "cannot seek value-initialized vector iterator".
-    std::reverse_copy(git_diff_reader.GetDiffs().cbegin(),
-                      git_diff_reader.GetDiffs().cend(), file_diffs_.begin());
-#else
-    file_diffs_ = git_diff_reader.GetDiffs();
-    std::reverse(file_diffs_.begin(), file_diffs_.end());
-#endif
+    const auto& reader_diffs = git_diff_reader.GetDiffs();
+    file_diffs_.resize(reader_diffs.size());
+    std::reverse_copy(reader_diffs.cbegin(), reader_diffs.cend(),
+                      file_diffs_.begin());
 
     if (file_diffs_.size() > 0) {
       if (file_diffs_.front().diff_tree_.action != 'A') {
