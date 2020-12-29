@@ -62,5 +62,9 @@ TEST(GitDiffReaderTest, LoadAndCompareWithFile) {
   }
 
   EXPECT_EQ(file_version_instance.GetLines().size(), 0);
+#if USE_SPARSE_INDEX_ARRAY
+  EXPECT_TRUE(GitDiffReaderTest::GetLinesInfo(file_version_instance).IsEmpty());
+#else
   EXPECT_EQ(GitDiffReaderTest::GetLinesInfo(file_version_instance).size(), 0);
+#endif
 }
