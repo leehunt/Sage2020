@@ -32,6 +32,7 @@ IMPLEMENT_DYNCREATE(CSage2020Doc, CDocument)
 BEGIN_MESSAGE_MAP(CSage2020Doc, CDocument)
 ON_UPDATE_COMMAND_UI(IDR_PROPERTIES_GRID,
                      &CSage2020Doc::OnUpdatePropertiesPaneGrid)
+ON_UPDATE_COMMAND_UI(IDR_HISTORY_TREE, &CSage2020Doc::OnUpdateHistoryTree)
 END_MESSAGE_MAP()
 
 // CSage2020Doc construction/destruction
@@ -158,6 +159,8 @@ void CSage2020Doc::OnUpdatePropertiesPaneGrid(CCmdUI* pCmdUI) {
     pPropVersion->Enable(FALSE);
   }
 }
+
+void CSage2020Doc::OnUpdateHistoryTree(CCmdUI* pCmdUI) {}
 
 #ifdef SHARED_HANDLERS
 

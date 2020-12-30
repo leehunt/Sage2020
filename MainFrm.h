@@ -23,86 +23,94 @@
 #if CALENDAR_BAR
 #include "CalendarBar.h"
 #endif
+#include "ChangeHistoryPane.h"
 #include "Resource.h"
 
-class COutlookBar : public CMFCOutlookBar
-{
-	virtual BOOL AllowShowOnPaneMenu() const { return TRUE; }
-	virtual void GetPaneName(CString& strName) const { BOOL bNameValid = strName.LoadString(IDS_OUTLOOKBAR); ASSERT(bNameValid); if (!bNameValid) strName.Empty(); }
+class COutlookBar : public CMFCOutlookBar {
+  virtual BOOL AllowShowOnPaneMenu() const { return TRUE; }
+  virtual void GetPaneName(CString& strName) const {
+    BOOL bNameValid = strName.LoadString(IDS_OUTLOOKBAR);
+    ASSERT(bNameValid);
+    if (!bNameValid)
+      strName.Empty();
+  }
 };
 
-class CMainFrame : public CFrameWndEx
-{
-	
-protected: // create from serialization only
-	CMainFrame() noexcept;
-	DECLARE_DYNCREATE(CMainFrame)
+class CMainFrame : public CFrameWndEx {
+ protected:  // create from serialization only
+  CMainFrame() noexcept;
+  DECLARE_DYNCREATE(CMainFrame)
 
-// Attributes
-public:
+  // Attributes
+ public:
+  // Operations
+ public:
+  // Overrides
+ public:
+  virtual BOOL PreCreateWindow(CREATESTRUCT& cs);
+  virtual BOOL LoadFrame(UINT nIDResource,
+                         DWORD dwDefaultStyle = WS_OVERLAPPEDWINDOW |
+                                                FWS_ADDTOTITLE,
+                         CWnd* pParentWnd = nullptr,
+                         CCreateContext* pContext = nullptr);
 
-// Operations
-public:
-
-// Overrides
-public:
-	virtual BOOL PreCreateWindow(CREATESTRUCT& cs);
-	virtual BOOL LoadFrame(UINT nIDResource, DWORD dwDefaultStyle = WS_OVERLAPPEDWINDOW | FWS_ADDTOTITLE, CWnd* pParentWnd = nullptr, CCreateContext* pContext = nullptr);
-
-// Implementation
-public:
-	virtual ~CMainFrame();
+  // Implementation
+ public:
+  virtual ~CMainFrame();
 #ifdef _DEBUG
-	virtual void AssertValid() const;
-	virtual void Dump(CDumpContext& dc) const;
+  virtual void AssertValid() const;
+  virtual void Dump(CDumpContext& dc) const;
 #endif
 
-protected:  // control bar embedded members
-	CMFCMenuBar       m_wndMenuBar;
-	CMFCToolBar       m_wndToolBar;
-	CMFCStatusBar     m_wndStatusBar;
-	CMFCToolBarImages m_UserImages;
+ protected:  // control bar embedded members
+  CMFCMenuBar m_wndMenuBar;
+  CMFCToolBar m_wndToolBar;
+  CMFCStatusBar m_wndStatusBar;
+  CMFCToolBarImages m_UserImages;
 #if FILE_VIEW_UI
-	CFileView         m_wndFileView;
+  CFileView m_wndFileView;
 #endif
 #if CLASS_VIEW_UI
-   CClassView m_wndClassView;
+  CClassView m_wndClassView;
 #endif
 #if OUTPUT_PANE
-  COutputWnd        m_wndOutput;
+  COutputWnd m_wndOutput;
 #endif
-	CPropertiesWnd    m_wndProperties;
+  CPropertiesWnd m_wndProperties;
 #if OUTLOOK_BAR
-  COutlookBar       m_wndNavigationBar;
+  COutlookBar m_wndNavigationBar;
 #endif
 #if SHELL_TREE_CONTROL
-	CMFCShellTreeCtrl m_wndTree;
+  CMFCShellTreeCtrl m_wndTree;
 #endif
 #if CALENDAR_BAR
-	CCalendarBar      m_wndCalendar;
+  CCalendarBar m_wndCalendar;
 #endif
+  CChangeHistoryPane m_wndChangeHistoryPane;
 
-// Generated message map functions
-protected:
-	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
-	afx_msg void OnViewCustomize();
-	afx_msg LRESULT OnToolbarCreateNew(WPARAM wp, LPARAM lp);
-	afx_msg void OnSettingChange(UINT uFlags, LPCTSTR lpszSection);
-	DECLARE_MESSAGE_MAP()
+  // Generated message map functions
+ protected:
+  afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
+  afx_msg void OnViewCustomize();
+  afx_msg LRESULT OnToolbarCreateNew(WPARAM wp, LPARAM lp);
+  afx_msg void OnSettingChange(UINT uFlags, LPCTSTR lpszSection);
+  DECLARE_MESSAGE_MAP()
 
-	BOOL CreateDockingWindows();
-	void SetDockingWindowIcons(BOOL bHiColorIcons);
-#if OUTLOOK_BAR 
+  BOOL CreateDockingWindows();
+  void SetDockingWindowIcons(BOOL bHiColorIcons);
+#if OUTLOOK_BAR
 #if CALENDAR_BAR
-	BOOL CreateOutlookBar(CMFCOutlookBar& bar, UINT uiID, CMFCShellTreeCtrl& tree, CCalendarBar& calendar, int nInitialWidth);
+  BOOL CreateOutlookBar(CMFCOutlookBar& bar,
+                        UINT uiID,
+                        CMFCShellTreeCtrl& tree,
+                        CCalendarBar& calendar,
+                        int nInitialWidth);
 #endif
 
-	int FindFocusedOutlookWnd(CMFCOutlookBarTabCtrl** ppOutlookWnd);
+  int FindFocusedOutlookWnd(CMFCOutlookBarTabCtrl** ppOutlookWnd);
 
-	CMFCOutlookBarTabCtrl* FindOutlookParent(CWnd* pWnd);
-	CMFCOutlookBarTabCtrl* m_pCurrOutlookWnd;
-	CMFCOutlookBarPane*    m_pCurrOutlookPage;
+  CMFCOutlookBarTabCtrl* FindOutlookParent(CWnd* pWnd);
+  CMFCOutlookBarTabCtrl* m_pCurrOutlookWnd;
+  CMFCOutlookBarPane* m_pCurrOutlookPage;
 #endif
 };
-
-

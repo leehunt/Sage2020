@@ -57,10 +57,11 @@ class CSage2020Doc : public CDocument {
   virtual void Dump(CDumpContext& dc) const;
 #endif
 
-	void AddDocListener(Sage2020ViewDocListener& listener);
+  void AddDocListener(Sage2020ViewDocListener& listener);
   void RemoveDocListener(Sage2020ViewDocListener& listener);
 
   afx_msg void OnUpdatePropertiesPaneGrid(CCmdUI* pCmdUI);
+  afx_msg void OnUpdateHistoryTree(CCmdUI* pCmdUI);
 
  protected:
   // Generated message map functions
@@ -74,7 +75,7 @@ class CSage2020Doc : public CDocument {
 
   std::vector<FileVersionDiff> file_diffs_;
   std::unique_ptr<FileVersionInstance> file_version_instance_;
-  
+
   CPoint viewport_origin_;
 
   Sage2020ViewDocListener* m_pDocListenerHead;
