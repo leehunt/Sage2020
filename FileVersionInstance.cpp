@@ -53,7 +53,8 @@ std::set<FileVersionLineInfo> FileVersionInstance::GetVersionsFromLines(
   return line_info;
 }
 
-SparseIndexArray::const_iterator SparseIndexArray::LowerFloor(size_t index) const {
+SparseIndexArray::const_iterator SparseIndexArray::LowerFloor(
+    size_t index) const {
   auto it = upper_bound(index);
   if (it == end()) {
     // Out of range, return ending marker.
@@ -80,8 +81,8 @@ SparseIndexArray::SparseIndexArray() {
 void SparseIndexArray::Add(size_t line_index,
                            size_t line_count,
                            const FileVersionLineInfo& line_info) {
-  assert(std::prev(end())->second == FileVersionLineInfo());
   assert(cbegin()->first == 0);
+  assert(std::prev(end())->second == FileVersionLineInfo());
 
   if (line_count == 0)
     return;
@@ -103,24 +104,26 @@ void SparseIndexArray::Add(size_t line_index,
 
   // Add the item.
   if (it->second.commit_index() != line_info.commit_index()) {
-    emplace(std::make_pair(std::size_t{line_index}, line_info));
+    auto itInsert = std::next(it);
+    emplace_hint(itInsert, std::make_pair(std::size_t{line_index}, line_info));
   } else if (it->first > line_index) {
+    auto itInsert = std::next(it);
     // Extend range to line_index.
     auto node_handle = extract(it);
     node_handle.key() = line_index;
-    insert(begin(), std::move(node_handle));
+    insert(itInsert, std::move(node_handle));
   } else {
     // Nothing to do; the range is already that commit index.
     assert(it->first < line_index);
   }
 
-  assert(std::prev(end())->second == FileVersionLineInfo());
   assert(cbegin()->first == 0);
+  assert(std::prev(end())->second == FileVersionLineInfo());
 }
 
 void SparseIndexArray::Remove(size_t line_index, size_t line_count) {
-  assert(std::prev(end())->second == FileVersionLineInfo());
   assert(cbegin()->first == 0);
+  assert(std::prev(end())->second == FileVersionLineInfo());
 
   if (line_count == 0)
     return;
@@ -138,34 +141,58 @@ void SparseIndexArray::Remove(size_t line_index, size_t line_count) {
     return;
   }
 
+  // Find full ranges to delete.
   auto itLower = lower_bound(line_index);
   auto itUpper = std::prev(upper_bound(line_index + line_count));
   assert(itUpper != end());
-  
-  if (itLower->first < itUpper->first) {
-    erase(itLower, itUpper);
-    // N.B. itLower may now be invalid.
+
+  if (itLower->first > itUpper->first)
+    itUpper = itLower;
+
+  ptrdiff_t left_indent = 0;
+  if (itLower->first > line_index)
+    left_indent = itLower->first - line_index;
+  // REVIEW: This doesn't trim trailing items for multi-index items correctly.
+  ptrdiff_t right_indent = 0;
+  if (std::next(itLower) != end() &&
+      std::next(itLower)->first > line_index + line_count)
+    right_indent = std::next(itLower)->first - (line_index + line_count);
+
+  if (itLower != itUpper) {
+    // REVIEW: This is else hacky.
+    if (itLower->first < itUpper->first)
+      itLower = erase(itLower, itUpper);
+    else
+      itUpper = itLower;
   }
 
-  // Trim any trailing range.
-  assert(line_index + line_count >= itUpper->first);
-  size_t incursion = line_index + line_count - itUpper->first;
-  if (incursion > 0) {
-    if (incursion != line_count) {
-      auto node_handle = extract(itUpper);
-      node_handle.key() -= line_count - incursion;
-      itUpper = insert(begin(), std::move(node_handle));
+  // Adjust itUpper's start to reflect change is itLower's span.
+  // REVIEW: This if is hacky.
+  if (right_indent > 0 && left_indent <= 0) {
+    if (std::next(itUpper) != end()) {
+      ++itUpper;
     }
+  }
+  // REVIEW: This if is hacky.
+  if (left_indent > 0) {
+    auto excess = line_index + line_count > itUpper->first
+                      ? line_index + line_count - itUpper->first
+                      : 0;
+    assert(itUpper->first >= line_count - excess);
+    auto node_handle = extract(itUpper);
+    node_handle.key() -= line_count - excess;
+    itUpper = insert(begin(), std::move(node_handle));
     ++itUpper;
   }
 
   // Move all higher items down.
   for (; itUpper != end(); ++itUpper) {
+    assert(itUpper->first >= line_count);
     auto node_handle = extract(itUpper);
     node_handle.key() -= line_count;
     itUpper = insert(begin(), std::move(node_handle));
   }
 
-  assert(std::prev(end())->second == FileVersionLineInfo());
   assert(cbegin()->first == 0);
+  assert(std::prev(end())->second == FileVersionLineInfo());
 }
