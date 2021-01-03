@@ -171,19 +171,29 @@ void SparseIndexArray::Remove(size_t line_index, size_t line_count) {
     }
 
     // Offset range(s).
-    while (it != end()) {
-      auto cur = it->first;
-      auto lim = line_index + line_count;
-      // REVIEW: Consider moving this 'if' outside the loop. It should be true
-      // true at most once at the start.
-      // N.b. 'cur - line_index == line_count - (lim - cur)'
-      auto to_offset = lim > cur ? cur - line_index : line_count;
-      auto itNext = std::next(it);
-      auto node_handle = extract(it);
-      node_handle.key() -= to_offset;
-      it = insert(itNext, std::move(node_handle));
-      itPrev = it;
-      ++it;
+    if (it != end()) {
+      // Check for partial-range case.
+      if (line_index + line_count > it->first) {
+        auto to_offset = it->first - line_index;
+        assert(to_offset < line_count);
+        auto itNext = std::next(it);
+        auto node_handle = extract(it);
+        node_handle.key() -= to_offset;
+        it = insert(itNext, std::move(node_handle));
+        itPrev = it;
+        ++it;
+      }
+
+      // Offset any full remaining ranges.
+      while (it != end()) {
+        auto to_offset = line_count;
+        auto itNext = std::next(it);
+        auto node_handle = extract(it);
+        node_handle.key() -= to_offset;
+        it = insert(itNext, std::move(node_handle));
+        itPrev = it;
+        ++it;
+      }
     }
   }
 
