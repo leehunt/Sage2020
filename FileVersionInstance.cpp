@@ -150,17 +150,17 @@ void SparseIndexArray::Remove(size_t line_index, size_t line_count) {
   // N.b. if "itPrev->first == line_index" then it will be deleted (if
   // line_count is long enough) or offset (if not) below.
   if (itPrev->first < line_index && line_index < it->first) {
-    auto to_erase = min(it->first - line_index, line_count);
+    auto to_trim = min(it->first - line_index, line_count);
     auto itNext = std::next(it);
     auto node_handle = extract(it);
-    node_handle.key() -= to_erase;
+    node_handle.key() -= to_trim;
     it = insert(itNext, std::move(node_handle));
     itPrev = it;
     ++it;
   }
 
   if (it != end()) {
-    // Check for any range to delete.
+    // Check for any contiguous range(s) to delete.
     if (line_index == itPrev->first && it->first <= line_index + line_count) {
       auto itLim = std::prev(upper_bound(line_index + line_count));
       assert(itLim != end());
