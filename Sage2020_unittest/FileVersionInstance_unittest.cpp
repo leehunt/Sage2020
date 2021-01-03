@@ -149,13 +149,12 @@ TEST(FileVersionInstanceTest, SparseIndexInsertGappy) {
   sparse_index_array.Add(3, 3, 2);
   sparse_index_array.Add(6, 3, 3);
 
-  sparse_index_array.Remove(2, 5);
+  sparse_index_array.Remove(2, 6);
 
   EXPECT_EQ(sparse_index_array.Get(0), FileVersionLineInfo{1});
   EXPECT_EQ(sparse_index_array.Get(1), FileVersionLineInfo{1});
   EXPECT_EQ(sparse_index_array.Get(2), FileVersionLineInfo{3});
-  EXPECT_EQ(sparse_index_array.Get(3), FileVersionLineInfo{3});
-  EXPECT_EQ(sparse_index_array.Get(4), FileVersionLineInfo{});
+  EXPECT_EQ(sparse_index_array.Get(3), FileVersionLineInfo{});
 }
 
 TEST(FileVersionInstanceTest, SparseIndexBug) {

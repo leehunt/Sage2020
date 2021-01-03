@@ -141,56 +141,50 @@ void SparseIndexArray::Remove(size_t line_index, size_t line_count) {
     return;
   }
 
-  // Find full ranges to delete.
-  auto itLower = lower_bound(line_index);
-  auto itUpper = std::prev(upper_bound(line_index + line_count));
-  assert(itUpper != end());
+  auto it = upper_bound(line_index);
+  assert(it != end());
+  auto itPrev = std::prev(it);
+  assert(itPrev != end());
 
-  if (itLower->first > itUpper->first)
-    itUpper = itLower;
-
-  ptrdiff_t left_indent = 0;
-  if (itLower->first > line_index)
-    left_indent = itLower->first - line_index;
-  // REVIEW: This doesn't trim trailing items for multi-index items correctly.
-  ptrdiff_t right_indent = 0;
-  if (std::next(itLower) != end() &&
-      std::next(itLower)->first > line_index + line_count)
-    right_indent = std::next(itLower)->first - (line_index + line_count);
-
-  if (itLower != itUpper) {
-    // REVIEW: This is else hacky.
-    if (itLower->first < itUpper->first)
-      itLower = erase(itLower, itUpper);
-    else
-      itUpper = itLower;
+  // Trim any leading range.
+  // N.b. if "itPrev->first == line_index" then it will be deleted (if
+  // line_count is long enough) or offset (if not) below.
+  if (itPrev->first < line_index && line_index < it->first) {
+    auto to_erase = min(it->first - line_index, line_count);
+    auto itNext = std::next(it);
+    auto node_handle = extract(it);
+    node_handle.key() -= to_erase;
+    it = insert(itNext, std::move(node_handle));
+    itPrev = it;
+    ++it;
   }
 
-  // Adjust itUpper's start to reflect change is itLower's span.
-  // REVIEW: This if is hacky.
-  if (right_indent > 0 && left_indent <= 0) {
-    if (std::next(itUpper) != end()) {
-      ++itUpper;
+  // Check for a range to delete.
+  if (it != end()) {
+    if (line_index == itPrev->first && it->first <= line_index + line_count) {
+      auto itLim = std::prev(upper_bound(line_index + line_count));
+      assert(itLim != end());
+      assert(itPrev->first <= itLim->first);
+      it = erase(itPrev, itLim);
+      assert(it == itLim);
+      itPrev = it;
     }
-  }
-  // REVIEW: This if is hacky.
-  if (left_indent > 0) {
-    auto excess = line_index + line_count > itUpper->first
-                      ? line_index + line_count - itUpper->first
-                      : 0;
-    assert(itUpper->first >= line_count - excess);
-    auto node_handle = extract(itUpper);
-    node_handle.key() -= line_count - excess;
-    itUpper = insert(begin(), std::move(node_handle));
-    ++itUpper;
-  }
 
-  // Move all higher items down.
-  for (; itUpper != end(); ++itUpper) {
-    assert(itUpper->first >= line_count);
-    auto node_handle = extract(itUpper);
-    node_handle.key() -= line_count;
-    itUpper = insert(begin(), std::move(node_handle));
+    // Offset range(s).
+    while (it != end()) {
+      auto cur = it->first;
+      auto lim = line_index + line_count;
+      // REVIEW: Consider moving this 'if' outside the loop. It should be true
+      // true at most once at the start.
+      // N.b. 'cur - line_index == line_count - (lim - cur)'
+      auto to_offset = lim > cur ? cur - line_index : line_count;
+      auto itNext = std::next(it);
+      auto node_handle = extract(it);
+      node_handle.key() -= to_offset;
+      it = insert(itNext, std::move(node_handle));
+      itPrev = it;
+      ++it;
+    }
   }
 
   assert(cbegin()->first == 0);
