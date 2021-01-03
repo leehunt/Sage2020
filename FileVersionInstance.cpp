@@ -107,11 +107,11 @@ void SparseIndexArray::Add(size_t line_index,
     auto itInsert = std::next(it);
     emplace_hint(itInsert, std::make_pair(std::size_t{line_index}, line_info));
   } else if (it->first > line_index) {
-    auto itInsert = std::next(it);
+    auto itInsertHint = std::next(it);
     // Extend range to line_index.
     auto node_handle = extract(it);
     node_handle.key() = line_index;
-    insert(itInsert, std::move(node_handle));
+    insert(itInsertHint, std::move(node_handle));
   } else {
     // Nothing to do; the range is already that commit index.
     assert(it->first < line_index);
@@ -151,10 +151,10 @@ void SparseIndexArray::Remove(size_t line_index, size_t line_count) {
   // line_count is long enough) or offset (if not) below.
   if (itPrev->first < line_index && line_index < it->first) {
     auto to_trim = min(it->first - line_index, line_count);
-    auto itNext = std::next(it);
+    auto itInsertHint = std::next(it);
     auto node_handle = extract(it);
     node_handle.key() -= to_trim;
-    it = insert(itNext, std::move(node_handle));
+    it = insert(itInsertHint, std::move(node_handle));
     itPrev = it;
     ++it;
   }
@@ -176,10 +176,10 @@ void SparseIndexArray::Remove(size_t line_index, size_t line_count) {
       if (line_index + line_count > it->first) {
         auto to_offset = it->first - line_index;
         assert(to_offset < line_count);
-        auto itNext = std::next(it);
+        auto itInsertHint = std::next(it);
         auto node_handle = extract(it);
         node_handle.key() -= to_offset;
-        it = insert(itNext, std::move(node_handle));
+        it = insert(itInsertHint, std::move(node_handle));
         itPrev = it;
         ++it;
       }
@@ -187,10 +187,10 @@ void SparseIndexArray::Remove(size_t line_index, size_t line_count) {
       // Offset any full remaining ranges.
       while (it != end()) {
         auto to_offset = line_count;
-        auto itNext = std::next(it);
+        auto itInsertHint = std::next(it);
         auto node_handle = extract(it);
         node_handle.key() -= to_offset;
-        it = insert(itNext, std::move(node_handle));
+        it = insert(itInsertHint, std::move(node_handle));
         itPrev = it;
         ++it;
       }
