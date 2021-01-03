@@ -159,8 +159,8 @@ void SparseIndexArray::Remove(size_t line_index, size_t line_count) {
     ++it;
   }
 
-  // Check for a range to delete.
   if (it != end()) {
+    // Check for any range to delete.
     if (line_index == itPrev->first && it->first <= line_index + line_count) {
       auto itLim = std::prev(upper_bound(line_index + line_count));
       assert(itLim != end());
@@ -170,7 +170,7 @@ void SparseIndexArray::Remove(size_t line_index, size_t line_count) {
       itPrev = it;
     }
 
-    // Offset range(s).
+    // Offset any remaining range(s).
     if (it != end()) {
       // Check for partial-range case.
       if (line_index + line_count > it->first) {
