@@ -15,7 +15,6 @@ class SparseIndexArray;
 
 class FileVersionLineInfo {
  public:
-  
   FileVersionLineInfo(size_t commit_index) : commit_index_(commit_index) {
     assert(static_cast<int>(commit_index) != -1);
   }
@@ -47,8 +46,7 @@ class SparseIndexArray : std::map<size_t, FileVersionLineInfo> {
   void Add(size_t line_index,
            size_t line_count,
            const FileVersionLineInfo& line_info);
-  void Remove(size_t line_index,
-              size_t line_count);
+  void Remove(size_t line_index, size_t line_count);
 
   bool IsEmpty() const {
     assert(std::prev(end())->second == FileVersionLineInfo());
@@ -60,8 +58,12 @@ class SparseIndexArray : std::map<size_t, FileVersionLineInfo> {
 
   size_t MaxLineIndex() const { return std::prev(end())->first; }
 
+  SparseIndexArray::iterator SubtractMapKey(SparseIndexArray::iterator it,
+                                            size_t to_subtract);
+
   bool operator==(const SparseIndexArray& other) const {
-    return *static_cast< const std::map<size_t, FileVersionLineInfo> *>(this) == static_cast < const std::map<size_t, FileVersionLineInfo>>(other); 
+    return *static_cast<const std::map<size_t, FileVersionLineInfo>*>(this) ==
+           static_cast<const std::map<size_t, FileVersionLineInfo>>(other);
   }
 
  private:

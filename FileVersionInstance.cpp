@@ -104,10 +104,10 @@ void SparseIndexArray::Add(size_t line_index,
 
   // Add the item.
   if (it->second.commit_index() != line_info.commit_index()) {
-    auto itInsert = std::next(it);
-    emplace_hint(itInsert, std::make_pair(std::size_t{line_index}, line_info));
+    const auto itInsertHint = std::next(it);
+    emplace_hint(itInsertHint, line_index, line_info);
   } else if (it->first > line_index) {
-    auto itInsertHint = std::next(it);
+    const auto itInsertHint = std::next(it);
     // Extend range to line_index.
     auto node_handle = extract(it);
     node_handle.key() = line_index;
@@ -119,6 +119,15 @@ void SparseIndexArray::Add(size_t line_index,
 
   assert(cbegin()->first == 0);
   assert(std::prev(end())->second == FileVersionLineInfo());
+}
+
+SparseIndexArray::iterator SparseIndexArray::SubtractMapKey(
+    SparseIndexArray::iterator it,
+    size_t to_subtract) {
+  const auto itInsertHint = std::next(it);
+  auto node_handle = extract(it);
+  node_handle.key() -= to_subtract;
+  return insert(itInsertHint, std::move(node_handle));
 }
 
 void SparseIndexArray::Remove(size_t line_index, size_t line_count) {
@@ -151,10 +160,7 @@ void SparseIndexArray::Remove(size_t line_index, size_t line_count) {
   // line_count is long enough) or offset (if not) below.
   if (itPrev->first < line_index && line_index < it->first) {
     auto to_trim = min(it->first - line_index, line_count);
-    auto itInsertHint = std::next(it);
-    auto node_handle = extract(it);
-    node_handle.key() -= to_trim;
-    it = insert(itInsertHint, std::move(node_handle));
+    it = SubtractMapKey(it, to_trim);
     itPrev = it;
     ++it;
   }
@@ -167,31 +173,22 @@ void SparseIndexArray::Remove(size_t line_index, size_t line_count) {
       assert(itPrev->first <= itLim->first);
       it = erase(itPrev, itLim);
       assert(it == itLim);
-      itPrev = it;
     }
 
     // Offset any remaining range(s).
     if (it != end()) {
       // Check for partial-range case.
       if (line_index + line_count > it->first) {
-        auto to_offset = it->first - line_index;
-        assert(to_offset < line_count);
-        auto itInsertHint = std::next(it);
-        auto node_handle = extract(it);
-        node_handle.key() -= to_offset;
-        it = insert(itInsertHint, std::move(node_handle));
-        itPrev = it;
+        auto to_subtract = it->first - line_index;
+        assert(to_subtract < line_count);
+        it = SubtractMapKey(it, to_subtract);
         ++it;
       }
 
       // Offset any full remaining ranges.
       while (it != end()) {
         auto to_offset = line_count;
-        auto itInsertHint = std::next(it);
-        auto node_handle = extract(it);
-        node_handle.key() -= to_offset;
-        it = insert(itInsertHint, std::move(node_handle));
-        itPrev = it;
+        it = SubtractMapKey(it, to_offset);
         ++it;
       }
     }
