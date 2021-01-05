@@ -15,6 +15,7 @@ static char THIS_FILE[] = __FILE__;
 #define new DEBUG_NEW
 #endif
 
+// TODO: Move this into utility file.
 static std::wstring to_wstring(const std::string& s) {
   return std::wstring(s.cbegin(), s.cend());
 }

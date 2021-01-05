@@ -27,6 +27,24 @@ void FileVersionInstanceEditor::RemoveDiff(const FileVersionDiff& diff) {
     RemoveHunk(*it);
   }
 
+#if _DEBUG
+#if USE_SPARSE_INDEX_ARRAY
+  for (int line_index = 0;
+       line_index < file_version_instance_.file_lines_info_.MaxLineIndex(); line_index++) {
+    auto info = file_version_instance_.file_lines_info_.GetLineInfo(line_index);
+    assert(static_cast<int>(info.commit_index()) <=
+           file_version_instance_.commit_index_);
+  }
+#else
+  for (size_t line_index = 0;
+       line_index < file_version_instance_.file_lines_info_.size();
+       line_index++) {
+    auto& info = file_version_instance_.file_lines_info_[line_index];
+    assert(static_cast<int>(info.commit_index()) <= file_version_instance_.commit_index_);
+  }
+#endif
+#endif
+
   if (listener_head_ != nullptr) {
     listener_head_->NotifyAllListenersOfVersionChange(
         file_version_instance_.commit_index_);
@@ -96,7 +114,7 @@ void FileVersionInstanceEditor::AddHunk(
           file_version_instance_.file_lines_info_.begin() +
               remove_location_index + hunk.remove_line_count_);
     }
-    file_version_instance_.RemoveLineInfo(remove_location_index,
+    file_version_instance_.RemoveLineInfo(remove_location_index + 1,
                                           hunk.remove_line_count_);
   }
 
@@ -176,7 +194,7 @@ void FileVersionInstanceEditor::RemoveHunk(const FileVersionDiffHunk& hunk) {
 
     // Restore line info
     assert(hunk.line_info_to_restore_);
-    file_version_instance_.AddLineInfo(add_location_index,
+    file_version_instance_.AddLineInfo(add_location_index + 1,
                                        hunk.remove_line_count_,
                                        *hunk.line_info_to_restore_);
 #if _DEBUG
