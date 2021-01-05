@@ -107,10 +107,12 @@ class FileVersionInstance {
   // Updates/replaces info for [line_num, line_num + line_count).
   void AddLineInfo(int line_num,
                    int line_count,
-                   const FileVersionLineInfo& info);
+      const LineToFileVersionLineInfo& line_infos);
 
   // Updates/replaces info for [line_num, line_num + line_count).
-  void RemoveLineInfo(int line_num, int line_count);
+  void RemoveLineInfo(
+      int line_num,
+      int line_count);
 
   const LineToFileVersionLineInfo& GetLinesInfo() const {
     return file_lines_info_;

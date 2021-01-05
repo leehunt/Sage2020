@@ -77,6 +77,7 @@
 #define IDB_PAGES_SMALL_HC              191
 #define IDR_PROPERTIES_GRID             195
 #define IDR_HISTORY_TREE                196
+#define ID_VIEW_CHANGE_HISTORY          197
 #define IDS_MYCALENDARS                 250
 #define IDS_CALENDAR                    251
 #define IDS_SHORTCUTS                   252
