@@ -44,10 +44,19 @@ ON_UPDATE_COMMAND_UI(IDR_PROPERTIES_GRID,
 ON_COMMAND(ID_FILE_PRINT, &CScrollView::OnFilePrint)
 ON_COMMAND(ID_FILE_PRINT_DIRECT, &CScrollView::OnFilePrint)
 ON_COMMAND(ID_FILE_PRINT_PREVIEW, &CSage2020View::OnFilePrintPreview)
+ON_UPDATE_COMMAND_UI(ID_EDIT_COPY, &CSage2020View::OnEditCopy)
+ON_COMMAND(ID_EDIT_COPY, &CSage2020View::OnEditCopy)
+ON_UPDATE_COMMAND_UI(ID_EDIT_SELECT_ALL, &CSage2020View::OnEditSelectAll)
+ON_COMMAND(ID_EDIT_SELECT_ALL, &CSage2020View::OnEditSelectAll)
 ON_WM_CONTEXTMENU()
 ON_WM_RBUTTONUP()
 ON_WM_MOUSEWHEEL()
 END_MESSAGE_MAP()
+
+// TODO: Move this into utility file.
+static std::wstring to_wstring(const std::string& s) {
+  return std::wstring(s.cbegin(), s.cend());
+}
 
 // CSage2020View construction/destruction
 
@@ -273,7 +282,6 @@ void CSage2020View::OnDraw(CDC* pDC) {
   const CPoint device_scroll_pos = GetDeviceScrollPosition();
   assert(yScrollPos == device_scroll_pos.y);
   const auto& diffs = pDoc->GetFileDiffs();
-  const int nVerMax = static_cast<int>(diffs.size() - 1);
   const int cLine =
       file_version_instance != NULL
           ? static_cast<int>(file_version_instance->GetLines().size())
@@ -294,7 +302,8 @@ void CSage2020View::OnDraw(CDC* pDC) {
             ? static_cast<int>(
                   file_version_instance->GetLineInfo(i).commit_index())
             : 0;
-    COLORREF crBack = CrBackgroundForVersion(nVer, nVerMax);
+    const int nVerMax = static_cast<int>(diffs.size());
+    COLORREF crBack = CrBackgroundForVersion(nVer + 1, nVerMax);
     COLORREF crFore = RGB(0x00, 0x00, 0x00);
     if (m_iSelStart <= i && i <= m_iSelEnd) {
       crBack = ~crBack & 0x00FFFFFF;
@@ -608,39 +617,45 @@ void CSage2020View::OnMouseMove(UINT nFlags, CPoint point) {
       return;
 
     CPoint ptScroll = GetDeviceScrollPosition();
-    int yMouse = ptScroll.y + point.y;
-    int i = yMouse / m_sizChar.cy;
-    int cLine = static_cast<int>(pDoc->GetFileVersionInstanceSize());
-    if (i >= cLine)
-      i = cLine - 1;
-    if (i < 0)
-      i = 0;
 
-    if (i < m_iSelStart) {
-      m_iSelStart = i;
-      m_ptSearchLast.x = -1;
-      m_ptSearchLast.y = i;
-      Invalidate(FALSE /*bErase*/);
-    } else if (i > m_iSelEnd) {
-      m_iSelEnd = i;
-      Invalidate(FALSE /*bErase*/);
-    }
-    // shrink the range if requested
-    else if (m_iSelStart <= i && i <= m_iSelEnd && !(nFlags & MK_SHIFT)) {
-      if (m_iSelStart == m_iMouseDown) {
-        if (m_iSelEnd > i) {
-          m_iSelEnd = i;
-          Invalidate(FALSE /*bErase*/);
-        }
-      } else {
-        // assert(m_iSelEnd == m_iMouseDown);
-        if (m_iSelStart < i) {
-          m_iSelStart = i;
-          m_ptSearchLast.x = -1;
-          m_ptSearchLast.y = i;
-          Invalidate(FALSE /*bErase*/);
+    if (m_iSelStart != -1 && m_iSelEnd != -1) {
+      int yMouse = ptScroll.y + point.y;
+      int i = yMouse / m_sizChar.cy;
+      int cLine = static_cast<int>(pDoc->GetFileVersionInstanceSize());
+      if (i >= cLine)
+        i = cLine - 1;
+      if (i < 0)
+        i = 0;
+
+      if (i < m_iSelStart) {
+        m_iSelStart = i;
+        m_ptSearchLast.x = -1;
+        m_ptSearchLast.y = i;
+        Invalidate(FALSE /*bErase*/);
+      } else if (i > m_iSelEnd) {
+        m_iSelEnd = i;
+        Invalidate(FALSE /*bErase*/);
+      }
+      // shrink the range if requested
+      else if (m_iSelStart <= i && i <= m_iSelEnd && !(nFlags & MK_SHIFT)) {
+        if (m_iSelStart == m_iMouseDown) {
+          if (m_iSelEnd > i) {
+            m_iSelEnd = i;
+            Invalidate(FALSE /*bErase*/);
+          }
+        } else {
+          // assert(m_iSelEnd == m_iMouseDown);
+          if (m_iSelStart < i) {
+            m_iSelStart = i;
+            m_ptSearchLast.x = -1;
+            m_ptSearchLast.y = i;
+            Invalidate(FALSE /*bErase*/);
+          }
         }
       }
+    } else {
+      // Remove selection.
+      Invalidate(FALSE /*bErase*/);
     }
 
     // scrolling
@@ -659,8 +674,9 @@ void CSage2020View::OnMouseMove(UINT nFlags, CPoint point) {
 
     if (ptScroll != ptScrollNew)
       ScrollToPosition(ptScrollNew);
-  } else
+  } else {
     ReleaseCapture();  // just in case
+  }
 }
 
 void CSage2020View::OnLButtonDown(UINT nFlags, CPoint point) {
@@ -696,6 +712,10 @@ void CSage2020View::OnLButtonDown(UINT nFlags, CPoint point) {
       }
       m_iMouseDown = i;
       Invalidate(FALSE /*bErase*/);
+    } else {
+      // Toggle.
+      m_iSelStart = -1;
+      m_iSelEnd = -1;
     }
   }
 }
@@ -757,6 +777,160 @@ void CSage2020View::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags) {
       break;
   }
 }
+
+void CSage2020View::OnEditCopy(CCmdUI* pCmdUI) {
+  CSage2020Doc* pDoc = GetDocument();
+  ASSERT_VALID(pDoc);
+  if (pDoc == NULL)
+    return;
+
+  int cLine = static_cast<int>(pDoc->GetFileVersionInstanceSize());
+  pCmdUI->Enable(m_iSelStart >= 0 && m_iSelEnd >= m_iSelStart &&
+                 cLine > m_iSelEnd);
+}
+
+void CSage2020View::OnEditCopy() {
+  if (m_iSelStart >= 0) {
+    CSage2020Doc* pDoc = GetDocument();
+    ASSERT_VALID(pDoc);
+    if (pDoc == NULL)
+      return;
+
+    const auto file_version_instance = pDoc->GetFileVersionInstance();
+    if (file_version_instance == NULL)
+      return;
+
+    bool fClipboardOpen = false;
+    HGLOBAL hGlob = NULL;
+    if (!::OpenClipboard(NULL /*hWndNewOwner; NULL - use current task */)) {
+      CString msg;
+      msg.Format(_T("Cannot open the Clipboard, error: %d"), ::GetLastError());
+      AfxMessageBox(msg);
+      goto LCleanup;
+    }
+    fClipboardOpen = true;
+
+    // Remove the current Clipboard contents
+    if (!::EmptyClipboard()) {
+      CString msg;
+      msg.Format(_T("Cannot empty the Clipboard, error: %d"), ::GetLastError());
+      AfxMessageBox(msg);
+      goto LCleanup;
+    }
+    // Get the currently selected data
+    C_ASSERT(sizeof(TCHAR) == 2);
+
+    int dLine = m_iSelEnd - m_iSelStart + 1;
+    size_t cchLines = 0;
+    for (const auto& line : file_version_instance->GetLines()) {
+      cchLines += line.size();
+    }
+    size_t cbClip =
+        (cchLines + 1 /*ending NULL*/) * sizeof(TCHAR);
+    hGlob = ::GlobalAlloc(GMEM_MOVEABLE, cbClip);
+    if (hGlob == NULL) {
+      CString msg;
+      msg.Format(_T("Cannot alloc clipboard memory, error: %d"),
+                 ::GetLastError());
+      AfxMessageBox(msg);
+      goto LCleanup;
+    }
+
+    TCHAR* szClip = static_cast<TCHAR*>(::GlobalLock(hGlob));
+    if (szClip == NULL) {
+      CString msg;
+      msg.Format(_T("Cannot alloc clipboard memory, error: %d"),
+                 ::GetLastError());
+      AfxMessageBox(msg);
+      goto LCleanup;
+    }
+
+    size_t cbRemain = cbClip;
+    size_t cbUsed = 0;
+    for (int iLine = m_iSelStart; iLine <= m_iSelEnd; ++iLine) {
+      const auto temp_wstring = to_wstring(file_version_instance->GetLines()[iLine]);
+      const TCHAR* szLine = temp_wstring.c_str();
+      assert(szLine != NULL);
+      if (szLine != NULL) {
+        size_t cchLine = _tcslen(szLine);
+        size_t cbLine = cchLine * sizeof(TCHAR);
+        memcpy_s(szClip, cbRemain, szLine, cbLine);
+        if (cchLine > 0 && szClip[cchLine - 1] == _T('\n'))  // add CR-LF
+        {
+          szClip[cchLine - 1] = _T('\r');
+          szClip[cchLine++] = _T('\n');
+          cbLine += sizeof(TCHAR);
+        }
+        cbUsed += cbLine;
+        cbRemain -= cbLine;
+        szClip += cchLine;
+      }
+      assert(cbClip >= cbUsed);
+      assert(cbRemain >= 0);
+    }
+
+    // NUL terminate
+    *szClip++ = '\0';
+    cbUsed += sizeof(TCHAR);
+    cbRemain -= sizeof(TCHAR);
+    assert(cbClip >= cbUsed);
+    assert(cbRemain >= 0);
+
+    VERIFY(::GlobalUnlock(hGlob) == 0 /*no locks*/);
+
+    hGlob = ::GlobalReAlloc(hGlob, cbUsed,
+                            GMEM_MOVEABLE);  // shrink down to used size
+    assert(hGlob != NULL);
+
+    if (hGlob == NULL || ::SetClipboardData(CF_UNICODETEXT, hGlob) == NULL) {
+      CString msg;
+      msg.Format(_T("Unable to set Clipboard data, error: %d"),
+                 ::GetLastError());
+      AfxMessageBox(msg);
+      goto LCleanup;
+    }
+
+  LCleanup:
+    if (fClipboardOpen)
+      ::CloseClipboard();
+    if (hGlob != NULL)
+      ::GlobalFree(hGlob);
+  }
+}
+
+void CSage2020View::OnEditSelectAll(CCmdUI* pCmdUI) {
+  CSage2020Doc* pDoc = GetDocument();
+  ASSERT_VALID(pDoc);
+  if (pDoc == NULL)
+    return;
+
+  size_t cLine = pDoc->GetFileVersionInstanceSize();
+  pCmdUI->Enable(cLine > 0);
+}
+
+void CSage2020View::OnEditSelectAll() {
+  CSage2020Doc* pDoc = GetDocument();
+  ASSERT_VALID(pDoc);
+  if (pDoc == NULL)
+    return;
+
+  bool need_redraw = false;
+  if (m_iSelStart != 0) {
+    m_iSelStart = 0;
+    need_redraw = true;
+  }
+  int cLine = static_cast<int>(pDoc->GetFileVersionInstanceSize());
+  if (m_iSelEnd != cLine - 1) {
+    assert(cLine > 0);
+    m_iSelEnd = cLine - 1;
+    need_redraw = true;
+  }
+
+  if (need_redraw) {
+    Invalidate(FALSE /*bErase*/);
+  }
+}
+  
 
 // CSage2020View printing
 

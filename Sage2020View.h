@@ -106,6 +106,9 @@ class CSage2020View : public CScrollView, public Sage2020ViewDocListener {
   afx_msg void OnEditCopy(CCmdUI* pCmdUI);
   afx_msg void OnEditCopy();
 
+  afx_msg void OnEditSelectAll(CCmdUI* pCmdUI);
+  afx_msg void OnEditSelectAll();
+
   afx_msg void OnGotoDlg();  // REVIEW: place this in MainFrm.h
 
   afx_msg void OnJumpToChangeVersion(CCmdUI* pCmdUI);

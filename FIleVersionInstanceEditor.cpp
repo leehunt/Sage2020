@@ -22,11 +22,29 @@ void FileVersionInstanceEditor::RemoveDiff(const FileVersionDiff& diff) {
   assert(file_version_instance_.commit_index_ >= 0);
   file_version_instance_.commit_index_--;
   assert(file_version_instance_.commit_index_ >= -1);
-  
+
   for (auto it = diff.hunks_.crbegin(); it != diff.hunks_.crend(); it++) {
     RemoveHunk(*it);
   }
-  
+
+#if _DEBUG
+#if USE_SPARSE_INDEX_ARRAY
+  for (int line_index = 0;
+       line_index < file_version_instance_.file_lines_info_.MaxLineIndex(); line_index++) {
+    auto info = file_version_instance_.file_lines_info_.GetLineInfo(line_index);
+    assert(static_cast<int>(info.commit_index()) <=
+           file_version_instance_.commit_index_);
+  }
+#else
+  for (size_t line_index = 0;
+       line_index < file_version_instance_.file_lines_info_.size();
+       line_index++) {
+    auto& info = file_version_instance_.file_lines_info_[line_index];
+    assert(static_cast<int>(info.commit_index()) <= file_version_instance_.commit_index_);
+  }
+#endif
+#endif
+
   if (listener_head_ != nullptr) {
     listener_head_->NotifyAllListenersOfVersionChange(
         file_version_instance_.commit_index_);
@@ -43,20 +61,28 @@ bool FileVersionInstanceEditor::GoToIndex(
     commit_index = diffs.size() - 1;
 
   bool edited = false;
-  while (file_version_instance_.commit_index_ > static_cast<int>(commit_index)) {
-    RemoveDiff(diffs[file_version_instance_.commit_index_]);
+  while (file_version_instance_.commit_index_ >
+         static_cast<int>(commit_index)) {
+    // N.b. Make a 'diff' copy since commit_index_ is modfied by RemoveDiff().
+    const auto diff = diffs[file_version_instance_.commit_index_];
+    RemoveDiff(diff);
     edited = true;
   }
   while (file_version_instance_.commit_index_ <
          static_cast<int>(commit_index)) {
-    AddDiff(diffs[file_version_instance_.commit_index_ + 1]);
+    // N.b. Make a 'diff' copy since commit_index_ is modfied by AddDiff().
+    const auto diff = diffs[file_version_instance_.commit_index_ + 1];
+    AddDiff(diff);
     edited = true;
   }
 
   return edited;
 }
 
-void FileVersionInstanceEditor::AddHunk(const FileVersionDiffHunk& hunk) {
+void FileVersionInstanceEditor::AddHunk(
+    const FileVersionDiffHunk& hunk) {
+
+
   // Remove lines.  N.b. Remove must be done first to get correct line
   // locations. Yes, using |add_location_| seems odd, but the add_location
   // tracks the new position of any adds/removed done by previous hunks in the
@@ -79,11 +105,18 @@ void FileVersionInstanceEditor::AddHunk(const FileVersionDiffHunk& hunk) {
         file_version_instance_.file_lines_.begin() + remove_location_index +
             hunk.remove_line_count_);
 
-    file_version_instance_.RemoveLineInfo(remove_location_index,
-                                         hunk.remove_line_count_);
+    if (!hunk.line_info_to_restore_) {
+      hunk.line_info_to_restore_ = std::make_shared<LineToFileVersionLineInfo>();
+      hunk.line_info_to_restore_->insert(
+          hunk.line_info_to_restore_->begin(),
+          file_version_instance_.file_lines_info_.begin() +
+              remove_location_index,
+          file_version_instance_.file_lines_info_.begin() +
+              remove_location_index + hunk.remove_line_count_);
+    }
+    file_version_instance_.RemoveLineInfo(remove_location_index + 1,
+                                          hunk.remove_line_count_);
   }
-
-  auto file_version_line_info = FileVersionLineInfo {static_cast<size_t>(file_version_instance_.commit_index_)};
 
   // Add lines.
   if (hunk.add_line_count_ > 0) {
@@ -96,14 +129,20 @@ void FileVersionInstanceEditor::AddHunk(const FileVersionDiffHunk& hunk) {
       ++it_insert;
     }
     // Add line info
+    auto file_version_line_info = FileVersionLineInfo{
+        static_cast<size_t>(file_version_instance_.commit_index_)};
+    
+    LineToFileVersionLineInfo single_infos;
+    single_infos.push_front(file_version_line_info);
     file_version_instance_.AddLineInfo(hunk.add_location_, hunk.add_line_count_,
-                std::move(file_version_line_info));
+                                       single_infos);
 #if _DEBUG
     for (auto line_num = hunk.add_location_;
          line_num < hunk.add_location_ + hunk.add_line_count_; line_num++) {
-    //  assert(file_version_instance_.GetCommitFromIndex(
-    //            file_version_instance_.GetLineInfo(line_num).commit_index()) ==
-    //         commit_id);
+      //  assert(file_version_instance_.GetCommitFromIndex(
+      //            file_version_instance_.GetLineInfo(line_num).commit_index())
+      //            ==
+      //         commit_id);
     }
 #endif
   }
@@ -131,12 +170,9 @@ void FileVersionInstanceEditor::RemoveHunk(const FileVersionDiffHunk& hunk) {
         file_version_instance_.file_lines_.begin() +
             (hunk.add_location_ - 1 + hunk.add_line_count_));
 
-    file_version_instance_.RemoveLineInfo(hunk.add_location_,
-                                         hunk.add_line_count_);
+    file_version_instance_.RemoveLineInfo(
+        hunk.add_location_, hunk.add_line_count_);
   }
-
-  auto file_version_line_info =
-      FileVersionLineInfo{static_cast<size_t>(file_version_instance_.commit_index_)};
 
   // Add lines by adding the "removed" lines.
   if (hunk.remove_line_count_ > 0) {
@@ -155,10 +191,12 @@ void FileVersionInstanceEditor::RemoveHunk(const FileVersionDiffHunk& hunk) {
       it_insert = file_version_instance_.file_lines_.insert(it_insert, line);
       ++it_insert;
     }
-    // Add line info
-    file_version_instance_.AddLineInfo(add_location_index,
+
+    // Restore line info
+    assert(hunk.line_info_to_restore_);
+    file_version_instance_.AddLineInfo(add_location_index + 1,
                                        hunk.remove_line_count_,
-                                       std::move(file_version_line_info));
+                                       *hunk.line_info_to_restore_);
 #if _DEBUG
     for (auto line_index = add_location_index;
          line_index < add_location_index + hunk.remove_line_count_;

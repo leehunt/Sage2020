@@ -128,8 +128,13 @@ void CSage2020Doc::OnUpdatePropertiesPaneGrid(CCmdUI* pCmdUI) {
   if (file_version_instance != NULL) {
     const auto& diffs = GetFileDiffs();
     int nVerMax = static_cast<int>(diffs.size());
-    pPropVersion->EnableSpinControl(TRUE, 0, nVerMax);
-    pPropVersion->Enable(TRUE);
+    if (nVerMax != 0) {
+      pPropVersion->EnableSpinControl(TRUE, 0, nVerMax - 1);
+      pPropVersion->Enable(TRUE);
+    } else {
+      pPropVersion->EnableSpinControl(FALSE, 0 /*nMin*/, 0 /*nMax*/);
+      pPropVersion->Enable(FALSE);
+    }
 
     if (pPropVersion->GetValue().iVal !=
         file_version_instance->GetCommitIndex()) {
@@ -145,6 +150,9 @@ void CSage2020Doc::OnUpdatePropertiesPaneGrid(CCmdUI* pCmdUI) {
       }
 
       pPropVersion->SetValue(
+          COleVariant((long)file_version_instance->GetCommitIndex(), VT_I4));
+      // Setting the orignal value allows IsModified() to work correctly.
+      pPropVersion->SetOriginalValue(
           COleVariant((long)file_version_instance->GetCommitIndex(), VT_I4));
 
       CPropertiesWnd::UpdateGridBlock(

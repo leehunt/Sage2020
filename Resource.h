@@ -77,6 +77,7 @@
 #define IDB_PAGES_SMALL_HC              191
 #define IDR_PROPERTIES_GRID             195
 #define IDR_HISTORY_TREE                196
+#define ID_VIEW_CHANGE_HISTORY          197
 #define IDS_MYCALENDARS                 250
 #define IDS_CALENDAR                    251
 #define IDS_SHORTCUTS                   252
@@ -93,7 +94,7 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        310
-#define _APS_NEXT_COMMAND_VALUE         32771
+#define _APS_NEXT_COMMAND_VALUE         32774
 #define _APS_NEXT_CONTROL_VALUE         1000
 #define _APS_NEXT_SYMED_VALUE           310
 #endif

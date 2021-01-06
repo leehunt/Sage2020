@@ -144,7 +144,7 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct) {
   DockPane(&m_wndOutput);
 #endif
   m_wndProperties.EnableDocking(CBRS_ALIGN_ANY);
-  //DockPane(&m_wndProperties);
+  DockPane(&m_wndProperties);
 
   m_wndChangeHistoryPane.EnableDocking(CBRS_ALIGN_ANY);
   DockPane(&m_wndChangeHistoryPane);
@@ -267,7 +267,7 @@ BOOL CMainFrame::CreateDockingWindows() {
   ASSERT(bNameValid);
   if (!m_wndChangeHistoryPane.Create(
           strChangeHistoryWnd, this, CRect(0, 0, 200, 200), TRUE,
-          ID_VIEW_PROPERTIESWND,
+          ID_VIEW_CHANGE_HISTORY,
           WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
               CBRS_LEFT | CBRS_ALIGN_LEFT)) {
     TRACE0("Failed to create Change History window\n");
