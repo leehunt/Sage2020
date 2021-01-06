@@ -66,8 +66,8 @@ class CMFCPropertyGridReadOnlySelectableProperty
         case VK_INSERT: {
           if (::GetAsyncKeyState(VK_SHIFT) < 0)  // Shift + VK_INSERT --> Paste
             return TRUE;                         // eat and don't destroy edit
+          [[fallthrough]];
         }
-        // fallthrough
         case _T('C'): {
           // sigh; this is copied from ProcessClipboardAccelerators() which is
           // protected
@@ -518,5 +518,5 @@ void CPropertiesWnd::UpdateGridBlock(
     if (!(pPropVersionColor->GetColor() == crVersion))
       pPropVersionColor->SetColor(crVersion);
   }
-#endif // 0
+#endif  // 0
 }

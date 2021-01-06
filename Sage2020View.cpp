@@ -55,6 +55,7 @@ CSage2020View::CSage2020View() noexcept
     : m_iSelStart(-1),
       m_iSelEnd(-1),
       m_fLeftMouseDown(false),
+      m_iMouseDown(0),
       m_ptSearchLast(-1, 0),
       m_fCaseSensitive(false),
       m_fHighlightAll(true),
@@ -585,7 +586,7 @@ void CSage2020View::DocEditNotification(int iLine, int cLine) {
   SetRedraw(TRUE);
 }
 
-void CSage2020View::DocVersionChangedNotification(int nVer) {
+void CSage2020View::DocVersionChangedNotification(size_t nVer) {
   if (nVer == -1) {
     m_currentFileVersionInstance = NULL;
 

@@ -2,15 +2,20 @@
 #include <string>
 #include <vector>
 struct FileVersionDiffHunk {
-  int add_location_;
-  int add_line_count_;
+  int add_location_ = 0;
+  int add_line_count_ = 0;
   std::vector<std::string> add_lines_;
-  int remove_location_;
-  int remove_line_count_;
+  int remove_location_ = 0;
+  int remove_line_count_ = 0;
   std::vector<std::string> remove_lines_;
   std::string start_context_;
 };
 struct FileVersionDiffTree {
+  FileVersionDiffTree() : old_mode(0), new_mode(0), action('\0') {
+    old_hash_string[0] = '\0';
+    new_hash_string[0] = '\0';
+    file_path[0] = '\0';
+  }
   int old_mode;
   char old_hash_string[14];
   int new_mode;
@@ -29,5 +34,5 @@ struct FileVersionDiff {
   FileVersionDiffTree diff_tree_;
   std::string diff_command_;
   std::string index_;
-  int ver_;
+  int ver_ = 0;
 };

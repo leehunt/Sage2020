@@ -25,7 +25,7 @@ class GitDiffReaderTest : public testing::Test {
 
 TEST(GitDiffReaderTest, LoadAndCompareWithFile) {
   std::filesystem::path file_path = __FILE__;
-  GitDiffReader git_diff_reader(file_path.filename());
+  GitDiffReader git_diff_reader(file_path);
 
   auto diffs = git_diff_reader.GetDiffs();
   EXPECT_GT(diffs.size(), 0U);
@@ -37,10 +37,12 @@ TEST(GitDiffReaderTest, LoadAndCompareWithFile) {
     editor.AddDiff(*it);
   }
 
-  std::string latest_file_id = diffs.front().diff_tree_.new_hash_string;
+  std::string latest_file_id =
+      diffs.size() > 0 ? diffs.front().diff_tree_.new_hash_string : "";
   GitFileReader git_file_reader_latest{latest_file_id};
   auto file_version_instance_loaded = std::make_unique<FileVersionInstance>(
-      std::move(git_file_reader_latest.GetLines()), diffs.front().commit_);
+      std::move(git_file_reader_latest.GetLines()),
+      diffs.size() > 0 ? diffs.front().commit_ : "");
 
   EXPECT_EQ(file_version_instance_loaded->GetLines().size(),
             file_version_instance.GetLines().size());

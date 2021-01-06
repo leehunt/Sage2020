@@ -161,7 +161,7 @@ void SparseIndexArray::Remove(size_t line_index, size_t line_count) {
 
   if (it != end()) {
     // Check for any contiguous range(s) to delete.
-    if (line_index == itPrev->first && it->first <= line_index + line_count) {
+    if (itPrev->first == line_index && line_index + line_count >= it->first) {
       auto itLim = std::prev(upper_bound(line_index + line_count));
       assert(itLim != end());
       assert(itPrev->first <= itLim->first);
@@ -172,8 +172,9 @@ void SparseIndexArray::Remove(size_t line_index, size_t line_count) {
 
     // Offset any remaining range(s).
     if (it != end()) {
-      // Check for partial-range case.
+      // Trim any trailing range.
       if (line_index + line_count > it->first) {
+        assert(it->first > line_index);
         auto to_offset = it->first - line_index;
         assert(to_offset < line_count);
         auto itInsertHint = std::next(it);

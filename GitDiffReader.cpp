@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include <direct.h>
 #include <stdio.h>
 #include <cassert>
 #include <functional>
@@ -420,10 +421,15 @@ LDone:
 
 GitDiffReader::GitDiffReader(const std::filesystem::path& file_path)
     : current_diff_(nullptr) {
+  char current_dir[MAX_PATH];
+  _getcwd(current_dir, static_cast<int>(std::size(current_dir)));
+  std::string parent_path(file_path.parent_path().u8string());
+  _chdir(parent_path.c_str());
   std::string command =
-      std::string(kGitDiffCommand) + std::string(file_path.u8string());
+      std::string(kGitDiffCommand) + std::string(file_path.filename().u8string());
   std::unique_ptr<FILE, decltype(&_pclose)> git_popen_stream(
       _popen(command.c_str(), "r"), &_pclose);
+  _chdir(current_dir);
 
   FILE* stream = git_popen_stream.get();
 

@@ -56,7 +56,7 @@ void Sage2020ViewDocListener::NotifyAllListenersOfEdit(int iLine, int cLine) {
   }
 }
 
-void Sage2020ViewDocListener::NotifyAllListenersOfVersionChange(int nVer) {
+void Sage2020ViewDocListener::NotifyAllListenersOfVersionChange(size_t nVer) {
   assert(this->previous_listener_ == nullptr);
 
   Sage2020ViewDocListener* listener = this;
