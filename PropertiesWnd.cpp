@@ -8,17 +8,13 @@
 #include "PropertiesWnd.h"
 #include "Resource.h"
 #include "Sage2020.h"
+#include "Utility.h"
 
 #ifdef _DEBUG
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
 #define new DEBUG_NEW
 #endif
-
-// TODO: Move this into utility file.
-static std::wstring to_wstring(const std::string& s) {
-  return std::wstring(s.cbegin(), s.cend());
-}
 
 // a subclass of CMFCPropertyGridProperty that fixes read-only copy behavior
 class CMFCPropertyGridReadOnlySelectableProperty

@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "ChangeHistoryPane.h"
+#include "Sage2020.h"
 #include "resource.h"
 
 BEGIN_MESSAGE_MAP(CChangeHistoryPane, CDockablePane)
@@ -8,6 +9,7 @@ ON_WM_ACTIVATE()
 ON_WM_CREATE()
 ON_WM_SIZE()
 ON_WM_SETFOCUS()
+ON_NOTIFY(TVN_ITEMEXPANDING, IDR_HISTORY_TREE, OnTreeNotifyExpanding)
 END_MESSAGE_MAP()
 
 void CChangeHistoryPane::OnActivate(UINT nState,
@@ -57,8 +59,47 @@ void CChangeHistoryPane::AdjustLayout() {
                              SWP_NOACTIVATE | SWP_NOZORDER);
 }
 
+void CChangeHistoryPane::InitPropList() {
+  SetPropListFont();
+
+  if (m_imageList == NULL) {
+    VERIFY(m_imageList.Create(
+        theApp.m_bHiColorIcons ? IDB_HISTORY_TREE_HC : IDB_HISTORY_TREE, 16,
+        1 /*nGrow*/, RGB(255, 0, 255)));
+    VERIFY(m_wndTreeCtrl.SetImageList(&m_imageList, TVSIL_NORMAL) ==
+           NULL /*no prev image list*/);
+  }
+}
+
+void CChangeHistoryPane::SetPropListFont() {
+  ::DeleteObject(m_fntTreeCtrl.Detach());
+
+  LOGFONT lf;
+  afxGlobalData.fontRegular.GetLogFont(&lf);
+
+  NONCLIENTMETRICS info;
+  info.cbSize = sizeof(info);
+
+  afxGlobalData.GetNonClientMetrics(info);
+
+  lf.lfHeight = info.lfMenuFont.lfHeight;
+  lf.lfWeight = info.lfMenuFont.lfWeight;
+  lf.lfItalic = info.lfMenuFont.lfItalic;
+
+  m_fntTreeCtrl.CreateFontIndirect(&lf);
+
+  m_wndTreeCtrl.SetFont(&m_fntTreeCtrl);
+}
+
 void CChangeHistoryPane::OnSetFocus(CWnd* pOldWnd) {
   CDockablePane::OnSetFocus(pOldWnd);
 
-	m_wndTreeCtrl.SetFocus();
+  m_wndTreeCtrl.SetFocus();
+}
+
+void CChangeHistoryPane::OnTreeNotifyExpanding(NMHDR* pNMHDR,
+                                               LRESULT* plResult) {
+  const NMTREEVIEW* pTreeView = reinterpret_cast<const NMTREEVIEW*>(pNMHDR);
+
+  HTREEITEM htreeitem = pTreeView->itemNew.hItem;
 }

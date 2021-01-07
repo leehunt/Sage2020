@@ -2,15 +2,16 @@
 
 #include <memory>
 #include "GitFileReader.h"
-
+#include "Utility.h"
 constexpr char kGitShowCommand[] = "git --no-pager show ";
 
-GitFileReader::GitFileReader(const std::string& hash) {
+GitFileReader::GitFileReader(
+    const std::filesystem::path& directory, const std::string& hash) {
   std::string command = std::string(kGitShowCommand) + hash;
-  std::unique_ptr<FILE, decltype(&_pclose)> git_stream(
-      _popen(command.c_str(), "r"), &_pclose);
 
-  ProcessFileLines(git_stream.get());
+  ProcessPipe process_pipe(to_wstring(command).c_str(), directory.c_str());
+
+  ProcessFileLines(process_pipe.GetStandardOutput());
 }
 
 GitFileReader::~GitFileReader() {}

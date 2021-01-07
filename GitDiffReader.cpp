@@ -9,6 +9,7 @@
 #include "GitDiffReader.h"
 #include "GitFileStreamCache.h"
 #include "LineTokenizer.h"
+#include "Utility.h"
 
 constexpr char kGitDiffCommand[] =
     "git --no-pager log -p -U0 --raw --no-color --pretty=raw -- ";
@@ -421,17 +422,11 @@ LDone:
 
 GitDiffReader::GitDiffReader(const std::filesystem::path& file_path)
     : current_diff_(nullptr) {
-  char current_dir[MAX_PATH];
-  _getcwd(current_dir, static_cast<int>(std::size(current_dir)));
-  std::string parent_path(file_path.parent_path().u8string());
-  _chdir(parent_path.c_str());
-  std::string command =
-      std::string(kGitDiffCommand) + std::string(file_path.filename().u8string());
-  std::unique_ptr<FILE, decltype(&_pclose)> git_popen_stream(
-      _popen(command.c_str(), "r"), &_pclose);
-  _chdir(current_dir);
+  std::wstring command =
+      to_wstring(kGitDiffCommand) + std::wstring(file_path.filename());
+  ProcessPipe process_pipe(command.c_str(), file_path.parent_path().c_str());
 
-  FILE* stream = git_popen_stream.get();
+  FILE* stream = process_pipe.GetStandardOutput();
 
   // Check if it is in the cache.
   fpos_t pos;
@@ -443,7 +438,7 @@ GitDiffReader::GitDiffReader(const std::filesystem::path& file_path)
   if (fsetpos(stream, &pos))
     return;
 
-  file_stream_cache_ = std::make_unique<GitFileStreamCache>();
+  file_stream_cache_ = std::make_unique<GitFileStreamCache>(file_path);
 
   // Format: "commit <sha1>".
   auto sha1 = strrchr(header_line, ' ');
@@ -454,13 +449,13 @@ GitDiffReader::GitDiffReader(const std::filesystem::path& file_path)
   auto len = strlen(sha1);
   if (sha1[len - 1] == '\n')
     sha1[len - 1] = '\0';
-  auto cache_stream = file_stream_cache_->GetStream(file_path, sha1);
+  auto cache_stream = file_stream_cache_->GetStream(sha1);
 
   if (cache_stream.get()) {
     if (cache_stream)
       ProcessDiffLines(cache_stream.get());
   } else {
-    auto file_stream = file_stream_cache_->SaveStream(stream, file_path, sha1);
+    auto file_stream = file_stream_cache_->SaveStream(stream, sha1);
     if (file_stream)
       ProcessDiffLines(file_stream.get());
   }

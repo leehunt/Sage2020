@@ -59,9 +59,10 @@ void CSage2020Doc::Serialize(CArchive& ar) {
   if (ar.IsStoring()) {
     // TODO: add storing code here
   } else {
-    auto path = ar.GetFile()->GetFilePath();
+    auto native_path = ar.GetFile()->GetFilePath();
     std::wstring_convert<std::codecvt_utf8<wchar_t>> myconv;
-    GitDiffReader git_diff_reader{myconv.to_bytes(path)};
+    std::filesystem::path path = myconv.to_bytes(native_path);
+    GitDiffReader git_diff_reader{path};
 
     // Sythethesize FileVersionInstance from diffs, going from first diff
     // (the last recorded in the git log) forward.
@@ -73,9 +74,11 @@ void CSage2020Doc::Serialize(CArchive& ar) {
     if (file_diffs_.size() > 0) {
       if (file_diffs_.front().diff_tree_.action != 'A') {
         // if the first commit is not an add, then get the file at that point.
+        std::filesystem::path parent_path = myconv.to_bytes(path);
+
         std::string initial_file_id =
             file_diffs_.front().diff_tree_.new_hash_string;
-        GitFileReader git_file_reader{initial_file_id};
+        GitFileReader git_file_reader{path.parent_path(), initial_file_id};
         file_version_instance_ = std::make_unique<FileVersionInstance>(
             std::move(git_file_reader.GetLines()), file_diffs_.front().commit_);
       } else {

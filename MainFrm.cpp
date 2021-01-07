@@ -120,7 +120,8 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct) {
 
   // Load menu item image (not placed on any standard toolbars):
   CMFCToolBar::AddToolBarForImageCollection(
-      IDR_MENU_IMAGES, theApp.m_bHiColorIcons ? IDB_MENU_IMAGES_24 : 0);
+      IDR_MENU_IMAGES,
+      theApp.m_bHiColorIcons ? IDB_MENU_IMAGES_24 : IDB_MENU_IMAGES);
 
   // create docking windows
   if (!CreateDockingWindows()) {

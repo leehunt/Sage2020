@@ -2,9 +2,10 @@
 
 #include <shlobj.h>
 #include <stdio.h>
+#include <cassert>
 #include "GitFileStreamCache.h"
+#include "Utility.h"
 //#include "Sage2020.h"
-//#include <memory>
 
 // extern CSage2020App theApp;
 
@@ -12,12 +13,11 @@
 
 constexpr char kGitGetRootCommand[] = "git rev-parse --show-toplevel";
 
-GitFileStreamCache::GitFileStreamCache() {}
+GitFileStreamCache::GitFileStreamCache(const std::filesystem::path& file_path)
+    : file_path_(std::filesystem::canonical(file_path)) {}
 
-FILE_CACHE_STREAM GitFileStreamCache::GetStream(
-    const std::filesystem::path& file_path,
-    const std::string& hash) {
-  const auto cache_file_path = GetItemCachePath(file_path, hash);
+AUTO_CLOSE_FILE_POINTER GitFileStreamCache::GetStream(const std::string& hash) {
+  const auto cache_file_path = GetItemCachePath(hash);
   auto temp_string = cache_file_path.u8string();
   std::unique_ptr<FILE, decltype(&fclose)> file_cache_stream(
       fopen(temp_string.c_str(), "r"), &fclose);
@@ -25,11 +25,10 @@ FILE_CACHE_STREAM GitFileStreamCache::GetStream(
   return file_cache_stream;
 }
 
-FILE_CACHE_STREAM GitFileStreamCache::SaveStream(
+AUTO_CLOSE_FILE_POINTER GitFileStreamCache::SaveStream(
     FILE* stream,
-    const std::filesystem::path& file_path,
     const std::string& hash) {
-  const auto cache_file_path = GetItemCachePath(file_path, hash);
+  const auto cache_file_path = GetItemCachePath(hash);
   std::filesystem::create_directories(cache_file_path.parent_path());
   auto native_file_path = cache_file_path.u8string();
   // Create output file, failing if it already exists.
@@ -62,12 +61,12 @@ FILE_CACHE_STREAM GitFileStreamCache::SaveStream(
 }
 
 std::filesystem::path GitFileStreamCache::GetGitRoot() {
-  // REVIEW: this assumes the cwd is |file_path_|.
-  std::unique_ptr<FILE, decltype(&_pclose)> git_stream(
-      _popen(kGitGetRootCommand, "r"), &_pclose);
+  ProcessPipe process_pipe(to_wstring(kGitGetRootCommand).c_str(),
+                           file_path_.parent_path().c_str());
 
   char stream_line[1024];
-  if (!fgets(stream_line, (int)std::size(stream_line), git_stream.get()))
+  if (!fgets(stream_line, (int)std::size(stream_line),
+             process_pipe.GetStandardOutput()))
     return {};
   auto len = strlen(stream_line);
   if (len > 0 && stream_line[len - 1] == '\n')
@@ -76,19 +75,14 @@ std::filesystem::path GitFileStreamCache::GetGitRoot() {
 }
 
 std::filesystem::path GitFileStreamCache::GetItemCachePath(
-    const std::filesystem::path& file_path,
     const std::string& hash) {
   // Look for file in
   // "CSIDL_LOCAL_APPDATA/Sage2020/type_name/hash/object(s)_relative_path.
 
-  // Get git root to remove from file path, if any.
-  std::filesystem::path relative_path;
-  if (file_path.is_absolute()) {
-    auto git_root = GetGitRoot();
-    relative_path = file_path.lexically_relative(git_root);
-  } else {
-    relative_path = file_path;
-  }
+  // Get relative file path of |file_path_| relative to the git root.
+  assert(file_path_.is_absolute());
+  auto git_root = std::filesystem::canonical(GetGitRoot());
+  auto git_relative_path = file_path_.lexically_relative(git_root);
 
   TCHAR local_app_data[MAX_PATH];
   HRESULT result = ::SHGetFolderPath(NULL, CSIDL_LOCAL_APPDATA, NULL,
@@ -98,7 +92,7 @@ std::filesystem::path GitFileStreamCache::GetItemCachePath(
 
   item_cache_path /=
       /* theApp.m_pszProfileName*/ "Sage2020" / std::filesystem::path(hash) /
-      relative_path;
+      git_relative_path;
 
   return item_cache_path;
 }

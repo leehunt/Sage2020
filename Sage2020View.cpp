@@ -3,7 +3,6 @@
 #include "pch.h"
 
 #include <cwctype>
-
 #include "framework.h"
 // SHARED_HANDLERS can be defined in an ATL project implementing preview,
 // thumbnail and search filter handlers and allows sharing of document code with
@@ -11,12 +10,11 @@
 #ifndef SHARED_HANDLERS
 #include "Sage2020.h"
 #endif
-
+#include "FIleVersionInstanceEditor.h"
 #include "PropertiesWnd.h"
 #include "Sage2020Doc.h"
 #include "Sage2020View.h"
-
-#include "FIleVersionInstanceEditor.h"
+#include "Utility.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -52,11 +50,6 @@ ON_WM_CONTEXTMENU()
 ON_WM_RBUTTONUP()
 ON_WM_MOUSEWHEEL()
 END_MESSAGE_MAP()
-
-// TODO: Move this into utility file.
-static std::wstring to_wstring(const std::string& s) {
-  return std::wstring(s.cbegin(), s.cend());
-}
 
 // CSage2020View construction/destruction
 
@@ -291,17 +284,17 @@ void CSage2020View::OnDraw(CDC* pDC) {
        y < rcClient.bottom + yScrollPos; y += m_sizChar.cy) {
     int i = y / m_sizChar.cy;
 
-    // REVIEW: Not sure why rcClient.bottom would track cLine * m_sizChar.cy 's height.
-    //assert(i < cLine || cLine == 0);
+    // REVIEW: Not sure why rcClient.bottom would track cLine * m_sizChar.cy 's
+    // height.
+    // assert(i < cLine || cLine == 0);
     if (i >= cLine)
       break;
 
     // set colors
-    int nVer =
-        file_version_instance != NULL
-            ? static_cast<int>(
-                  file_version_instance->GetLineInfo(i).commit_index())
-            : 0;
+    int nVer = file_version_instance != NULL
+                   ? static_cast<int>(
+                         file_version_instance->GetLineInfo(i).commit_index())
+                   : 0;
     const int nVerMax = static_cast<int>(diffs.size());
     COLORREF crBack = CrBackgroundForVersion(nVer + 1, nVerMax);
     COLORREF crFore = RGB(0x00, 0x00, 0x00);
@@ -494,11 +487,12 @@ void CSage2020View::OnUpdatePropertiesPaneGrid(CCmdUI* pCmdUI) {
 
   std::set<FileVersionLineInfo> version_line_info_set;
   if (file_version_instance != NULL) {
-    version_line_info_set = file_version_instance->GetVersionsFromLines(
-        m_iSelStart, m_iSelEnd + 1);
+    version_line_info_set =
+        file_version_instance->GetVersionsFromLines(m_iSelStart, m_iSelEnd + 1);
   }
 
-  CPropertiesWnd::EnsureItems(*pGrid, static_cast<int>(version_line_info_set.size()));
+  CPropertiesWnd::EnsureItems(*pGrid,
+                              static_cast<int>(version_line_info_set.size()));
 
   const auto& diffs = pDoc->GetFileDiffs();
 
@@ -653,9 +647,6 @@ void CSage2020View::OnMouseMove(UINT nFlags, CPoint point) {
           }
         }
       }
-    } else {
-      // Remove selection.
-      Invalidate(FALSE /*bErase*/);
     }
 
     // scrolling
@@ -714,8 +705,12 @@ void CSage2020View::OnLButtonDown(UINT nFlags, CPoint point) {
       Invalidate(FALSE /*bErase*/);
     } else {
       // Toggle.
-      m_iSelStart = -1;
-      m_iSelEnd = -1;
+      bool clear_selection = m_iSelStart != -1 || m_iSelEnd != -1;
+      if (clear_selection) {
+        m_iSelStart = -1;
+        m_iSelEnd = -1;
+        Invalidate(FALSE /*bErase*/);
+      }
     }
   }
 }
@@ -825,8 +820,7 @@ void CSage2020View::OnEditCopy() {
     for (const auto& line : file_version_instance->GetLines()) {
       cchLines += line.size();
     }
-    size_t cbClip =
-        (cchLines + 1 /*ending NULL*/) * sizeof(TCHAR);
+    size_t cbClip = (cchLines + 1 /*ending NULL*/) * sizeof(TCHAR);
     hGlob = ::GlobalAlloc(GMEM_MOVEABLE, cbClip);
     if (hGlob == NULL) {
       CString msg;
@@ -848,7 +842,8 @@ void CSage2020View::OnEditCopy() {
     size_t cbRemain = cbClip;
     size_t cbUsed = 0;
     for (int iLine = m_iSelStart; iLine <= m_iSelEnd; ++iLine) {
-      const auto temp_wstring = to_wstring(file_version_instance->GetLines()[iLine]);
+      const auto temp_wstring =
+          to_wstring(file_version_instance->GetLines()[iLine]);
       const TCHAR* szLine = temp_wstring.c_str();
       assert(szLine != NULL);
       if (szLine != NULL) {
@@ -930,7 +925,6 @@ void CSage2020View::OnEditSelectAll() {
     Invalidate(FALSE /*bErase*/);
   }
 }
-  
 
 // CSage2020View printing
 
@@ -989,19 +983,18 @@ BOOL CSage2020View::OnMouseWheel(UINT nFlags, short zDelta, CPoint pt) {
       auto file_version_instance = pDoc->GetFileVersionInstance();
 
       if (file_version_instance != nullptr) {
-        const size_t commit_index =
-            file_version_instance->GetCommitIndex();
+        const size_t commit_index = file_version_instance->GetCommitIndex();
         const auto& diffs = pDoc->GetFileDiffs();
         const size_t diffs_total = diffs.size();
         FileVersionInstanceEditor editor(*file_version_instance,
                                          pDoc->GetListenerHead());
-        if (zDelta < 0) {
+        if (zDelta > 0) {
           // Add Diff
           if (commit_index + 1 < diffs_total) {
             editor.AddDiff(diffs[commit_index + 1]);
             pDoc->UpdateAllViews(NULL);  // NULL - also update this view
           }
-        } else if (zDelta > 0) {
+        } else if (zDelta < 0) {
           // Remove diff
           if (commit_index > 0) {
             editor.RemoveDiff(diffs[commit_index]);
