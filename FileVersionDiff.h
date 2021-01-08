@@ -1,8 +1,8 @@
 #pragma once
+#include <deque>
 #include <memory>
 #include <string>
 #include <vector>
-#include <deque>
 
 #if USE_SPARSE_INDEX_ARRAY
 class SparseIndexArray;
@@ -22,7 +22,9 @@ struct FileVersionDiffHunk {
   std::string start_context_;
   // Keep track of any deleted line info so that remove operations will restore
   // the current history of changes up to that point.
-  // REVIEW: Find way to turn this into a std::unique_ptr<>.
+  // REVIEW: Find way to turn this into a std::unique_ptr<> (doing so requires
+  // exposing all of FileVersionLineInfo, which is currently not in unqiue
+  // header file).
   mutable std::shared_ptr<LineToFileVersionLineInfo> line_info_to_restore_;
 };
 struct FileVersionDiffTree {
@@ -50,4 +52,10 @@ struct FileVersionDiff {
   std::string diff_command_;
   std::string index_;
   int ver_ = 0;
+
+  ~FileVersionDiff() {
+#if _DEBUG
+    ver_ = 0;
+#endif
+  }
 };

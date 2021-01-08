@@ -40,8 +40,7 @@ bool GitDiffReader::FReadCommit(TOK* ptok) {
   assert(!strcmp(ptok->szVal, "commit"));
 
   // Start new diff.
-  FileVersionDiff diff;
-  diffs_.push_back(diff);
+  diffs_.emplace_back(std::move(FileVersionDiff{}));
   current_diff_ = &diffs_.back();
 
   if (!FGetTok(ptok))
@@ -473,4 +472,8 @@ void GitDiffReader::ProcessDiffLines(FILE* stream) {
 
 const std::vector<FileVersionDiff>& GitDiffReader::GetDiffs() {
   return diffs_;
+}
+
+std::vector<FileVersionDiff> GitDiffReader::MoveDiffs() {
+  return std::move(diffs_);
 }

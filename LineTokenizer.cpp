@@ -168,10 +168,6 @@ static BOOL FGetCharTok(CHTOK* ptok) {
 
   ptok->tkch = _TkchLexText(&ptok->pchEnd, _vrgsttblWsIndirect);
 
-#if _DEBUG
-  wprintf(L"TOK: cur=%d prev=%d\r\n", ptok->tkch, ptok->tkchPrev);
-#endif
-
   // terminate
   ptok->chSav = *ptok->pchEnd;
   *ptok->pchEnd = L'\0';

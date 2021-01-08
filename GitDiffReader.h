@@ -13,6 +13,8 @@ class GitDiffReader {
 
   const std::vector<FileVersionDiff>& GetDiffs();
 
+  std::vector<FileVersionDiff> MoveDiffs();
+
  private:
   void ProcessDiffLines(FILE* stream);
   bool ProcessLogLine(char* line);

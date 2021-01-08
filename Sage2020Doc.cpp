@@ -24,6 +24,7 @@
 #define new DEBUG_NEW
 #endif
 #include "FIleVersionInstanceEditor.h"
+#include "ChangeHistoryPane.h"
 
 // CSage2020Doc
 
@@ -38,7 +39,6 @@ END_MESSAGE_MAP()
 // CSage2020Doc construction/destruction
 
 CSage2020Doc::CSage2020Doc() noexcept : m_pDocListenerHead(nullptr) {
-  // TODO: add one-time construction code here
 }
 
 CSage2020Doc::~CSage2020Doc() {}
@@ -66,10 +66,8 @@ void CSage2020Doc::Serialize(CArchive& ar) {
 
     // Sythethesize FileVersionInstance from diffs, going from first diff
     // (the last recorded in the git log) forward.
-    const auto& reader_diffs = git_diff_reader.GetDiffs();
-    file_diffs_.resize(reader_diffs.size());
-    std::reverse_copy(reader_diffs.cbegin(), reader_diffs.cend(),
-                      file_diffs_.begin());
+    file_diffs_ = git_diff_reader.MoveDiffs();
+    std::reverse(file_diffs_.begin(), file_diffs_.end());
 
     if (file_diffs_.size() > 0) {
       if (file_diffs_.front().diff_tree_.action != 'A') {
@@ -171,7 +169,48 @@ void CSage2020Doc::OnUpdatePropertiesPaneGrid(CCmdUI* pCmdUI) {
   }
 }
 
-void CSage2020Doc::OnUpdateHistoryTree(CCmdUI* pCmdUI) {}
+void CSage2020Doc::OnUpdateHistoryTree(CCmdUI* pCmdUI) {
+  // Update selection-based properties (e.g. currently displayed change)
+  CWnd* pWndT = CWnd::FromHandlePermanent(*pCmdUI->m_pOther);
+  ASSERT_VALID(pWndT);
+
+  CTreeCtrl* pTree = static_cast<CTreeCtrl*>(pWndT);
+  ASSERT_VALID(pTree);
+  if (pTree == NULL)
+    return;
+
+  pCmdUI->m_bContinueRouting = TRUE;  // ensure that we route to doc
+
+#if 0
+  if (m_fNewDoc) {
+    pTree->DeleteAllItems();
+    m_fNewDoc = false;
+  }
+#endif // 0
+
+  if (!GetFileVersionInstanceSize())
+    return;
+
+  auto commit_index = GetFileVersionInstance()->GetCommitIndex();
+  const auto& file_diffs = GetFileDiffs();
+  if (CChangeHistoryPane::FEnsureTreeItemsAndSelection(
+          *pTree, pTree->GetRootItem(), file_diffs, file_diffs[commit_index].commit_)) {
+    HTREEITEM htreeitemSelected = pTree->GetSelectedItem();
+    if (htreeitemSelected != NULL) {
+      FileVersionDiff* file_version_diff = reinterpret_cast<FileVersionDiff*>(
+          pTree->GetItemData(htreeitemSelected));
+      assert(file_version_diff != NULL);
+      if (file_version_diff) {
+        if (file_diffs[commit_index].commit_ != file_version_diff->commit_) {
+#if 0 // TODO
+          if (FEditToFileVersion(pdrItem->nVer, pdrItem->GetRootFilerep()))
+            UpdateAllViews(NULL);  // NULL - also update this view
+#endif
+        }
+      }
+    }
+  }
+}
 
 #ifdef SHARED_HANDLERS
 
