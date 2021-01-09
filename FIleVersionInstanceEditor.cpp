@@ -51,7 +51,22 @@ void FileVersionInstanceEditor::RemoveDiff(const FileVersionDiff& diff) {
   }
 }
 
-bool FileVersionInstanceEditor::GoToIndex(
+bool FileVersionInstanceEditor::GoToCommit(
+    const GitHash& commit,
+    const std::vector<FileVersionDiff>& diffs) {
+  bool edited = false;
+
+  for (size_t commit_index = 0; commit_index < diffs.size(); commit_index++) {
+    if (diffs[commit_index].commit_ == commit) {
+      edited = GoToIndex(commit_index, diffs);
+      break;
+    }
+  }
+
+  return edited;
+}
+
+  bool FileVersionInstanceEditor::GoToIndex(
     size_t commit_index,
     const std::vector<FileVersionDiff>& diffs) {
   if (!diffs.size())

@@ -26,7 +26,9 @@ enum PIPES {
   _PIPE_MAX
 }; /* Constants 0 and 1 for READ and WRITE */
 
-ProcessPipe::ProcessPipe(const TCHAR command_line[], const TCHAR starting_dir[])
+ProcessPipe::ProcessPipe(const TCHAR command_line[],
+                         const TCHAR starting_dir[],
+                         FILE* std_in)
     : file_(NULL) {
   pi_ = {};
 
@@ -39,7 +41,8 @@ ProcessPipe::ProcessPipe(const TCHAR command_line[], const TCHAR starting_dir[])
   };
   // si.wShowWindow = SW_MINIMIZE;
   si.dwFlags = STARTF_USESTDHANDLES;
-  // si.hStdInput =
+  if (std_in != NULL)
+    si.hStdInput = reinterpret_cast<HANDLE>(_get_osfhandle(_fileno(std_in)));
   // reinterpret_cast<HANDLE>(_get_osfhandle(rgfdPipe[PIPE_READ]));
   si.hStdOutput = reinterpret_cast<HANDLE>(_get_osfhandle(my_pipe[PIPE_WRITE]));
   // si.hStdError =

@@ -23,8 +23,8 @@
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
-#include "FIleVersionInstanceEditor.h"
 #include "ChangeHistoryPane.h"
+#include "FIleVersionInstanceEditor.h"
 
 // CSage2020Doc
 
@@ -38,8 +38,7 @@ END_MESSAGE_MAP()
 
 // CSage2020Doc construction/destruction
 
-CSage2020Doc::CSage2020Doc() noexcept : m_pDocListenerHead(nullptr) {
-}
+CSage2020Doc::CSage2020Doc() noexcept : m_pDocListenerHead(nullptr), m_fNewDoc(false) {}
 
 CSage2020Doc::~CSage2020Doc() {}
 
@@ -181,12 +180,10 @@ void CSage2020Doc::OnUpdateHistoryTree(CCmdUI* pCmdUI) {
 
   pCmdUI->m_bContinueRouting = TRUE;  // ensure that we route to doc
 
-#if 0
   if (m_fNewDoc) {
     pTree->DeleteAllItems();
     m_fNewDoc = false;
   }
-#endif // 0
 
   if (!GetFileVersionInstanceSize())
     return;
@@ -194,18 +191,19 @@ void CSage2020Doc::OnUpdateHistoryTree(CCmdUI* pCmdUI) {
   auto commit_index = GetFileVersionInstance()->GetCommitIndex();
   const auto& file_diffs = GetFileDiffs();
   if (CChangeHistoryPane::FEnsureTreeItemsAndSelection(
-          *pTree, pTree->GetRootItem(), file_diffs, file_diffs[commit_index].commit_)) {
+          *pTree, pTree->GetRootItem(), file_diffs,
+          file_diffs[commit_index].commit_)) {
     HTREEITEM htreeitemSelected = pTree->GetSelectedItem();
     if (htreeitemSelected != NULL) {
-      FileVersionDiff* file_version_diff = reinterpret_cast<FileVersionDiff*>(
+      FileVersionDiff* selected_file_diff = reinterpret_cast<FileVersionDiff*>(
           pTree->GetItemData(htreeitemSelected));
-      assert(file_version_diff != NULL);
-      if (file_version_diff) {
-        if (file_diffs[commit_index].commit_ != file_version_diff->commit_) {
-#if 0 // TODO
-          if (FEditToFileVersion(pdrItem->nVer, pdrItem->GetRootFilerep()))
-            UpdateAllViews(NULL);  // NULL - also update this view
-#endif
+      assert(selected_file_diff != NULL);
+      if (selected_file_diff) {
+        if (file_diffs[commit_index].commit_ != selected_file_diff->commit_) {
+          FileVersionInstanceEditor editor(*file_version_instance_.get(),
+                                           m_pDocListenerHead);
+          if (editor.GoToCommit(selected_file_diff->commit_, file_diffs))
+            UpdateAllViews(NULL);
         }
       }
     }
@@ -273,3 +271,12 @@ void CSage2020Doc::Dump(CDumpContext& dc) const {
 #endif  //_DEBUG
 
 // CSage2020Doc commands
+
+BOOL CSage2020Doc::OnOpenDocument(LPCTSTR lpszPathName) {
+  if (!CDocument::OnOpenDocument(lpszPathName))
+    return FALSE;
+
+  m_fNewDoc = true;  // HACK
+
+  return TRUE;
+}

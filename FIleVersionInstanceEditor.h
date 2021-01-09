@@ -15,6 +15,9 @@ class FileVersionInstanceEditor {
   void AddDiff(const FileVersionDiff& diff);
   void RemoveDiff(const FileVersionDiff& diff);
 
+  bool GoToCommit(const GitHash& commit,
+                  const std::vector<FileVersionDiff>& diffs);
+
   bool GoToIndex(size_t commit_index, const std::vector<FileVersionDiff>& diffs);
 
  private:

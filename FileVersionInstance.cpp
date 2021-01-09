@@ -6,8 +6,8 @@
 FileVersionInstance::FileVersionInstance() : commit_index_(-1) {}
 
 FileVersionInstance::FileVersionInstance(std::deque<std::string>& lines,
-                                         const std::string& commit_id)
-    : commit_index_(0), commit_id_(commit_id) {
+                                         const GitHash& commit)
+    : commit_index_(0), commit_(commit) {
   LineToFileVersionLineInfo infos;
   infos.push_back(FileVersionLineInfo(commit_index_));
   AddLineInfo(1, static_cast<int>(lines.size()), infos);

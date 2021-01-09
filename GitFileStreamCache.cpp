@@ -27,6 +27,7 @@ AUTO_CLOSE_FILE_POINTER GitFileStreamCache::GetStream(const std::string& hash) {
 
 AUTO_CLOSE_FILE_POINTER GitFileStreamCache::SaveStream(
     FILE* stream,
+    const char* header_line,
     const std::string& hash) {
   const auto cache_file_path = GetItemCachePath(hash);
   std::filesystem::create_directories(cache_file_path.parent_path());
@@ -37,14 +38,25 @@ AUTO_CLOSE_FILE_POINTER GitFileStreamCache::SaveStream(
 
   fpos_t pos;
   if (fgetpos(file_cache_stream.get(), &pos)) {
+    // Error.
     file_cache_stream.reset();
     remove(native_file_path.c_str());
     return file_cache_stream;
   }
 
+  if (header_line) {
+    if (fputs(header_line, file_cache_stream.get()) == EOF) {
+      // Error.
+      file_cache_stream.reset();
+      remove(native_file_path.c_str());
+      return file_cache_stream;
+    }
+  }
+
   char stream_line[1024];
   while (fgets(stream_line, (int)std::size(stream_line), stream)) {
     if (fputs(stream_line, file_cache_stream.get()) == EOF) {
+      // Error.
       file_cache_stream.reset();
       remove(native_file_path.c_str());
       return file_cache_stream;
@@ -52,6 +64,7 @@ AUTO_CLOSE_FILE_POINTER GitFileStreamCache::SaveStream(
   }
 
   if (fsetpos(file_cache_stream.get(), &pos)) {
+    // Error.
     file_cache_stream.reset();
     remove(native_file_path.c_str());
     return file_cache_stream;

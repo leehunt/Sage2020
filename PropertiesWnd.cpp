@@ -468,7 +468,7 @@ void CPropertiesWnd::UpdateGridBlock(
 
   std::wstring change_list;
   if (file_version_diff != NULL)
-    change_list = to_wstring(file_version_diff->commit_);
+    change_list = to_wstring(file_version_diff->commit_.sha_);
   CMFCPropertyGridProperty* pPropVersionCL = pPropVersionHeader->GetSubItem(1);
   ASSERT_VALID(pPropVersionCL);
   if (pPropVersionCL != NULL) {

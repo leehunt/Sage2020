@@ -11,8 +11,29 @@
 #include "LineTokenizer.h"
 #include "Utility.h"
 
-constexpr char kGitDiffCommand[] =
-    "git --no-pager log -p -U0 --raw --no-color --pretty=raw -- ";
+constexpr TCHAR kGitDiffCommand[] =
+    _T("git --no-pager log -p -U0 --raw --no-color --pretty=raw -- %s");
+constexpr TCHAR kGitLogNameTagCommandFromStdIn[] = _T("git name-rev --stdin");
+
+static std::string GetTextToWhitespace(TOK* ptok) {
+  std::string text;
+  char* szStart = ptok->szVal;
+
+  while (ptok->tk != TK::tkWSPC && ptok->tk != TK::tkNEWLINE &&
+         ptok->tk != TK::tkNil) {
+    if (!FGetTokDirect(ptok))
+      break;
+  }
+
+  char chSav = ptok->szVal[0];
+  ptok->szVal[0] = L'\0';
+
+  text = szStart;
+
+  ptok->szVal[0] = chSav;
+
+  return text;
+}
 
 static std::string GetTextToEndOfLine(TOK* ptok) {
   std::string text;
@@ -23,7 +44,8 @@ static std::string GetTextToEndOfLine(TOK* ptok) {
       break;
   }
 
-  // Keep any '\n', but ensure the string is terminated.
+  // Keep any '\n', but ensure the string is terminated (if there is no '\n'
+  // then we still simply just add another '\0').
   char chSav = ptok->szVal[1];
   ptok->szVal[1] = L'\0';
 
@@ -34,20 +56,29 @@ static std::string GetTextToEndOfLine(TOK* ptok) {
   return text;
 }
 
+bool GitDiffReader::FReadGitHash(TOK* ptok, GitHash& hash) {
+  if (!FGetTok(ptok))
+    return false;
+  hash.sha_ = GetTextToWhitespace(ptok);
+
+  if (!FGetTok(ptok))
+    return false;
+  hash.tag_ = GetTextToWhitespace(ptok);
+
+  return true;
+}
+
 bool GitDiffReader::FReadCommit(TOK* ptok) {
+  // Format: "commit <sha1> (<tag>)".
   if (ptok->tk != TK::tkWORD)
     return false;
   assert(!strcmp(ptok->szVal, "commit"));
 
-  // Start new diff.
-  diffs_.emplace_back(std::move(FileVersionDiff{}));
+  // Start new diff.  REVIEW: is there a better way to determine diff edges?
+  diffs_.push_back({});
   current_diff_ = &diffs_.back();
 
-  if (!FGetTok(ptok))
-    return false;
-  current_diff_->commit_ = GetTextToEndOfLine(ptok);
-
-  return true;
+  return FReadGitHash(ptok, current_diff_->commit_);
 }
 
 bool GitDiffReader::FReadTree(TOK* ptok) {
@@ -69,9 +100,9 @@ bool GitDiffReader::FReadParent(TOK* ptok) {
 
   if (!FGetTok(ptok))
     return false;
-  current_diff_->parent_ = GetTextToEndOfLine(ptok);
 
-  return true;
+  current_diff_->parents_.push_back({});
+  return FReadGitHash(ptok, current_diff_->parents_.back());
 }
 
 bool GitDiffReader::FReadAuthor(TOK* ptok) {
@@ -421,48 +452,50 @@ LDone:
 
 GitDiffReader::GitDiffReader(const std::filesystem::path& file_path)
     : current_diff_(nullptr) {
-  std::wstring command =
-      to_wstring(kGitDiffCommand) + std::wstring(file_path.filename());
-  ProcessPipe process_pipe(command.c_str(), file_path.parent_path().c_str());
+  TCHAR command[1024];
+  wsprintf(command, kGitDiffCommand, file_path.filename().c_str());
+  ProcessPipe process_pipe_git_log(command, file_path.parent_path().c_str());
+  ProcessPipe process_pipe_git_tag(kGitLogNameTagCommandFromStdIn,
+                                   file_path.parent_path().c_str(),
+                                   process_pipe_git_log.GetStandardOutput());
 
-  FILE* stream = process_pipe.GetStandardOutput();
+  FILE* stream = process_pipe_git_tag.GetStandardOutput();
 
   // Check if it is in the cache.
-  fpos_t pos;
-  if (fgetpos(stream, &pos))
-    return;
   char header_line[1024];
   if (!fgets(header_line, (int)std::size(header_line), stream))
-    return;
-  if (fsetpos(stream, &pos))
     return;
 
   file_stream_cache_ = std::make_unique<GitFileStreamCache>(file_path);
 
-  // Format: "commit <sha1>".
-  auto sha1 = strrchr(header_line, ' ');
-  if (!sha1)
+  // Sniff header of stream to see if we have commit cached.
+  ProcessLogLine(header_line);
+  if (!current_diff_ || !current_diff_->commit_.IsValid()) {
     return;
-  // Skip space.
-  sha1++;
-  auto len = strlen(sha1);
-  if (sha1[len - 1] == '\n')
-    sha1[len - 1] = '\0';
-  auto cache_stream = file_stream_cache_->GetStream(sha1);
+  }
+  auto cache_stream = file_stream_cache_->GetStream(current_diff_->commit_.sha_);
 
   if (cache_stream.get()) {
-    if (cache_stream)
+    if (cache_stream) {
       ProcessDiffLines(cache_stream.get());
+    }
   } else {
-    auto file_stream = file_stream_cache_->SaveStream(stream, sha1);
-    if (file_stream)
+    auto file_stream = file_stream_cache_->SaveStream(
+        stream, header_line, current_diff_->commit_.sha_);
+    if (file_stream) {
       ProcessDiffLines(file_stream.get());
+    }
   }
 }
 
 GitDiffReader::~GitDiffReader() {}
 
 void GitDiffReader::ProcessDiffLines(FILE* stream) {
+  
+  assert(!current_diff_ ^ diffs_.size());
+  diffs_.clear();
+  current_diff_ = nullptr;
+
   char stream_line[1024];
   while (fgets(stream_line, (int)std::size(stream_line), stream)) {
     if (!ProcessLogLine(stream_line))

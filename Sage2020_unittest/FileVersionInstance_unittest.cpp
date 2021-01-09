@@ -14,8 +14,9 @@ class FileVersionInstanceTest : public testing::Test {
 TEST(FileVersionInstanceTest, Load) {
   std::deque<std::string> some_lines = {"Hello\n", "World!\n", "Thanks!\n"};
   std::deque<std::string> some_lines_copy = some_lines;
-  std::string commit_id = "01234567890abcdef01234567890abcdef01234567";
-  FileVersionInstance file_version_instance(some_lines, commit_id);
+  GitHash commit;
+  commit.sha_ = "01234567890abcdef01234567890abcdef01234567";
+  FileVersionInstance file_version_instance(some_lines, commit);
   int i = 0;
   for (const auto& line : some_lines) {
     EXPECT_EQ(line.size(), 0);

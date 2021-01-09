@@ -23,6 +23,7 @@ class GitDiffReader {
   bool FReadAddLine(TOK* ptok);
   bool FReadRemoveLine(TOK* ptok);
   bool FParseNamedLine(TOK* ptok);
+  bool FReadGitHash(TOK* ptok, GitHash& hash);
   bool FReadCommit(TOK* ptok);
   bool FReadTree(TOK* ptok);
   bool FReadParent(TOK* ptok);

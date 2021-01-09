@@ -42,8 +42,7 @@ TEST(GitDiffReaderTest, LoadAndCompareWithFile) {
   GitFileReader git_file_reader_latest{file_path.parent_path(), latest_file_id};
   auto file_version_instance_loaded = std::make_unique<FileVersionInstance>(
       std::move(git_file_reader_latest.GetLines()),
-      diffs.size() > 0 ? diffs.front().commit_ : "");
-
+      diffs.size() > 0 ? diffs.front().commit_ : GitHash());
   EXPECT_EQ(file_version_instance_loaded->GetLines().size(),
             file_version_instance.GetLines().size());
   for (size_t i = 0; i < file_version_instance.GetLines().size(); i++) {

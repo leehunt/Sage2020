@@ -79,4 +79,9 @@ class CSage2020Doc : public CDocument {
   CPoint viewport_origin_;
 
   Sage2020ViewDocListener* m_pDocListenerHead;
+
+  bool m_fNewDoc;
+
+ public:
+  virtual BOOL OnOpenDocument(LPCTSTR lpszPathName);
 };

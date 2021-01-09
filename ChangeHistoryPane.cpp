@@ -1,6 +1,8 @@
 #include "pch.h"
 
 #include <cassert>
+#include <iomanip>
+#include <sstream>
 #include <vector>
 #include "ChangeHistoryPane.h"
 #include "FileVersionDiff.h"
@@ -138,8 +140,33 @@ static void SetToolTip(CTreeCtrl& tree,
   }
 }
 
-static std::string CreateTreeItemLabel(size_t commit_index) {
-  return std::to_string(commit_index);
+static std::string CreateTreeItemLabel(size_t commit_index,
+                                       const FileVersionDiff& file_diff) {
+  auto date_pos = file_diff.author_.rfind('>');
+  std::string author_string;
+  std::string time_string;
+  if (date_pos != std::string::npos) {
+    author_string = file_diff.author_.substr(0, date_pos + 1);
+    auto raw_string = file_diff.author_.substr(date_pos + 2);
+    if (raw_string.back() == '\n')
+      raw_string = raw_string.substr(0, raw_string.size() - 1);
+#if 0
+    std::istringstream ss(raw_string);
+    std::tm t = {};
+    ss >> std::get_time(&t, "%s %z");
+    std::ostringstream os;
+    os << std::put_time(&t, "%c");
+    time_string = os.str();
+#else
+    auto epoch_secs = static_cast<const time_t>(atol(raw_string.c_str()));
+    time_string.assign(ctime(&epoch_secs));
+#endif
+  } else {
+    author_string = file_diff.author_;
+  }
+  std::string label =
+      author_string + ' ' + time_string + ' ' + file_diff.commit_.tag_;
+  return label;
 }
 
 enum VERSION_IMAGES {
@@ -247,7 +274,7 @@ static void SetTreeItemData(CTreeCtrl& tree,
     CTreeCtrl& tree,
     HTREEITEM htreeitemRoot,
     const std::vector<FileVersionDiff>& file_diffs,
-    const std::string& selected_commit) {
+    const GitHash& selected_commit) {
   BOOL fSelected = FALSE;
   bool fTreeFocused = tree.GetFocus() == &tree;
 
@@ -260,14 +287,15 @@ static void SetTreeItemData(CTreeCtrl& tree,
         reinterpret_cast<const FileVersionDiff*>(tree.GetItemData(htreeitem));
     if (item_file_diff == NULL ||
         item_file_diff->commit_ != file_diff.commit_) {
-      auto item_label = to_wstring(CreateTreeItemLabel(commit_index));
+      auto item_label =
+          to_wstring(CreateTreeItemLabel(commit_index, file_diff));
       SetTreeItemData(tree, htreeitem, file_diff, item_label);
 
-      if (selected_commit == file_diff.commit_) {
+      if (file_diff.commit_ == selected_commit) {
         VERIFY(fSelected = tree.SelectItem(htreeitem));
       }
     } else {
-      if (!fTreeFocused && selected_commit == file_diff.commit_)
+      if (!fTreeFocused && file_diff.commit_ == selected_commit)
         VERIFY(fSelected = tree.SelectItem(htreeitem));
     }
 
@@ -289,16 +317,17 @@ static void SetTreeItemData(CTreeCtrl& tree,
     HTREEITEM htreeitemParent = tree.GetParentItem(htreeitemRoot);
     do {
       const auto& file_diff = file_diffs[commit_index];
-      auto item_label = to_wstring(CreateTreeItemLabel(commit_index));
+      auto item_label =
+          to_wstring(CreateTreeItemLabel(commit_index, file_diff));
       HTREEITEM htreeitemNew = tree.InsertItem(
           item_label.c_str(), htreeitemParent);  // inserts at end
       if (htreeitemNew != NULL) {
         SetTreeItemData(tree, htreeitemNew, file_diff, item_label);
 
-        if (selected_commit == file_diff.commit_)
+        if (file_diff.commit_ == selected_commit)
           VERIFY(fSelected = tree.SelectItem(htreeitemNew));
       } else {
-        if (!fTreeFocused && selected_commit == file_diff.commit_)
+        if (!fTreeFocused && file_diff.commit_ == selected_commit)
           VERIFY(fSelected = tree.SelectItem(htreeitem));
       }
       commit_index++;

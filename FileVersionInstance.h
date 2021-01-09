@@ -5,6 +5,7 @@
 #include <map>
 #include <set>
 #include <vector>
+#include "GitHash.h"
 
 #define USE_SPARSE_INDEX_ARRAY 0
 
@@ -83,11 +84,10 @@ typedef std::deque<FileVersionLineInfo> LineToFileVersionLineInfo;
 class FileVersionInstance {
  public:
   FileVersionInstance();
-  FileVersionInstance(std::deque<std::string>& lines,
-                      const std::string& commit_id);
+  FileVersionInstance(std::deque<std::string>& lines, const GitHash& commit);
   virtual ~FileVersionInstance() {}
 
-  std::string GetCommit() const { return commit_id_; }
+  const GitHash& GetCommit() const { return commit_; }
   size_t GetCommitIndex() const { return commit_index_; }
 
   const std::deque<std::string>& GetLines() const { return file_lines_; }
@@ -107,12 +107,10 @@ class FileVersionInstance {
   // Updates/replaces info for [line_num, line_num + line_count).
   void AddLineInfo(int line_num,
                    int line_count,
-      const LineToFileVersionLineInfo& line_infos);
+                   const LineToFileVersionLineInfo& line_infos);
 
   // Updates/replaces info for [line_num, line_num + line_count).
-  void RemoveLineInfo(
-      int line_num,
-      int line_count);
+  void RemoveLineInfo(int line_num, int line_count);
 
   const LineToFileVersionLineInfo& GetLinesInfo() const {
     return file_lines_info_;
@@ -121,7 +119,7 @@ class FileVersionInstance {
  private:
   std::deque<std::string> file_lines_;
   LineToFileVersionLineInfo file_lines_info_;
-  std::string commit_id_;
+  GitHash commit_;
   int commit_index_;
 
   // REVIEW: Is there a better way to express this relationship?

@@ -4,6 +4,7 @@
 #include <vector>
 
 struct FileVersionDiff;
+struct GitHash;
 class CChangeHistoryPane : public CDockablePane {
 
 public:
@@ -34,5 +35,5 @@ public:
       CTreeCtrl& tree,
       HTREEITEM htreeitemRoot,
       const std::vector<FileVersionDiff>& file_diffs,
-      const std::string& selected_commit);
+      const GitHash& selected_commit);
 };
