@@ -79,14 +79,14 @@ bool FileVersionInstanceEditor::GoToCommit(
   while (file_version_instance_.commit_index_ >
          static_cast<int>(commit_index)) {
     // N.b. Make a 'diff' copy since commit_index_ is modfied by RemoveDiff().
-    const auto diff = diffs[file_version_instance_.commit_index_];
+    const auto& diff = diffs[file_version_instance_.commit_index_];
     RemoveDiff(diff);
     edited = true;
   }
   while (file_version_instance_.commit_index_ <
          static_cast<int>(commit_index)) {
     // N.b. Make a 'diff' copy since commit_index_ is modfied by AddDiff().
-    const auto diff = diffs[file_version_instance_.commit_index_ + 1];
+    const auto& diff = diffs[file_version_instance_.commit_index_ + 1];
     AddDiff(diff);
     edited = true;
   }
@@ -96,7 +96,6 @@ bool FileVersionInstanceEditor::GoToCommit(
 
 void FileVersionInstanceEditor::AddHunk(
     const FileVersionDiffHunk& hunk) {
-
 
   // Remove lines.  N.b. Remove must be done first to get correct line
   // locations. Yes, using |add_location_| seems odd, but the add_location
@@ -121,7 +120,7 @@ void FileVersionInstanceEditor::AddHunk(
             hunk.remove_line_count_);
 
     if (!hunk.line_info_to_restore_) {
-      hunk.line_info_to_restore_ = std::make_shared<LineToFileVersionLineInfo>();
+      hunk.line_info_to_restore_ = std::make_unique<LineToFileVersionLineInfo>();
       hunk.line_info_to_restore_->insert(
           hunk.line_info_to_restore_->begin(),
           file_version_instance_.file_lines_info_.begin() +

@@ -39,7 +39,8 @@ TEST(FileVersionInstanceTest, Load) {
     i++;
   }
 #if USE_SPARSE_INDEX_ARRAY
-  EXPECT_FALSE(FileVersionInstanceTest::GetLinesInfo(file_version_instance).IsEmpty());
+  EXPECT_FALSE(
+      FileVersionInstanceTest::GetLinesInfo(file_version_instance).IsEmpty());
 #else
   EXPECT_EQ(FileVersionInstanceTest::GetLinesInfo(file_version_instance).size(),
             3U);
@@ -130,7 +131,6 @@ TEST(FileVersionInstanceTest, SparseIndexRemove) {
 }
 
 TEST(FileVersionInstanceTest, SparseIndexInsertVsAppend) {
-
   SparseIndexArray sparse_index_array1;
   sparse_index_array1.Add(0, 3, 3);
   sparse_index_array1.Add(0, 3, 2);

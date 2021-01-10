@@ -14,6 +14,8 @@ class GitDiffReaderTest;
 class FileVersionInstanceTest;
 class SparseIndexArray;
 
+// FUTURE: Move this class into seperate header file and only include that in
+// "FileVersionDiff.h".
 class FileVersionLineInfo {
  public:
   FileVersionLineInfo(size_t commit_index) : commit_index_(commit_index) {

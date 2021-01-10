@@ -3,15 +3,8 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include "FileVersionInstance.h"
 #include "GitHash.h"
-
-#if USE_SPARSE_INDEX_ARRAY
-class SparseIndexArray;
-typedef SparseIndexArray LineToFileVersionLineInfo;
-#else
-class FileVersionLineInfo;
-typedef std::deque<FileVersionLineInfo> LineToFileVersionLineInfo;
-#endif
 
 struct FileVersionDiffHunk {
   int add_location_ = 0;
@@ -23,15 +16,10 @@ struct FileVersionDiffHunk {
   std::string start_context_;
   // Keep track of any deleted line info so that remove operations will restore
   // the current history of changes up to that point.
-  // REVIEW: Find way to turn this into a std::unique_ptr<> (doing so requires
-  // exposing all of FileVersionLineInfo, which is currently not in unqiue
-  // header file).
-  mutable std::shared_ptr<LineToFileVersionLineInfo> line_info_to_restore_;
+  mutable std::unique_ptr<LineToFileVersionLineInfo> line_info_to_restore_;
 #if _DEBUG_MEM_TRACE
   FileVersionDiffHunk() { printf("FileVersionDiffHunk\t%p\n", this); }
-  ~FileVersionDiffHunk() {
-    printf("~FileVersionDiffHunk\t%p\n", this);
-  }
+  ~FileVersionDiffHunk() { printf("~FileVersionDiffHunk\t%p\n", this); }
 #endif
 };
 struct FileVersionDiffTree {
@@ -47,11 +35,21 @@ struct FileVersionDiffTree {
   char action;
   char file_path[FILENAME_MAX];
 };
+struct FileVersionDiff;
+struct FileVersionDiffParent {
+  GitHash commit_;
+  mutable std::unique_ptr<std::vector<FileVersionDiff>> file_version_diffs;
+#if _DEBUG_MEM_TRACE
+  FileVersionDiffParent() { printf("FileVersionDiffParent\t%p\n", this); }
+  ~FileVersionDiffParent() { printf("~FileVersionDiffParent\t%p\n", this); }
+#endif
+};
 struct FileVersionDiff {
+  std::filesystem::path path_;
   std::vector<FileVersionDiffHunk> hunks_;
   GitHash commit_;
   std::string tree_;
-  std::vector<GitHash> parents_;
+  std::vector<FileVersionDiffParent> parents_;
   std::string author_;
   std::string committer_;
   std::string comment_;
@@ -59,7 +57,6 @@ struct FileVersionDiff {
   std::string diff_command_;
   std::string index_;
   int ver_ = 0;
-
 #if _DEBUG_MEM_TRACE
   FileVersionDiff() { printf("FileVersionDiff\t%p\n", this); }
   ~FileVersionDiff() { printf("~FileVersionDiff\t%p\n", this); }

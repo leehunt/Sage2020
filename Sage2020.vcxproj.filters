@@ -240,6 +240,12 @@
     <Image Include="res\history_pane_hc.bmp">
       <Filter>Resource Files</Filter>
     </Image>
+    <Image Include="res\history_tree.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\history_tree_hc.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <None Include="res\Sage2020.rc2">

@@ -11,9 +11,12 @@
 #include "LineTokenizer.h"
 #include "Utility.h"
 
+constexpr TCHAR kGitMostRecentCommitForFileCommand[] =
+    _T("git --no-pager log %S -n 1 -- %s");
 constexpr TCHAR kGitDiffCommand[] =
-    _T("git --no-pager log -p -U0 --raw --no-color --pretty=raw -- %s");
-constexpr TCHAR kGitLogNameTagCommandFromStdIn[] = _T("git name-rev --stdin");
+    _T("git --no-pager log %S -p -U0 --raw --no-color --pretty=raw -- %s");
+constexpr TCHAR kGitLogNameTagCommandFromStdIn[] =
+    _T("git --no-pager name-rev --stdin");
 
 static std::string GetTextToWhitespace(TOK* ptok) {
   std::string text;
@@ -78,6 +81,8 @@ bool GitDiffReader::FReadCommit(TOK* ptok) {
   diffs_.push_back({});
   current_diff_ = &diffs_.back();
 
+  current_diff_->path_ = path_;
+
   return FReadGitHash(ptok, current_diff_->commit_);
 }
 
@@ -102,7 +107,7 @@ bool GitDiffReader::FReadParent(TOK* ptok) {
     return false;
 
   current_diff_->parents_.push_back({});
-  return FReadGitHash(ptok, current_diff_->parents_.back());
+  return FReadGitHash(ptok, current_diff_->parents_.back().commit_);
 }
 
 bool GitDiffReader::FReadAuthor(TOK* ptok) {
@@ -327,7 +332,7 @@ bool GitDiffReader::FReadHunkHeader(TOK* ptok) {
   hunk.start_context_ = GetTextToEndOfLine(ptok);
 
   // Create new Hunk series.
-  current_diff_->hunks_.push_back(hunk);
+  current_diff_->hunks_.push_back(std::move(hunk));
 
   return true;
 }
@@ -450,16 +455,23 @@ LDone:
   return !is_done;
 }
 
-GitDiffReader::GitDiffReader(const std::filesystem::path& file_path)
-    : current_diff_(nullptr) {
+GitDiffReader::GitDiffReader(const std::filesystem::path& file_path,
+                             const std::string& tag)
+    : current_diff_(nullptr), path_(file_path) {
   TCHAR command[1024];
-  wsprintf(command, kGitDiffCommand, file_path.filename().c_str());
-  ProcessPipe process_pipe_git_log(command, file_path.parent_path().c_str());
-  ProcessPipe process_pipe_git_tag(kGitLogNameTagCommandFromStdIn,
-                                   file_path.parent_path().c_str(),
-                                   process_pipe_git_log.GetStandardOutput());
+  std::string tag_no_parentheses = tag;
+  if (!tag_no_parentheses.empty()) {
+    if (tag_no_parentheses.front() == '(')
+      tag_no_parentheses = tag_no_parentheses.substr(1);
+    if (!tag_no_parentheses.empty() && tag_no_parentheses.back() == ')')
+      tag_no_parentheses =
+          tag_no_parentheses.substr(0, tag_no_parentheses.size() - 1);
+  }
+  wsprintf(command, kGitMostRecentCommitForFileCommand,
+           tag_no_parentheses.c_str(), file_path.filename().c_str());
+  ProcessPipe process_pipe_git_commit(command, file_path.parent_path().c_str());
 
-  FILE* stream = process_pipe_git_tag.GetStandardOutput();
+  FILE* stream = process_pipe_git_commit.GetStandardOutput();
 
   // Check if it is in the cache.
   char header_line[1024];
@@ -473,15 +485,22 @@ GitDiffReader::GitDiffReader(const std::filesystem::path& file_path)
   if (!current_diff_ || !current_diff_->commit_.IsValid()) {
     return;
   }
-  auto cache_stream = file_stream_cache_->GetStream(current_diff_->commit_.sha_);
+  auto cache_stream =
+      file_stream_cache_->GetStream(current_diff_->commit_.sha_);
 
   if (cache_stream.get()) {
     if (cache_stream) {
       ProcessDiffLines(cache_stream.get());
     }
   } else {
+    wsprintf(command, kGitDiffCommand, tag_no_parentheses.c_str(),
+             file_path.filename().c_str());
+    ProcessPipe process_pipe_git_log(command, file_path.parent_path().c_str());
+    ProcessPipe process_pipe_git_tag(kGitLogNameTagCommandFromStdIn,
+                                     file_path.parent_path().c_str(),
+                                     process_pipe_git_log.GetStandardOutput());
     auto file_stream = file_stream_cache_->SaveStream(
-        stream, header_line, current_diff_->commit_.sha_);
+        process_pipe_git_tag.GetStandardOutput(), current_diff_->commit_.sha_);
     if (file_stream) {
       ProcessDiffLines(file_stream.get());
     }
@@ -491,7 +510,6 @@ GitDiffReader::GitDiffReader(const std::filesystem::path& file_path)
 GitDiffReader::~GitDiffReader() {}
 
 void GitDiffReader::ProcessDiffLines(FILE* stream) {
-  
   assert(!current_diff_ ^ diffs_.size());
   diffs_.clear();
   current_diff_ = nullptr;

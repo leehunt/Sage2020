@@ -25,9 +25,9 @@ class GitDiffReaderTest : public testing::Test {
 
 TEST(GitDiffReaderTest, LoadAndCompareWithFile) {
   std::filesystem::path file_path = __FILE__;
-  GitDiffReader git_diff_reader(file_path);
+  GitDiffReader git_diff_reader(file_path, std::string());
 
-  auto diffs = git_diff_reader.GetDiffs();
+  auto& diffs = git_diff_reader.GetDiffs();
   EXPECT_GT(diffs.size(), 0U);
   // Sythethesize FileVersionInstance from diffs, going from first diff (the
   // last recorded in the git log) forward.

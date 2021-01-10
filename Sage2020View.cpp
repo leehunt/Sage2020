@@ -254,10 +254,10 @@ void CSage2020View::OnDraw(CDC* pDC) {
 
   const int iSearchOffset = GetHighlightAll() ? 0 : m_ptSearchLast.x;
   CPoint cptViewport = pDC->GetViewportOrg();
-  CPoint cptOld = cptViewport;
   auto file_version_instance = pDoc->GetFileVersionInstance();
   if (m_currentFileVersionInstance != file_version_instance) {
-    pDoc->viewport_origin() = cptViewport;
+    if (m_currentFileVersionInstance)
+      pDoc->viewport_origin() = cptViewport;
     if (file_version_instance != nullptr) {
       // recalc for possible updated cLine
       UpdateScrollSizes(rcClient.bottom);
@@ -265,7 +265,8 @@ void CSage2020View::OnDraw(CDC* pDC) {
       ScrollToPosition(pDoc->viewport_origin());
 
       pDC->SetViewportOrg(-GetDeviceScrollPosition());
-      pDoc->viewport_origin() = pDC->GetViewportOrg();
+      
+      cptViewport = pDC->GetViewportOrg();
     }
 
     m_currentFileVersionInstance = file_version_instance;

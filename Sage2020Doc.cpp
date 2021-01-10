@@ -38,7 +38,8 @@ END_MESSAGE_MAP()
 
 // CSage2020Doc construction/destruction
 
-CSage2020Doc::CSage2020Doc() noexcept : m_pDocListenerHead(nullptr), m_fNewDoc(false) {}
+CSage2020Doc::CSage2020Doc() noexcept
+    : m_pDocListenerHead(nullptr), m_fNewDoc(false) {}
 
 CSage2020Doc::~CSage2020Doc() {}
 
@@ -59,9 +60,8 @@ void CSage2020Doc::Serialize(CArchive& ar) {
     // TODO: add storing code here
   } else {
     auto native_path = ar.GetFile()->GetFilePath();
-    std::wstring_convert<std::codecvt_utf8<wchar_t>> myconv;
-    std::filesystem::path path = myconv.to_bytes(native_path);
-    GitDiffReader git_diff_reader{path};
+    std::filesystem::path path = (PCWSTR)native_path;
+    GitDiffReader git_diff_reader{path, std::string()};
 
     // Sythethesize FileVersionInstance from diffs, going from first diff
     // (the last recorded in the git log) forward.
@@ -71,7 +71,7 @@ void CSage2020Doc::Serialize(CArchive& ar) {
     if (file_diffs_.size() > 0) {
       if (file_diffs_.front().diff_tree_.action != 'A') {
         // if the first commit is not an add, then get the file at that point.
-        std::filesystem::path parent_path = myconv.to_bytes(path);
+        std::filesystem::path parent_path = path;
 
         std::string initial_file_id =
             file_diffs_.front().diff_tree_.new_hash_string;
@@ -276,7 +276,13 @@ BOOL CSage2020Doc::OnOpenDocument(LPCTSTR lpszPathName) {
   if (!CDocument::OnOpenDocument(lpszPathName))
     return FALSE;
 
-  m_fNewDoc = true;  // HACK
+  m_fNewDoc = true;  // HACK (Consider adding Sage2020ViewDocListener to CChangeHistoryPane).
+
+  if (m_pDocListenerHead) {
+    m_pDocListenerHead->NotifyAllListenersOfVersionChange(-1);
+  }
+
+  viewport_origin() = CPoint();
 
   return TRUE;
 }

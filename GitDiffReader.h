@@ -8,7 +8,7 @@ class GitFileStreamCache;
 struct TOK;
 class GitDiffReader {
  public:
-  GitDiffReader(const std::filesystem::path& file_path);
+  GitDiffReader(const std::filesystem::path& file_path, const std::string& tag);
   virtual ~GitDiffReader();
 
   const std::vector<FileVersionDiff>& GetDiffs();
@@ -38,4 +38,5 @@ class GitDiffReader {
   std::vector<FileVersionDiff> diffs_;
 
   std::unique_ptr<GitFileStreamCache> file_stream_cache_;
+  std::filesystem::path path_;
 };

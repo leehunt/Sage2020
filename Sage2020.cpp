@@ -67,7 +67,7 @@ BOOL CSage2020App::InitInstance() {
   InitCtrls.dwSize = sizeof(InitCtrls);
   // Set this to include all the common control classes you want to use
   // in your application.
-  InitCtrls.dwICC = ICC_WIN95_CLASSES;
+  InitCtrls.dwICC = ICC_WIN95_CLASSES | ICC_TREEVIEW_CLASSES | ICC_LINK_CLASS;
   InitCommonControlsEx(&InitCtrls);
 
   CWinAppEx::InitInstance();

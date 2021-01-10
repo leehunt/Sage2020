@@ -9,6 +9,7 @@
 #include "Sage2020.h"
 #include "Utility.h"
 #include "resource.h"
+#include "GitDiffReader.h"
 
 BEGIN_MESSAGE_MAP(CChangeHistoryPane, CDockablePane)
 ON_WM_ACTIVATE()
@@ -122,6 +123,26 @@ void CChangeHistoryPane::OnTreeNotifyExpanding(NMHDR* pNMHDR,
   const NMTREEVIEW* pTreeView = reinterpret_cast<const NMTREEVIEW*>(pNMHDR);
 
   HTREEITEM htreeitem = pTreeView->itemNew.hItem;
+
+  auto file_version_diff = reinterpret_cast<const FileVersionDiff*>(
+      m_wndTreeCtrl.GetItemData(htreeitem));
+  if (file_version_diff == NULL) {
+    assert(false);
+    return;
+  }
+  for (auto it = file_version_diff->parents_.begin();
+       it != file_version_diff->parents_.end(); ++it) {
+#if 0
+    if (!it->file_version_diffs) {
+      GitDiffReader git_diff_reader{file_version_diff->path_,
+                                    it->commit_.tag_};
+      if (git_diff_reader.GetDiffs().size() > 0) {
+        it->file_version_diffs = std::make_unique<std::vector<FileVersionDiff>>(
+            git_diff_reader.MoveDiffs());
+      }
+    }
+#endif // 0
+  }
 }
 
 static void SetToolTip(CTreeCtrl& tree,
@@ -200,6 +221,10 @@ static void SetTreeItemData(CTreeCtrl& tree,
       HTREEITEM htreeitemChild = NULL;
       while ((htreeitemChild = tree.GetChildItem(htreeitem)) != NULL)
         tree.DeleteItem(htreeitemChild);
+      if (file_version_diff.parents_.size() > 0) {
+        if (!tree.ItemHasChildren(htreeitem))
+          tree.InsertItem(_T("Dummy"), htreeitem);
+      }
       break;
     }
 #if 0
@@ -235,6 +260,10 @@ static void SetTreeItemData(CTreeCtrl& tree,
       HTREEITEM htreeitemChild = NULL;
       while ((htreeitemChild = tree.GetChildItem(htreeitem)) != NULL)
         tree.DeleteItem(htreeitemChild);
+      if (file_version_diff.parents_.size() > 0) {
+        if (!tree.ItemHasChildren(htreeitem))
+          tree.InsertItem(_T("Dummy"), htreeitem);
+      }
       break;
     }
 #if 0
@@ -299,14 +328,13 @@ static void SetTreeItemData(CTreeCtrl& tree,
         VERIFY(fSelected = tree.SelectItem(htreeitem));
     }
 
-#if 0
-    const DIFFRECORD* pdrChild = pdr->PdrChild();
-    if (pdrChild != NULL)
-      fSelected = !FEnsureTreeItemsAndSelection(
-          tree, tree.GetChildItem(htreeitem), PdrHead(pdrChild), nCLSelection,
-          cstrDepotFilePath);
-
-#endif  // 0
+    for (auto& parent : file_diff.parents_) {
+      if (parent.file_version_diffs) {
+        fSelected = !FEnsureTreeItemsAndSelection(
+            tree, tree.GetChildItem(htreeitem), *parent.file_version_diffs,
+            (*parent.file_version_diffs)[0].commit_);
+      }
+    }
 
     commit_index++;
     htreeitem = tree.GetNextItem(htreeitem, TVGN_NEXT);
