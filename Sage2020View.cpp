@@ -265,7 +265,7 @@ void CSage2020View::OnDraw(CDC* pDC) {
       ScrollToPosition(pDoc->viewport_origin());
 
       pDC->SetViewportOrg(-GetDeviceScrollPosition());
-      
+
       cptViewport = pDC->GetViewportOrg();
     }
 

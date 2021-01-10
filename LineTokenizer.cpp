@@ -5,7 +5,6 @@
 
 #define CCH_MAX_MACRO 1024
 
-
 #define SYM 9
 
 // clang-format off

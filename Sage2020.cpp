@@ -4,8 +4,8 @@
 
 #include "pch.h"
 
-#include "Sage2020.h"
 #include "MainFrm.h"
+#include "Sage2020.h"
 #include "afxdialogex.h"
 #include "afxwinappex.h"
 #include "framework.h"

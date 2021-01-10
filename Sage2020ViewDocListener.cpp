@@ -18,7 +18,6 @@ Sage2020ViewDocListener* Sage2020ViewDocListener::LinkListener(
 
 Sage2020ViewDocListener* Sage2020ViewDocListener::UnlinkListener(
     Sage2020ViewDocListener* listener_head) {
-
   assert(listener_head != nullptr);
   assert(listener_head != next_listener_);
 
@@ -44,7 +43,6 @@ Sage2020ViewDocListener* Sage2020ViewDocListener::UnlinkListener(
 
   return new_head;
 }
-
 
 void Sage2020ViewDocListener::NotifyAllListenersOfEdit(int iLine, int cLine) {
   assert(this->previous_listener_ == nullptr);

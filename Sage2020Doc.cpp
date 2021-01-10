@@ -276,7 +276,8 @@ BOOL CSage2020Doc::OnOpenDocument(LPCTSTR lpszPathName) {
   if (!CDocument::OnOpenDocument(lpszPathName))
     return FALSE;
 
-  m_fNewDoc = true;  // HACK (Consider adding Sage2020ViewDocListener to CChangeHistoryPane).
+  m_fNewDoc = true;  // HACK (Consider adding Sage2020ViewDocListener to
+                     // CChangeHistoryPane).
 
   if (m_pDocListenerHead) {
     m_pDocListenerHead->NotifyAllListenersOfVersionChange(-1);

@@ -315,12 +315,12 @@ void CMainFrame::SetDockingWindowIcons(BOOL bHiColorIcons) {
                          ::GetSystemMetrics(SM_CYSMICON), 0);
   m_wndProperties.SetIcon(hPropertiesBarIcon, FALSE);
 
-  HICON hChangeHistoryPaneIcon =
-    (HICON)::LoadImage(::AfxGetResourceHandle(),
-                        MAKEINTRESOURCE(bHiColorIcons ? IDI_PROPERTIES_WND_HC
-                                                      : IDI_PROPERTIES_WND),  // TODO: fix up
-                        IMAGE_ICON, ::GetSystemMetrics(SM_CXSMICON),
-                        ::GetSystemMetrics(SM_CYSMICON), 0);
+  HICON hChangeHistoryPaneIcon = (HICON)::LoadImage(
+      ::AfxGetResourceHandle(),
+      MAKEINTRESOURCE(bHiColorIcons ? IDI_PROPERTIES_WND_HC
+                                    : IDI_PROPERTIES_WND),  // TODO: fix up
+      IMAGE_ICON, ::GetSystemMetrics(SM_CXSMICON),
+      ::GetSystemMetrics(SM_CYSMICON), 0);
   m_wndChangeHistoryPane.SetIcon(hChangeHistoryPaneIcon, FALSE);
 }
 

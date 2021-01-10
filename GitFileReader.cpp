@@ -5,8 +5,8 @@
 #include "Utility.h"
 constexpr char kGitShowCommand[] = "git --no-pager show ";
 
-GitFileReader::GitFileReader(
-    const std::filesystem::path& directory, const std::string& hash) {
+GitFileReader::GitFileReader(const std::filesystem::path& directory,
+                             const std::string& hash) {
   std::string command = std::string(kGitShowCommand) + hash;
 
   ProcessPipe process_pipe(to_wstring(command).c_str(), directory.c_str());

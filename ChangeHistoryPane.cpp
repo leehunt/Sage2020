@@ -6,10 +6,10 @@
 #include <vector>
 #include "ChangeHistoryPane.h"
 #include "FileVersionDiff.h"
+#include "GitDiffReader.h"
 #include "Sage2020.h"
 #include "Utility.h"
 #include "resource.h"
-#include "GitDiffReader.h"
 
 BEGIN_MESSAGE_MAP(CChangeHistoryPane, CDockablePane)
 ON_WM_ACTIVATE()
@@ -141,7 +141,7 @@ void CChangeHistoryPane::OnTreeNotifyExpanding(NMHDR* pNMHDR,
             git_diff_reader.MoveDiffs());
       }
     }
-#endif // 0
+#endif  // 0
   }
 }
 

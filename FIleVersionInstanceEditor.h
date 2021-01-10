@@ -18,7 +18,8 @@ class FileVersionInstanceEditor {
   bool GoToCommit(const GitHash& commit,
                   const std::vector<FileVersionDiff>& diffs);
 
-  bool GoToIndex(size_t commit_index, const std::vector<FileVersionDiff>& diffs);
+  bool GoToIndex(size_t commit_index,
+                 const std::vector<FileVersionDiff>& diffs);
 
  private:
   void AddHunk(const FileVersionDiffHunk& hunk);

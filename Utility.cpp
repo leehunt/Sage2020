@@ -12,11 +12,11 @@ std::wstring to_wstring(const std::string& s) {
                    [](unsigned char byte) { return byte > 127; }) == s.end()) {
     return std::wstring(s.cbegin(), s.cend());
   }
-  size_t desired_size = static_cast<size_t>(
-      ::MultiByteToWideChar(CP_UTF8, 0, s.c_str(), static_cast<int>(s.size()), nullptr, 0));
+  size_t desired_size = static_cast<size_t>(::MultiByteToWideChar(
+      CP_UTF8, 0, s.c_str(), static_cast<int>(s.size()), nullptr, 0));
   std::wstring wstr(desired_size, '\0');
-  ::MultiByteToWideChar(CP_UTF8, 0, s.c_str(), static_cast<int>(s.size()), wstr.data(),
-                        static_cast<int>(wstr.size()));
+  ::MultiByteToWideChar(CP_UTF8, 0, s.c_str(), static_cast<int>(s.size()),
+                        wstr.data(), static_cast<int>(wstr.size()));
   return wstr;
 }
 

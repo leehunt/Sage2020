@@ -44,14 +44,12 @@ void FileVersionInstance::AddLineInfo(
                               line_infos[i]);
     }
 #endif
+    }
   }
-}
 
-void FileVersionInstance::RemoveLineInfo(
-      int line_num, int line_count) {
-
+  void FileVersionInstance::RemoveLineInfo(int line_num, int line_count) {
 #if USE_SPARSE_INDEX_ARRAY
-  file_lines_info_.Remove(line_num - 1, line_count);
+    file_lines_info_.Remove(line_num - 1, line_count);
 #else
   auto itBegin = file_lines_info_.begin() + (line_num - 1);
   file_lines_info_.erase(itBegin, itBegin + line_count);

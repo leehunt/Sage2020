@@ -6,8 +6,7 @@
 struct FileVersionDiff;
 struct GitHash;
 class CChangeHistoryPane : public CDockablePane {
-
-public:
+ public:
   CChangeHistoryPane();
   ~CChangeHistoryPane();
 
