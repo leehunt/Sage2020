@@ -488,6 +488,8 @@ void CSage2020View::OnUpdatePropertiesPaneGrid(CCmdUI* pCmdUI) {
 
   std::set<FileVersionLineInfo> version_line_info_set;
   if (file_version_instance != NULL) {
+    assert(m_iSelStart <= m_iSelEnd);
+    assert(m_iSelEnd < static_cast<int>(file_version_instance->GetLines().size()));
     version_line_info_set =
         file_version_instance->GetVersionsFromLines(m_iSelStart, m_iSelEnd + 1);
   }
@@ -527,22 +529,36 @@ void CSage2020View::DocEditNotification(int iLine, int cLine) {
   GetClientRect(&rcClient);
   UpdateScrollSizes(rcClient.bottom);
 
+#if _DEBUG
+  CSage2020Doc* pDoc = GetDocument();
+  ASSERT_VALID(pDoc);
+  if (pDoc == NULL)
+    return;
+
+  auto file_version_instance = pDoc->GetFileVersionInstance();
+#endif // _DEBUG
+
+
   int iLineTop = ptCur.y / m_sizChar.cy;
   int cLineOffset = m_iSelStart - iLineTop;
   if (m_iSelStart >= iLine) {
     if (cLine < 0 && m_iSelStart < iLine - cLine)
-      m_iSelStart = iLine;
+      m_iSelStart = iLine - 1;
     else
       m_iSelStart += cLine;
-    assert(m_iSelStart >= 0);
+    assert(m_iSelStart >= -1);
+    assert(m_iSelStart < static_cast<int>(file_version_instance->GetLines().size()));
   }
   if (m_iSelEnd >= iLine) {
     if (cLine < 0 && m_iSelEnd < iLine - cLine)
-      m_iSelEnd = iLine;
+      m_iSelEnd = iLine - 1;
     else
       m_iSelEnd += cLine;
-    assert(m_iSelEnd >= 0);
+    assert(m_iSelEnd >= -1);
+    assert(m_iSelEnd < static_cast<int>(file_version_instance->GetLines().size()));
   }
+
+  assert(m_iSelStart <= m_iSelEnd);
 
   if (m_ptSearchLast.y >= iLine) {
     if (cLine < 0 && m_ptSearchLast.y < iLine - cLine)
@@ -650,6 +666,13 @@ void CSage2020View::OnMouseMove(UINT nFlags, CPoint point) {
       }
     }
 
+#if _DEBUG
+    assert(m_iSelStart <= m_iSelEnd);
+    auto file_version_instance = pDoc->GetFileVersionInstance();
+    assert(m_iSelEnd <
+           static_cast<int>(file_version_instance->GetLines().size()));
+#endif
+
     // scrolling
     RECT rcClient;
     GetClientRect(&rcClient);
@@ -713,6 +736,13 @@ void CSage2020View::OnLButtonDown(UINT nFlags, CPoint point) {
         Invalidate(FALSE /*bErase*/);
       }
     }
+#if _DEBUG
+    assert(m_iSelStart <= m_iSelEnd);
+    auto file_version_instance = pDoc->GetFileVersionInstance();
+    assert(m_iSelEnd <
+           static_cast<int>(file_version_instance->GetLines().size()));
+#endif
+
   }
 }
 void CSage2020View::OnLButtonUp(UINT nFlags, CPoint point) {

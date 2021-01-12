@@ -56,6 +56,8 @@ BOOL CSage2020Doc::OnNewDocument() {
 // CSage2020Doc serialization
 
 void CSage2020Doc::Serialize(CArchive& ar) {
+  CWaitCursor wait;
+
   if (ar.IsStoring()) {
     // TODO: add storing code here
   } else {
@@ -139,6 +141,7 @@ void CSage2020Doc::OnUpdatePropertiesPaneGrid(CCmdUI* pCmdUI) {
     if (pPropVersion->GetValue().iVal !=
         file_version_instance->GetCommitIndex()) {
       if (pPropVersion->IsModified()) {
+        CWaitCursor wait;
         FileVersionInstanceEditor editor(*file_version_instance,
                                          m_pDocListenerHead);
         if (editor.GoToIndex(pPropVersion->GetValue().iVal, diffs)) {
@@ -202,6 +205,8 @@ void CSage2020Doc::OnUpdateHistoryTree(CCmdUI* pCmdUI) {
         if (file_diffs[commit_index].commit_ != selected_file_diff->commit_) {
           FileVersionInstanceEditor editor(*file_version_instance_.get(),
                                            m_pDocListenerHead);
+          CWaitCursor wait;
+
           if (editor.GoToCommit(selected_file_diff->commit_, file_diffs))
             UpdateAllViews(NULL);
         }
