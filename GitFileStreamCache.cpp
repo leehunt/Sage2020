@@ -13,7 +13,7 @@
 
 constexpr char kGitGetRootCommand[] = "git rev-parse --show-toplevel";
 
-constexpr char kFileCacheVersionLine[] = "Cache file version: 1\n";
+constexpr char kFileCacheVersionLine[] = "Cache file version: 3\n";
 
 GitFileStreamCache::GitFileStreamCache(const std::filesystem::path& file_path)
     : file_path_(std::filesystem::canonical(file_path)) {}

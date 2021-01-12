@@ -14,7 +14,7 @@
 constexpr TCHAR kGitMostRecentCommitForFileCommand[] =
     _T("git --no-pager log %S -n 1 -- %s");
 constexpr TCHAR kGitDiffCommand[] =
-    _T("git --no-pager log %S -p -U0 --raw --no-color --pretty=raw -- %s");
+    _T("git --no-pager log %S -p -U0 --raw --no-color --first-parent --pretty=raw -- %s");
 constexpr TCHAR kGitLogNameTagCommandFromStdIn[] =
     _T("git --no-pager name-rev --stdin");
 
