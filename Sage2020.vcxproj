@@ -225,7 +225,6 @@
     <ClCompile Include="GitFileReader.cpp" />
     <ClCompile Include="GitFileStreamCache.cpp" />
     <ClCompile Include="LineTokenizer.cpp" />
-    <ClCompile Include="FileView.cpp" />
     <ClCompile Include="MainFrm.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
@@ -239,7 +238,6 @@
     <ClCompile Include="Sage2020ViewDocListener.cpp" />
     <ClCompile Include="Sage2020View.cpp" />
     <ClCompile Include="Utility.cpp" />
-    <ClCompile Include="ViewTree.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Sage2020.rc" />

@@ -508,7 +508,8 @@ LNextTok:
           break;
 
         default:
-          assert(FALSE);
+          assert(*ptok->szVal < 0);
+          ptok->tk = TK::tkWORD;  // UTF-8
           break;
       }
       break;

@@ -151,6 +151,7 @@ static void SetToolTip(CTreeCtrl& tree,
   CToolTipCtrl* ptooltip = tree.GetToolTips();
   if (ptooltip != NULL) {
     TCHAR wzTipLimited[1024];  // must limit tips to this size
+    wzTipLimited[0] - '\0';
     _tcsncpy_s(wzTipLimited, to_wstring(file_version_diff.comment_).c_str(),
                _countof(wzTipLimited) - 1);
     RECT rcItem;
@@ -163,30 +164,16 @@ static void SetToolTip(CTreeCtrl& tree,
 
 static std::string CreateTreeItemLabel(size_t commit_index,
                                        const FileVersionDiff& file_diff) {
-  auto date_pos = file_diff.author_.rfind('>');
-  std::string author_string;
-  std::string time_string;
-  if (date_pos != std::string::npos) {
-    author_string = file_diff.author_.substr(0, date_pos + 1);
-    auto raw_string = file_diff.author_.substr(date_pos + 2);
-    if (raw_string.back() == '\n')
-      raw_string = raw_string.substr(0, raw_string.size() - 1);
-#if 0
-    std::istringstream ss(raw_string);
-    std::tm t = {};
-    ss >> std::get_time(&t, "%s %z");
-    std::ostringstream os;
-    os << std::put_time(&t, "%c");
-    time_string = os.str();
-#else
-    auto epoch_secs = static_cast<const time_t>(atol(raw_string.c_str()));
-    time_string.assign(ctime(&epoch_secs));
-#endif
-  } else {
-    author_string = file_diff.author_;
+  char time_string[64];
+  time_string[0] = '\0';
+  if (asctime_s(time_string, &file_diff.author_.time_)) {
+    // Error.
+    time_string[0] = '\0';
   }
   std::string label =
-      author_string + ' ' + time_string + ' ' + file_diff.commit_.tag_;
+      std::to_string(commit_index) + ' ' +
+      file_diff.author_.name_ + " <" + file_diff.author_.email_ + "> " + std::string(time_string) + ' ' +
+                      file_diff.commit_.tag_;
   return label;
 }
 
@@ -221,10 +208,12 @@ static void SetTreeItemData(CTreeCtrl& tree,
       HTREEITEM htreeitemChild = NULL;
       while ((htreeitemChild = tree.GetChildItem(htreeitem)) != NULL)
         tree.DeleteItem(htreeitemChild);
+#if 0
       if (file_version_diff.parents_.size() > 0) {
         if (!tree.ItemHasChildren(htreeitem))
           tree.InsertItem(_T("Dummy"), htreeitem);
       }
+#endif // 0
       break;
     }
 #if 0
@@ -260,10 +249,12 @@ static void SetTreeItemData(CTreeCtrl& tree,
       HTREEITEM htreeitemChild = NULL;
       while ((htreeitemChild = tree.GetChildItem(htreeitem)) != NULL)
         tree.DeleteItem(htreeitemChild);
+#if 0
       if (file_version_diff.parents_.size() > 0) {
         if (!tree.ItemHasChildren(htreeitem))
           tree.InsertItem(_T("Dummy"), htreeitem);
       }
+#endif  // 0
       break;
     }
 #if 0
@@ -328,11 +319,14 @@ static void SetTreeItemData(CTreeCtrl& tree,
         VERIFY(fSelected = tree.SelectItem(htreeitem));
     }
 
-    for (auto& parent : file_diff.parents_) {
-      if (parent.file_version_diffs) {
-        fSelected = !FEnsureTreeItemsAndSelection(
-            tree, tree.GetChildItem(htreeitem), *parent.file_version_diffs,
-            (*parent.file_version_diffs)[0].commit_);
+    auto child_item = tree.GetChildItem(htreeitem);
+    if (child_item != NULL) {
+      for (auto& parent : file_diff.parents_) {
+        if (parent.file_version_diffs) {
+          fSelected = !FEnsureTreeItemsAndSelection(
+              tree, child_item, *parent.file_version_diffs,
+              (*parent.file_version_diffs)[0].commit_);
+        }
       }
     }
 
@@ -341,7 +335,7 @@ static void SetTreeItemData(CTreeCtrl& tree,
   }
 
   // add any new items
-  if (commit_index < file_diffs.size()) {
+  if (htreeitemRoot != NULL && commit_index < file_diffs.size()) {
     HTREEITEM htreeitemParent = tree.GetParentItem(htreeitemRoot);
     do {
       const auto& file_diff = file_diffs[commit_index];

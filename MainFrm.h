@@ -62,6 +62,8 @@ class CMainFrame : public CFrameWndEx {
   virtual void Dump(CDumpContext& dc) const;
 #endif
 
+  CWnd& GetStatusWnd() { return m_wndStatusBar; }
+
  protected:  // control bar embedded members
   CMFCMenuBar m_wndMenuBar;
   CMFCToolBar m_wndToolBar;

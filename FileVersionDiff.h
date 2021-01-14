@@ -44,19 +44,23 @@ struct FileVersionDiffParent {
   ~FileVersionDiffParent() { printf("~FileVersionDiffParent\t%p\n", this); }
 #endif
 };
+struct NameEmailTime {
+  std::string name_;
+  std::string email_;
+  struct tm time_;
+};
 struct FileVersionDiff {
   GitHash commit_;
   std::vector<FileVersionDiffParent> parents_;
   std::vector<FileVersionDiffHunk> hunks_;
-  std::string author_;
+  NameEmailTime author_;
   std::string diff_command_;
-  std::string committer_;
+  NameEmailTime committer_;
   std::string comment_;
   std::string tree_;
   FileVersionDiffTree diff_tree_;
   std::string index_;
   std::filesystem::path path_;
-  int ver_ = 0;
 #if _DEBUG_MEM_TRACE
   FileVersionDiff() { printf("FileVersionDiff\t%p\n", this); }
   ~FileVersionDiff() { printf("~FileVersionDiff\t%p\n", this); }

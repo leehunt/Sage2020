@@ -5,6 +5,7 @@
 #pragma once
 #include "Sage2020ViewDocListener.h"
 
+class CSage2020Doc;
 class CSage2020View : public CScrollView, public Sage2020ViewDocListener {
  protected:  // create from serialization only
   CSage2020View() noexcept;
@@ -32,6 +33,9 @@ class CSage2020View : public CScrollView, public Sage2020ViewDocListener {
   void SetHighlightAll(bool fHighlightAll) { m_fHighlightAll = fHighlightAll; }
   bool GetHighlightAll() const { return m_fHighlightAll; }
 
+  // TODO: Place this into a shared utility file.
+  static COLORREF CrBackgroundForVersion(int nVer, int nVerMax);
+
   // Overrides
  protected:
   virtual BOOL PreCreateWindow(CREATESTRUCT& cs);
@@ -43,7 +47,6 @@ class CSage2020View : public CScrollView, public Sage2020ViewDocListener {
   // Implementation
   void SetCustomFont();
   void UpdateScrollSizes(int dx);
-  static COLORREF CrBackgroundForVersion(int nVer, int nVerMax);
 
   // REVIEW: MFC has 'CView::OnUpdate' that should be used to update /
   // invalidate the View (but NOT draw) in response to Doc updates.

@@ -38,25 +38,29 @@ static std::string GetTextToWhitespace(TOK* ptok) {
   return text;
 }
 
-static std::string GetTextToEndOfLine(TOK* ptok) {
+static std::string GetTextToToken(TOK* ptok, TK tk, int cch_tok_to_include) {
   std::string text;
   char* szStart = ptok->szVal;
 
-  while (ptok->tk != TK::tkNEWLINE && ptok->tk != TK::tkNil) {
+  while (ptok->tk != tk && ptok->tk != TK::tkNil) {
     if (!FGetTok(ptok))
       break;
   }
 
-  // Keep any '\n', but ensure the string is terminated (if there is no '\n'
-  // then we still simply just add another '\0').
-  char chSav = ptok->szVal[1];
-  ptok->szVal[1] = L'\0';
+  char chSav = ptok->szVal[cch_tok_to_include];
+  ptok->szVal[cch_tok_to_include] = L'\0';
 
   text = szStart;
 
-  ptok->szVal[1] = chSav;
+  ptok->szVal[cch_tok_to_include] = chSav;
 
   return text;
+}
+
+static std::string GetTextToEndOfLine(TOK* ptok) {
+  // Keep any ending '\n' by setting |cch_tok_to_include| to 1, (if there
+  // is no |tk| then we still simply just add another '\0').
+  return GetTextToToken(ptok, TK::tkNEWLINE, 1);
 }
 
 bool GitDiffReader::FReadGitHash(TOK* ptok, GitHash& hash) {
@@ -110,6 +114,32 @@ bool GitDiffReader::FReadParent(TOK* ptok) {
   return FReadGitHash(ptok, current_diff_->parents_.back().commit_);
 }
 
+bool GitDiffReader::FReadNameEmailAndTime(TOK* ptok,
+                                          NameEmailTime& name_email_time) {
+  // name <email> time [+|-]dddd
+  name_email_time.name_ = GetTextToToken(ptok, TK::tkLESSTHAN, 0);
+  if (name_email_time.name_.size() > 0 &&
+      name_email_time.name_[name_email_time.name_.size() - 1] == ' ') {
+    // Trim any trailing space.
+    name_email_time.name_ =
+        name_email_time.name_.substr(0, name_email_time.name_.size() - 1);
+  }
+
+  // skip TK::tkLESSTHAN
+  if (!FGetTok(ptok))
+    return false;
+  name_email_time.email_ = GetTextToToken(ptok, TK::tkGREATERTHAN, 0);
+  
+  // skip TK::tkGREATERTHAN
+  if (!FGetTok(ptok))
+    return false;
+  auto tm_string = GetTextToEndOfLine(ptok);
+  auto time_val = static_cast<time_t>(_atoi64(tm_string.c_str()));
+  gmtime_s(&name_email_time.time_, &time_val);
+
+  return ptok->tk != TK::tkNil;
+}
+
 bool GitDiffReader::FReadAuthor(TOK* ptok) {
   if (ptok->tk != TK::tkWORD)
     return false;
@@ -117,9 +147,8 @@ bool GitDiffReader::FReadAuthor(TOK* ptok) {
 
   if (!FGetTok(ptok))
     return false;
-  current_diff_->author_ = GetTextToEndOfLine(ptok);
 
-  return true;
+  return FReadNameEmailAndTime(ptok, current_diff_->author_);
 }
 
 bool GitDiffReader::FReadCommitter(TOK* ptok) {
@@ -129,9 +158,8 @@ bool GitDiffReader::FReadCommitter(TOK* ptok) {
 
   if (!FGetTok(ptok))
     return false;
-  current_diff_->committer_ = GetTextToEndOfLine(ptok);
 
-  return true;
+  return FReadNameEmailAndTime(ptok, current_diff_->committer_);
 }
 
 bool GitDiffReader::FReadDiff(TOK* ptok) {
@@ -472,6 +500,8 @@ GitDiffReader::GitDiffReader(const std::filesystem::path& file_path,
   ProcessPipe process_pipe_git_commit(command, file_path.parent_path().c_str());
 
   FILE* stream = process_pipe_git_commit.GetStandardOutput();
+  if (stream == nullptr)
+    return;
 
   // Check if it is in the cache.
   char header_line[1024];

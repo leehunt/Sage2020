@@ -6,6 +6,7 @@
 #define IDP_OLE_INIT_FAILED             100
 #define IDS_CHANGE_HISTORY              101
 #define IDS_CHANGE_HISTORY_WND          101
+#define IDS_ERROR_LOADING_FILE          102
 #define IDR_POPUP_EDIT                  119
 #define ID_STATUSBAR_PANE1              120
 #define ID_STATUSBAR_PANE2              121

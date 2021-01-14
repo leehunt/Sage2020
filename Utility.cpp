@@ -68,6 +68,7 @@ ProcessPipe::ProcessPipe(const TCHAR command_line[],
     assert(false);
     _close(my_pipe[PIPE_READ]);
     _close(my_pipe[PIPE_WRITE]);
+    return;
   }
   _close(my_pipe[PIPE_WRITE]);  // This has been inherited by the child process.
 
