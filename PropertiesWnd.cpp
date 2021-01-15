@@ -426,10 +426,9 @@ void CPropertiesWnd::UpdateGridBlock(
   if (pPropVersionAuthor != NULL) {
     _variant_t varWzAuthorT(
         file_version_diff != NULL
-                                ? to_wstring(file_version_diff->author_.name_ +
-                                             " <" +
-                                             file_version_diff->author_.email_ + ">")
-                                      .c_str()
+            ? to_wstring(file_version_diff->author_.name_ + " <" +
+                         file_version_diff->author_.email_ + ">")
+                  .c_str()
             : _T(""));
     if (!(pPropVersionAuthor->GetValue() == varWzAuthorT))
       pPropVersionAuthor->SetValue(varWzAuthorT);
@@ -442,7 +441,8 @@ void CPropertiesWnd::UpdateGridBlock(
   ASSERT_VALID(pPropVersionColor);
   if (pPropVersionColor != NULL) {
     COLORREF crVersion(file_version_diff != NULL
-                           ? CSage2020View::CrBackgroundForVersion(commit_index, nVerMax)
+                           ? CSage2020View::CrBackgroundForVersion(
+                                 static_cast<int>(commit_index), nVerMax)
                            : RGB(0xFF, 0xFF, 0xFF));
     if (!(pPropVersionColor->GetColor() == crVersion))
       pPropVersionColor->SetColor(crVersion);

@@ -203,7 +203,6 @@
     <ClInclude Include="GitFileStreamCache.h" />
     <ClInclude Include="GitHash.h" />
     <ClInclude Include="LineTokenizer.h" />
-    <ClInclude Include="FileView.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="MainFrm.h" />
     <ClInclude Include="pch.h" />

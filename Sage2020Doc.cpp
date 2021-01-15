@@ -211,7 +211,7 @@ void CSage2020Doc::OnUpdateHistoryTree(CCmdUI* pCmdUI) {
     m_fNewDoc = false;
   }
 
-  if (!GetFileVersionInstanceSize())
+  if (GetFileVersionInstance() == nullptr)
     return;
 
   auto commit_index = GetFileVersionInstance()->GetCommitIndex();

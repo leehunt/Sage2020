@@ -151,7 +151,7 @@ static void SetToolTip(CTreeCtrl& tree,
   CToolTipCtrl* ptooltip = tree.GetToolTips();
   if (ptooltip != NULL) {
     TCHAR wzTipLimited[1024];  // must limit tips to this size
-    wzTipLimited[0] - '\0';
+    wzTipLimited[0] = '\0';
     _tcsncpy_s(wzTipLimited, to_wstring(file_version_diff.comment_).c_str(),
                _countof(wzTipLimited) - 1);
     RECT rcItem;
@@ -213,7 +213,7 @@ static void SetTreeItemData(CTreeCtrl& tree,
         if (!tree.ItemHasChildren(htreeitem))
           tree.InsertItem(_T("Dummy"), htreeitem);
       }
-#endif // 0
+#endif // 1
       break;
     }
 #if 0
@@ -298,7 +298,7 @@ static void SetTreeItemData(CTreeCtrl& tree,
   BOOL fSelected = FALSE;
   bool fTreeFocused = tree.GetFocus() == &tree;
 
-  // sync current items
+  // Sync current items.
   size_t commit_index = 0;
   HTREEITEM htreeitem = htreeitemRoot;
   while (commit_index < file_diffs.size() && htreeitem != NULL) {
@@ -334,8 +334,8 @@ static void SetTreeItemData(CTreeCtrl& tree,
     htreeitem = tree.GetNextItem(htreeitem, TVGN_NEXT);
   }
 
-  // add any new items
-  if (htreeitemRoot != NULL && commit_index < file_diffs.size()) {
+  // Add any new items.
+  if (commit_index < file_diffs.size()) {
     HTREEITEM htreeitemParent = tree.GetParentItem(htreeitemRoot);
     do {
       const auto& file_diff = file_diffs[commit_index];

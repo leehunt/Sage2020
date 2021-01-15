@@ -62,13 +62,12 @@ CSage2020View::CSage2020View() noexcept
       m_fCaseSensitive(false),
       m_fHighlightAll(true),
       m_pDocListened(nullptr),
-      m_currentFileVersionInstance(nullptr) {
-  m_sizChar.cx = 0;
-}
+      m_currentFileVersionInstance(nullptr),
+      m_sizChar(0, 0) {}
 
 CSage2020View::~CSage2020View() {
   if (m_pDocListened != NULL) {
-    // m_pDocListened->RemoveDocListener(*this);  // TODO
+    m_pDocListened->RemoveDocListener(*this);
     m_pDocListened = NULL;
   }
 }
@@ -489,7 +488,8 @@ void CSage2020View::OnUpdatePropertiesPaneGrid(CCmdUI* pCmdUI) {
   std::set<FileVersionLineInfo> version_line_info_set;
   if (file_version_instance != NULL) {
     assert(m_iSelStart <= m_iSelEnd);
-    assert(m_iSelEnd < static_cast<int>(file_version_instance->GetLines().size()));
+    assert(m_iSelEnd <
+           static_cast<int>(file_version_instance->GetLines().size()));
     version_line_info_set =
         file_version_instance->GetVersionsFromLines(m_iSelStart, m_iSelEnd + 1);
   }
@@ -522,12 +522,12 @@ void CSage2020View::OnUpdatePropertiesPaneGrid(CCmdUI* pCmdUI) {
 void CSage2020View::DocEditNotification(int iLine, int cLine) {
   POINT ptCur = GetDeviceScrollPosition();
 
-  SetRedraw(FALSE);
-
-  // recalc for updated pDoc->FilerepRead().CLine()
+  // Recalc for updated lines
   RECT rcClient;
   GetClientRect(&rcClient);
-  UpdateScrollSizes(rcClient.bottom);
+  if (!m_sizChar.cx) {
+    UpdateScrollSizes(rcClient.bottom);
+  }
 
 #if _DEBUG
   CSage2020Doc* pDoc = GetDocument();
@@ -536,8 +536,7 @@ void CSage2020View::DocEditNotification(int iLine, int cLine) {
     return;
 
   auto file_version_instance = pDoc->GetFileVersionInstance();
-#endif // _DEBUG
-
+#endif  // _DEBUG
 
   int iLineTop = ptCur.y / m_sizChar.cy;
   int cLineOffset = m_iSelStart - iLineTop;
@@ -547,7 +546,8 @@ void CSage2020View::DocEditNotification(int iLine, int cLine) {
     else
       m_iSelStart += cLine;
     assert(m_iSelStart >= -1);
-    assert(m_iSelStart < static_cast<int>(file_version_instance->GetLines().size()));
+    assert(m_iSelStart <
+           static_cast<int>(file_version_instance->GetLines().size()));
   }
   if (m_iSelEnd >= iLine) {
     if (cLine < 0 && m_iSelEnd < iLine - cLine)
@@ -555,7 +555,8 @@ void CSage2020View::DocEditNotification(int iLine, int cLine) {
     else
       m_iSelEnd += cLine;
     assert(m_iSelEnd >= -1);
-    assert(m_iSelEnd < static_cast<int>(file_version_instance->GetLines().size()));
+    assert(m_iSelEnd <
+           static_cast<int>(file_version_instance->GetLines().size()));
   }
 
   assert(m_iSelStart <= m_iSelEnd);
@@ -595,25 +596,35 @@ void CSage2020View::DocEditNotification(int iLine, int cLine) {
     else
       ptCur.y += cLine * m_sizChar.cy;
 
+    SetRedraw(FALSE);
+
     // momentarially turn off the visible bit to keep ScrollToPosition from
     // using windows scrolling
     LONG lWindowStyle = ::GetWindowLong(m_hWnd, GWL_STYLE);
     ::SetWindowLong(m_hWnd, GWL_STYLE, lWindowStyle & ~WS_VISIBLE);
     ScrollToPosition(ptCur);
     ::SetWindowLong(m_hWnd, GWL_STYLE, lWindowStyle);
-  }
 
-  SetRedraw(TRUE);
+    SetRedraw(TRUE);
+  }
 }
 
 void CSage2020View::DocVersionChangedNotification(size_t nVer) {
   if (nVer == -1) {
     m_currentFileVersionInstance = NULL;
 
+    m_iSelStart = m_iSelEnd = -1;
+
     CSage2020Doc* pDoc = GetDocument();
-    if (pDoc != NULL)
+    if (pDoc != NULL) {
       pDoc->viewport_origin() = CPoint();
+    }
   }
+
+  // Recalc for updated lines
+  RECT rcClient;
+  GetClientRect(&rcClient);
+  UpdateScrollSizes(rcClient.bottom);
 }
 
 // CSimpleAgeViewerView message handlers
@@ -742,7 +753,6 @@ void CSage2020View::OnLButtonDown(UINT nFlags, CPoint point) {
     assert(m_iSelEnd <
            static_cast<int>(file_version_instance->GetLines().size()));
 #endif
-
   }
 }
 void CSage2020View::OnLButtonUp(UINT nFlags, CPoint point) {
