@@ -5,7 +5,7 @@
 #pragma once
 #define FILE_VIEW_UI 0
 #define CLASS_VIEW_UI 0
-#define OUTPUT_PANE 0
+#define OUTPUT_PANE 1
 #define OUTLOOK_BAR 0
 #define SHELL_TREE_CONTROL 0
 #define CALENDAR_BAR 0
@@ -47,6 +47,7 @@ class CMainFrame : public CFrameWndEx {
  public:
   // Overrides
  public:
+  virtual BOOL OnCreateClient(LPCREATESTRUCT lpcs, CCreateContext* pContext);
   virtual BOOL PreCreateWindow(CREATESTRUCT& cs);
   virtual BOOL LoadFrame(UINT nIDResource,
                          DWORD dwDefaultStyle = WS_OVERLAPPEDWINDOW |
@@ -64,7 +65,12 @@ class CMainFrame : public CFrameWndEx {
 
   CWnd& GetStatusWnd() { return m_wndStatusBar; }
 
- protected:  // control bar embedded members
+  COutputWnd& GetOutputWnd() { return m_wndOutput; }
+
+ protected:
+  CSplitterWnd m_wndSplitter;
+  
+  // control bar embedded members
   CMFCMenuBar m_wndMenuBar;
   CMFCToolBar m_wndToolBar;
   CMFCStatusBar m_wndStatusBar;
@@ -115,4 +121,9 @@ class CMainFrame : public CFrameWndEx {
   CMFCOutlookBarTabCtrl* m_pCurrOutlookWnd;
   CMFCOutlookBarPane* m_pCurrOutlookPage;
 #endif
+ public:
+  virtual BOOL OnCmdMsg(UINT nID,
+                        int nCode,
+                        void* pExtra,
+                        AFX_CMDHANDLERINFO* pHandlerInfo);
 };

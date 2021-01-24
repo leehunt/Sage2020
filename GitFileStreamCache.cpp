@@ -4,16 +4,14 @@
 #include <stdio.h>
 #include <cassert>
 #include "GitFileStreamCache.h"
+#include "Sage2020.h"
 #include "Utility.h"
-//#include "Sage2020.h"
 
-// extern CSage2020App theApp;
-
-#pragma comment(lib, "shell32.lib")
+extern CSage2020App theApp;
 
 constexpr char kGitGetRootCommand[] = "git rev-parse --show-toplevel";
 
-constexpr char kFileCacheVersionLine[] = "Cache file version: 3\n";
+constexpr char kFileCacheVersionLine[] = "Cache file version: 6\n";
 
 GitFileStreamCache::GitFileStreamCache(const std::filesystem::path& file_path)
     : file_path_(std::filesystem::canonical(file_path)) {}
@@ -123,8 +121,7 @@ std::filesystem::path GitFileStreamCache::GetItemCachePath(
   std::filesystem::path item_cache_path(local_app_data);
 
   item_cache_path /=
-      /* theApp.m_pszProfileName*/ "Sage2020" / std::filesystem::path(hash) /
-      git_relative_path;
+      theApp.m_pszProfileName / std::filesystem::path(hash) / git_relative_path;
 
   return item_cache_path;
 }

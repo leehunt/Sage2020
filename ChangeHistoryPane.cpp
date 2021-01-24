@@ -7,6 +7,7 @@
 #include "ChangeHistoryPane.h"
 #include "FileVersionDiff.h"
 #include "GitDiffReader.h"
+#include "MainFrm.h"
 #include "Sage2020.h"
 #include "Utility.h"
 #include "resource.h"
@@ -17,6 +18,7 @@ ON_WM_CREATE()
 ON_WM_SIZE()
 ON_WM_SETFOCUS()
 ON_NOTIFY(TVN_ITEMEXPANDING, IDR_HISTORY_TREE, OnTreeNotifyExpanding)
+// ON_NOTIFY(TVN_DELETEITEM, IDR_HISTORY_TREE, OnTreeDeleteItem)
 END_MESSAGE_MAP()
 
 CChangeHistoryPane::CChangeHistoryPane() : m_pToolTipControl(NULL) {}
@@ -130,20 +132,53 @@ void CChangeHistoryPane::OnTreeNotifyExpanding(NMHDR* pNMHDR,
     assert(false);
     return;
   }
-  for (auto it = file_version_diff->parents_.begin();
-       it != file_version_diff->parents_.end(); ++it) {
-#if 0
-    if (!it->file_version_diffs) {
-      GitDiffReader git_diff_reader{file_version_diff->path_,
-                                    it->commit_.tag_};
-      if (git_diff_reader.GetDiffs().size() > 0) {
-        it->file_version_diffs = std::make_unique<std::vector<FileVersionDiff>>(
+  if (file_version_diff->parents_.size() < 2) {
+    assert(false);
+    return;
+  }
+  const auto& first_parent_commit =
+      file_version_diff->parents_[file_version_diff->parents_.size() - 1]
+          .commit_;
+
+  CWnd* pwndStatus = NULL;
+  COutputWnd* pwndOutput = NULL;
+  CFrameWnd* pParentFrame = GetParentFrame();
+  assert(pParentFrame != NULL);
+  if (pParentFrame != NULL &&
+      pParentFrame->IsKindOf(RUNTIME_CLASS(CMainFrame))) {
+    CMainFrame* pMainFrame = static_cast<CMainFrame*>(pParentFrame);
+    pwndStatus = pMainFrame != NULL ? &pMainFrame->GetStatusWnd() : NULL;
+    pwndOutput = pMainFrame != NULL ? &pMainFrame->GetOutputWnd() : NULL;
+  }
+
+  GitDiffReader git_diff_reader{file_version_diff->path_,
+                                first_parent_commit.sha_, pwndOutput};
+  if (git_diff_reader.GetDiffs().size() > 0) {
+    file_version_diff->parents_[1].file_version_diffs_ =
+        std::make_unique<std::vector<FileVersionDiff>>(
             git_diff_reader.MoveDiffs());
-      }
-    }
-#endif  // 0
   }
 }
+
+#if 0
+void CChangeHistoryPane::OnTreeDeleteItem(NMHDR* pNMHDR, LRESULT* plResult) {
+  const NMTREEVIEW* pTreeView = reinterpret_cast<const NMTREEVIEW*>(pNMHDR);
+  CToolTipCtrl* ptooltip = m_wndTreeCtrl.GetToolTips();
+  if (ptooltip != NULL) {
+    HTREEITEM htreeitem = pTreeView->itemNew.hItem;
+
+    auto file_version_diff = reinterpret_cast<const FileVersionDiff*>(
+        m_wndTreeCtrl.GetItemData(htreeitem));
+
+    CToolInfo tool_info;
+    if (ptooltip->GetToolInfo(tool_info, &m_wndTreeCtrl,
+                              reinterpret_cast<UINT_PTR>(&file_version_diff))) {
+      ptooltip->DelTool(&m_wndTreeCtrl,
+                        reinterpret_cast<UINT_PTR>(&file_version_diff));
+    }
+  }
+}
+#endif  // 0
 
 static void SetToolTip(CTreeCtrl& tree,
                        const FileVersionDiff& file_version_diff,
@@ -156,9 +191,18 @@ static void SetToolTip(CTreeCtrl& tree,
                _countof(wzTipLimited) - 1);
     RECT rcItem;
     VERIFY(tree.GetItemRect(htreeitem, &rcItem, FALSE /*bTextOnly*/));
-    ptooltip->AddTool(
-        &tree, wzTipLimited, &rcItem,
-        reinterpret_cast<UINT_PTR>(&file_version_diff) /*unique id*/);
+
+    CToolInfo tool_info;
+    if (ptooltip->GetToolInfo(tool_info, &tree,
+                              reinterpret_cast<UINT_PTR>(&file_version_diff))) {
+      // Tool exists for this item; update its rectangle.
+      tool_info.rect = rcItem;
+      ptooltip->SetToolInfo(&tool_info);
+    } else {
+      ptooltip->AddTool(
+          &tree, wzTipLimited, &rcItem,
+          reinterpret_cast<UINT_PTR>(&file_version_diff) /*unique id*/);
+    }
   }
 }
 
@@ -170,10 +214,10 @@ static std::string CreateTreeItemLabel(size_t commit_index,
     // Error.
     time_string[0] = '\0';
   }
-  std::string label =
-      std::to_string(commit_index) + ' ' +
-      file_diff.author_.name_ + " <" + file_diff.author_.email_ + "> " + std::string(time_string) + ' ' +
-                      file_diff.commit_.tag_;
+  std::string label = std::to_string(commit_index) + ' ' +
+                      file_diff.author_.name_ + " <" +
+                      file_diff.author_.email_ + "> " +
+                      std::string(time_string) + ' ' + file_diff.commit_.tag_;
   return label;
 }
 
@@ -209,11 +253,11 @@ static void SetTreeItemData(CTreeCtrl& tree,
       while ((htreeitemChild = tree.GetChildItem(htreeitem)) != NULL)
         tree.DeleteItem(htreeitemChild);
 #if 0
-      if (file_version_diff.parents_.size() > 0) {
+      if (file_version_diff.parents_.size() > 1) {
         if (!tree.ItemHasChildren(htreeitem))
           tree.InsertItem(_T("Dummy"), htreeitem);
       }
-#endif // 1
+#endif  // 1
       break;
     }
 #if 0
@@ -249,8 +293,8 @@ static void SetTreeItemData(CTreeCtrl& tree,
       HTREEITEM htreeitemChild = NULL;
       while ((htreeitemChild = tree.GetChildItem(htreeitem)) != NULL)
         tree.DeleteItem(htreeitemChild);
-#if 0
-      if (file_version_diff.parents_.size() > 0) {
+#if 1
+      if (file_version_diff.parents_.size() > 1) {
         if (!tree.ItemHasChildren(htreeitem))
           tree.InsertItem(_T("Dummy"), htreeitem);
       }
@@ -286,7 +330,10 @@ static void SetTreeItemData(CTreeCtrl& tree,
     }
   }
 
-  SetToolTip(tree, file_version_diff, htreeitem);
+  // TOOD: This doesn't work reliably since it requires a |rect| to display that
+  // can move/scroll as the containing Pane is updated. Consder using
+  // TVS_INFOTIP instead whcih will ask for an item. SetToolTip(tree,
+  // file_version_diff, htreeitem);
 }
 
 // returns true if the current version has changed due to a tree selection
@@ -322,10 +369,10 @@ static void SetTreeItemData(CTreeCtrl& tree,
     auto child_item = tree.GetChildItem(htreeitem);
     if (child_item != NULL) {
       for (auto& parent : file_diff.parents_) {
-        if (parent.file_version_diffs) {
+        if (parent.file_version_diffs_) {
           fSelected = !FEnsureTreeItemsAndSelection(
-              tree, child_item, *parent.file_version_diffs,
-              (*parent.file_version_diffs)[0].commit_);
+              tree, child_item, *parent.file_version_diffs_,
+              (*parent.file_version_diffs_)[0].commit_);
         }
       }
     }

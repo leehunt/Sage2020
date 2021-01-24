@@ -42,10 +42,13 @@ ON_UPDATE_COMMAND_UI(IDR_PROPERTIES_GRID,
 ON_COMMAND(ID_FILE_PRINT, &CScrollView::OnFilePrint)
 ON_COMMAND(ID_FILE_PRINT_DIRECT, &CScrollView::OnFilePrint)
 ON_COMMAND(ID_FILE_PRINT_PREVIEW, &CSage2020View::OnFilePrintPreview)
+
 ON_UPDATE_COMMAND_UI(ID_EDIT_COPY, &CSage2020View::OnEditCopy)
 ON_COMMAND(ID_EDIT_COPY, &CSage2020View::OnEditCopy)
+
 ON_UPDATE_COMMAND_UI(ID_EDIT_SELECT_ALL, &CSage2020View::OnEditSelectAll)
 ON_COMMAND(ID_EDIT_SELECT_ALL, &CSage2020View::OnEditSelectAll)
+
 ON_WM_CONTEXTMENU()
 ON_WM_RBUTTONUP()
 ON_WM_MOUSEWHEEL()
@@ -226,7 +229,7 @@ const COLORREF c_rgclrrefAge[] = {
 BOOL CSage2020View::OnEraseBkgnd(CDC* pDC) {
   CSage2020Doc* pDoc = GetDocument();
   ASSERT_VALID(pDoc);
-  if (pDoc == NULL || pDoc->GetFileVersionInstanceSize() == 0)
+  if (pDoc == NULL || pDoc->GetFileVersionInstance() == nullptr)
     return __super::OnEraseBkgnd(pDC);
 
   return TRUE;  // we will erase when drawing
@@ -858,10 +861,11 @@ void CSage2020View::OnEditCopy() {
 
     int dLine = m_iSelEnd - m_iSelStart + 1;
     size_t cchLines = 0;
-    for (const auto& line : file_version_instance->GetLines()) {
-      cchLines += line.size();
+    for (int iLine = m_iSelStart; iLine <= m_iSelEnd; ++iLine) {
+      cchLines += file_version_instance->GetLines()[iLine].size();
     }
-    size_t cbClip = (cchLines + 1 /*ending NULL*/) * sizeof(TCHAR);
+    size_t cbClip = (cchLines + dLine * 1 /*lf -> cr/lf*/ + 1 /*ending NUL*/) *
+                    sizeof(TCHAR);
     hGlob = ::GlobalAlloc(GMEM_MOVEABLE, cbClip);
     if (hGlob == NULL) {
       CString msg;
@@ -942,6 +946,7 @@ void CSage2020View::OnEditSelectAll(CCmdUI* pCmdUI) {
 
   size_t cLine = pDoc->GetFileVersionInstanceSize();
   pCmdUI->Enable(cLine > 0);
+  pCmdUI->SetCheck(m_iSelStart == 0 && m_iSelEnd == cLine - 1);
 }
 
 void CSage2020View::OnEditSelectAll() {
@@ -950,21 +955,21 @@ void CSage2020View::OnEditSelectAll() {
   if (pDoc == NULL)
     return;
 
-  bool need_redraw = false;
-  if (m_iSelStart != 0) {
-    m_iSelStart = 0;
-    need_redraw = true;
-  }
   int cLine = static_cast<int>(pDoc->GetFileVersionInstanceSize());
-  if (m_iSelEnd != cLine - 1) {
-    assert(cLine > 0);
+  if (cLine == 0)
+    return;
+
+  bool all_is_selected = m_iSelStart == 0 && m_iSelEnd == cLine - 1;
+  // Toggle.
+  if (all_is_selected) {
+    m_iSelStart = -1;
+    m_iSelEnd = -1;
+  } else {
+    m_iSelStart = 0;
     m_iSelEnd = cLine - 1;
-    need_redraw = true;
   }
 
-  if (need_redraw) {
-    Invalidate(FALSE /*bErase*/);
-  }
+  Invalidate(FALSE /*bErase*/);
 }
 
 // CSage2020View printing

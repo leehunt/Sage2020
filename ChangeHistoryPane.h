@@ -30,6 +30,8 @@ class CChangeHistoryPane : public CDockablePane {
   afx_msg void SetPropListFont();
   void OnSetFocus(CWnd* pOldWnd);
   void OnTreeNotifyExpanding(NMHDR* pNMHDR, LRESULT* plResult);
+  //void OnTreeDeleteItem(NMHDR* pNMHDR, LRESULT* plResult);
+
   static bool FEnsureTreeItemsAndSelection(
       CTreeCtrl& tree,
       HTREEITEM htreeitemRoot,

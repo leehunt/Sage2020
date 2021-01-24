@@ -1,10 +1,11 @@
 
 #include "pch.h"
-#include "framework.h"
 
+#include <cassert>
+#include "MainFrm.h"
 #include "OutputWnd.h"
 #include "Resource.h"
-#include "MainFrm.h"
+#include "framework.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -15,186 +16,296 @@ static char THIS_FILE[] = __FILE__;
 /////////////////////////////////////////////////////////////////////////////
 // COutputBar
 
-COutputWnd::COutputWnd() noexcept
-{
-}
+COutputWnd::COutputWnd() noexcept {}
 
-COutputWnd::~COutputWnd()
-{
-}
+COutputWnd::~COutputWnd() {}
 
 BEGIN_MESSAGE_MAP(COutputWnd, CDockablePane)
-	ON_WM_CREATE()
-	ON_WM_SIZE()
+ON_WM_CREATE()
+ON_WM_SIZE()
 END_MESSAGE_MAP()
 
-int COutputWnd::OnCreate(LPCREATESTRUCT lpCreateStruct)
-{
-	if (CDockablePane::OnCreate(lpCreateStruct) == -1)
-		return -1;
+int COutputWnd::OnCreate(LPCREATESTRUCT lpCreateStruct) {
+  if (CDockablePane::OnCreate(lpCreateStruct) == -1)
+    return -1;
 
-	CRect rectDummy;
-	rectDummy.SetRectEmpty();
+  CRect rectDummy;
+  rectDummy.SetRectEmpty();
 
-	// Create tabs window:
-	if (!m_wndTabs.Create(CMFCTabCtrl::STYLE_FLAT, rectDummy, this, 1))
-	{
-		TRACE0("Failed to create output tab window\n");
-		return -1;      // fail to create
-	}
+  // Create tabs window:
+  if (!m_wndTabs.Create(CMFCTabCtrl::STYLE_FLAT, rectDummy, this, 1)) {
+    TRACE0("Failed to create output tab window\n");
+    return -1;  // fail to create
+  }
 
-	// Create output panes:
-	const DWORD dwStyle = LBS_NOINTEGRALHEIGHT | WS_CHILD | WS_VISIBLE | WS_HSCROLL | WS_VSCROLL;
+  // Create output panes:
+  const DWORD dwStyle =
+      LBS_NOINTEGRALHEIGHT | WS_CHILD | WS_VISIBLE | WS_HSCROLL | WS_VSCROLL;
 
-	if (!m_wndOutputBuild.Create(dwStyle, rectDummy, &m_wndTabs, 2) ||
-		!m_wndOutputDebug.Create(dwStyle, rectDummy, &m_wndTabs, 3) ||
-		!m_wndOutputFind.Create(dwStyle, rectDummy, &m_wndTabs, 4))
-	{
-		TRACE0("Failed to create output windows\n");
-		return -1;      // fail to create
-	}
+#if BUILD_TAB
+  if (!m_wndOutputBuild.Create(dwStyle, rectDummy, &m_wndTabs, 2)) {
+    TRACE0("Failed to create output windows\n");
+    return -1;  // fail to create
+  }
+#endif
+#if DEBUG_TAB
+  if (!m_wndOutputDebug.Create(dwStyle, rectDummy, &m_wndTabs, 3)) {
+    TRACE0("Failed to create output windows\n");
+    return -1;  // fail to create
+  }
+#endif
+#if FIND_TAB
+  if (!m_wndOutputFind.Create(dwStyle, rectDummy, &m_wndTabs, 4)) {
+    TRACE0("Failed to create output windows\n");
+    return -1;  // fail to create
+  }
+#endif
 
-	UpdateFonts();
+  UpdateFonts();
 
-	CString strTabName;
-	BOOL bNameValid;
+  CString strTabName;
+  BOOL bNameValid;
 
-	// Attach list windows to tab:
-	bNameValid = strTabName.LoadString(IDS_BUILD_TAB);
-	ASSERT(bNameValid);
-	m_wndTabs.AddTab(&m_wndOutputBuild, strTabName, (UINT)0);
-	bNameValid = strTabName.LoadString(IDS_DEBUG_TAB);
-	ASSERT(bNameValid);
-	m_wndTabs.AddTab(&m_wndOutputDebug, strTabName, (UINT)1);
-	bNameValid = strTabName.LoadString(IDS_FIND_TAB);
-	ASSERT(bNameValid);
-	m_wndTabs.AddTab(&m_wndOutputFind, strTabName, (UINT)2);
+  // Attach list windows to tab:
+#if BUILD_TAB
+  bNameValid = strTabName.LoadString(IDS_BUILD_TAB);
+  ASSERT(bNameValid);
+  m_wndTabs.AddTab(&m_wndOutputBuild, strTabName, (UINT)0);
+#endif
+#if DEBUG_TAB
+  bNameValid = strTabName.LoadString(IDS_DEBUG_TAB);
+  ASSERT(bNameValid);
+  m_wndTabs.AddTab(&m_wndOutputDebug, strTabName, (UINT)1);
+#endif
+#if FIND_TAB
+  bNameValid = strTabName.LoadString(IDS_FIND_TAB);
+  ASSERT(bNameValid);
+  m_wndTabs.AddTab(&m_wndOutputFind, strTabName, (UINT)2);
+#endif
 
-	// Fill output tabs with some dummy text (nothing magic here)
-	FillBuildWindow();
-	FillDebugWindow();
-	FillFindWindow();
+  // Fill output tabs with some dummy text (nothing magic here)
+#if BUILD_TAB
+  FillBuildWindow();
+#endif
+#if DEBUG_TAB
+  // FillDebugWindow();
+#endif
+#if FIND_TAB
+  FillFindWindow();
+#endif
 
-	return 0;
+  return 0;
 }
 
-void COutputWnd::OnSize(UINT nType, int cx, int cy)
-{
-	CDockablePane::OnSize(nType, cx, cy);
+void COutputWnd::OnSize(UINT nType, int cx, int cy) {
+  CDockablePane::OnSize(nType, cx, cy);
 
-	// Tab control should cover the whole client area:
-	m_wndTabs.SetWindowPos (nullptr, -1, -1, cx, cy, SWP_NOMOVE | SWP_NOACTIVATE | SWP_NOZORDER);
+  // Tab control should cover the whole client area:
+  m_wndTabs.SetWindowPos(nullptr, -1, -1, cx, cy,
+                         SWP_NOMOVE | SWP_NOACTIVATE | SWP_NOZORDER);
 }
 
-void COutputWnd::AdjustHorzScroll(CListBox& wndListBox)
-{
-	CClientDC dc(this);
-	CFont* pOldFont = dc.SelectObject(&afxGlobalData.fontRegular);
+void COutputWnd::AdjustHorzScroll(CListBox& wndListBox) {
+  CClientDC dc(this);
+  CFont* pOldFont = dc.SelectObject(&afxGlobalData.fontRegular);
 
-	int cxExtentMax = 0;
+  int cxExtentMax = 0;
 
-	for (int i = 0; i < wndListBox.GetCount(); i ++)
-	{
-		CString strItem;
-		wndListBox.GetText(i, strItem);
+  for (int i = 0; i < wndListBox.GetCount(); i++) {
+    CString strItem;
+    wndListBox.GetText(i, strItem);
 
-		cxExtentMax = max(cxExtentMax, (int)dc.GetTextExtent(strItem).cx);
-	}
+    cxExtentMax = max(cxExtentMax, (int)dc.GetTextExtent(strItem).cx);
+  }
 
-	wndListBox.SetHorizontalExtent(cxExtentMax);
-	dc.SelectObject(pOldFont);
+  wndListBox.SetHorizontalExtent(cxExtentMax);
+  dc.SelectObject(pOldFont);
 }
 
-void COutputWnd::FillBuildWindow()
-{
-	m_wndOutputBuild.AddString(_T("Build output is being displayed here."));
-	m_wndOutputBuild.AddString(_T("The output is being displayed in rows of a list view"));
-	m_wndOutputBuild.AddString(_T("but you can change the way it is displayed as you wish..."));
+#if BUILD_TAB
+void COutputWnd::FillBuildWindow() {
+  m_wndOutputBuild.AddString(_T("Build output is being displayed here."));
+  m_wndOutputBuild.AddString(
+      _T("The output is being displayed in rows of a list view"));
+  m_wndOutputBuild.AddString(
+      _T("but you can change the way it is displayed as you wish..."));
+}
+#endif
+
+#if DEBUG_TAB
+void COutputWnd::FillDebugWindow() {
+  m_wndOutputDebug.AddString(_T("Debug output is being displayed here."));
+  m_wndOutputDebug.AddString(
+      _T("The output is being displayed in rows of a list view"));
+  m_wndOutputDebug.AddString(
+      _T("but you can change the way it is displayed as you wish..."));
+}
+#endif
+
+#if FIND_TAB
+void COutputWnd::FillFindWindow() {
+  m_wndOutputFind.AddString(_T("Find output is being displayed here."));
+  m_wndOutputFind.AddString(
+      _T("The output is being displayed in rows of a list view"));
+  m_wndOutputFind.AddString(
+      _T("but you can change the way it is displayed as you wish..."));
+}
+#endif
+
+void COutputWnd::UpdateFonts() {
+#if BUILD_TAB
+  m_wndOutputBuild.SetFont(&afxGlobalData.fontRegular);
+#endif
+#if DEBUG_TAB
+  m_wndOutputDebug.SetFont(&afxGlobalData.fontRegular);
+#endif
+#if FIND_TAB
+  m_wndOutputFind.SetFont(&afxGlobalData.fontRegular);
+#endif
 }
 
-void COutputWnd::FillDebugWindow()
-{
-	m_wndOutputDebug.AddString(_T("Debug output is being displayed here."));
-	m_wndOutputDebug.AddString(_T("The output is being displayed in rows of a list view"));
-	m_wndOutputDebug.AddString(_T("but you can change the way it is displayed as you wish..."));
-}
-
-void COutputWnd::FillFindWindow()
-{
-	m_wndOutputFind.AddString(_T("Find output is being displayed here."));
-	m_wndOutputFind.AddString(_T("The output is being displayed in rows of a list view"));
-	m_wndOutputFind.AddString(_T("but you can change the way it is displayed as you wish..."));
-}
-
-void COutputWnd::UpdateFonts()
-{
-	m_wndOutputBuild.SetFont(&afxGlobalData.fontRegular);
-	m_wndOutputDebug.SetFont(&afxGlobalData.fontRegular);
-	m_wndOutputFind.SetFont(&afxGlobalData.fontRegular);
+void COutputWnd::AppendDebugTabMessage(LPCTSTR lpszItem) {
+  m_wndOutputDebug.AddString(lpszItem);
 }
 
 /////////////////////////////////////////////////////////////////////////////
 // COutputList1
 
-COutputList::COutputList() noexcept
-{
-}
+COutputList::COutputList() noexcept {}
 
-COutputList::~COutputList()
-{
-}
+COutputList::~COutputList() {}
 
 BEGIN_MESSAGE_MAP(COutputList, CListBox)
-	ON_WM_CONTEXTMENU()
-	ON_COMMAND(ID_EDIT_COPY, OnEditCopy)
-	ON_COMMAND(ID_EDIT_CLEAR, OnEditClear)
-	ON_COMMAND(ID_VIEW_OUTPUTWND, OnViewOutput)
-	ON_WM_WINDOWPOSCHANGING()
+ON_WM_CONTEXTMENU()
+ON_UPDATE_COMMAND_UI(ID_EDIT_COPY, &COutputList::OnEditCopy)
+ON_COMMAND(ID_EDIT_COPY, OnEditCopy)
+ON_UPDATE_COMMAND_UI(ID_EDIT_CLEAR, &COutputList::OnEditClear)
+ON_COMMAND(ID_EDIT_CLEAR, OnEditClear)
+ON_COMMAND(ID_VIEW_OUTPUTWND, OnViewOutput)
+ON_WM_WINDOWPOSCHANGING()
 END_MESSAGE_MAP()
+
 /////////////////////////////////////////////////////////////////////////////
 // COutputList message handlers
 
-void COutputList::OnContextMenu(CWnd* /*pWnd*/, CPoint point)
-{
-	CMenu menu;
-	menu.LoadMenu(IDR_OUTPUT_POPUP);
+void COutputList::OnContextMenu(CWnd* /*pWnd*/, CPoint point) {
+  CMenu menu;
+  menu.LoadMenu(IDR_OUTPUT_POPUP);
 
-	CMenu* pSumMenu = menu.GetSubMenu(0);
+  CMenu* pSumMenu = menu.GetSubMenu(0);
 
-	if (AfxGetMainWnd()->IsKindOf(RUNTIME_CLASS(CMDIFrameWndEx)))
-	{
-		CMFCPopupMenu* pPopupMenu = new CMFCPopupMenu;
+  if (AfxGetMainWnd()->IsKindOf(RUNTIME_CLASS(CMDIFrameWndEx))) {
+    CMFCPopupMenu* pPopupMenu = new CMFCPopupMenu;
 
-		if (!pPopupMenu->Create(this, point.x, point.y, (HMENU)pSumMenu->m_hMenu, FALSE, TRUE))
-			return;
+    if (!pPopupMenu->Create(this, point.x, point.y, (HMENU)pSumMenu->m_hMenu,
+                            FALSE, TRUE))
+      return;
 
-		((CMDIFrameWndEx*)AfxGetMainWnd())->OnShowPopupMenu(pPopupMenu);
-		UpdateDialogControls(this, FALSE);
-	}
+    ((CMDIFrameWndEx*)AfxGetMainWnd())->OnShowPopupMenu(pPopupMenu);
+    UpdateDialogControls(this, FALSE);
+  }
 
-	SetFocus();
+  SetFocus();
 }
 
-void COutputList::OnEditCopy()
-{
-	MessageBox(_T("Copy output"));
+void COutputList::OnEditCopy(CCmdUI* pCmdUI) {
+  pCmdUI->Enable(GetCurSel() != LB_ERR);
 }
 
-void COutputList::OnEditClear()
-{
-	MessageBox(_T("Clear output"));
+void COutputList::OnEditCopy() {
+  bool fClipboardOpen = false;
+  HGLOBAL hGlob = NULL;
+
+  auto current_selection = GetCurSel();
+  if (current_selection != LB_ERR) {
+    if (!::OpenClipboard(NULL /*hWndNewOwner; NULL - use current task */)) {
+      CString msg;
+      msg.Format(_T("Cannot open the Clipboard, error: %d"), ::GetLastError());
+      AfxMessageBox(msg);
+      goto LCleanup;
+    }
+    fClipboardOpen = true;
+
+    // Remove the current Clipboard contents
+    if (!::EmptyClipboard()) {
+      CString msg;
+      msg.Format(_T("Cannot empty the Clipboard, error: %d"), ::GetLastError());
+      AfxMessageBox(msg);
+      goto LCleanup;
+    }
+    // Get the currently selected data
+    C_ASSERT(sizeof(TCHAR) == 2);
+
+    CString line;
+    GetText(current_selection, line /*ref*/);
+
+    size_t cbClip = (line.GetLength() + 1 /*lf -> cr/lf*/ + 1 /*ending NUL*/) *
+                    sizeof(TCHAR);
+    hGlob = ::GlobalAlloc(GMEM_MOVEABLE, cbClip);
+    if (hGlob == NULL) {
+      CString msg;
+      msg.Format(_T("Cannot alloc clipboard memory, error: %d"),
+                 ::GetLastError());
+      AfxMessageBox(msg);
+      goto LCleanup;
+    }
+
+    TCHAR* szClip = static_cast<TCHAR*>(::GlobalLock(hGlob));
+    if (szClip == NULL) {
+      CString msg;
+      msg.Format(_T("Cannot alloc clipboard memory, error: %d"),
+                 ::GetLastError());
+      AfxMessageBox(msg);
+      goto LCleanup;
+    }
+
+    wcscpy_s(szClip, cbClip / sizeof(TCHAR), line);
+    int cchLine = line.GetLength();
+    if (cchLine > 0 && szClip[cchLine - 1] == _T('\n')) {
+      szClip[cchLine - 1] = _T('\r');
+      szClip[cchLine++] = _T('\n');
+    }
+    // NUL terminate
+    szClip[cchLine++] = _T('\0');
+
+    VERIFY(::GlobalUnlock(hGlob) == 0 /*no locks*/);
+
+    hGlob = ::GlobalReAlloc(hGlob, cchLine * sizeof(TCHAR),
+                            GMEM_MOVEABLE);  // shrink down to used size
+    assert(hGlob != NULL);
+
+    if (hGlob == NULL || ::SetClipboardData(CF_UNICODETEXT, hGlob) == NULL) {
+      CString msg;
+      msg.Format(_T("Unable to set Clipboard data, error: %d"),
+                 ::GetLastError());
+      AfxMessageBox(msg);
+      goto LCleanup;
+    }
+  }
+
+LCleanup:
+  if (fClipboardOpen)
+    ::CloseClipboard();
+  if (hGlob != NULL)
+    ::GlobalFree(hGlob);
 }
 
-void COutputList::OnViewOutput()
-{
-	CDockablePane* pParentBar = DYNAMIC_DOWNCAST(CDockablePane, GetOwner());
-	CMDIFrameWndEx* pMainFrame = DYNAMIC_DOWNCAST(CMDIFrameWndEx, GetTopLevelFrame());
+void COutputList::OnEditClear(CCmdUI* pCmdUI) {
+  pCmdUI->Enable(GetCount() > 0);
+}
 
-	if (pMainFrame != nullptr && pParentBar != nullptr)
-	{
-		pMainFrame->SetFocus();
-		pMainFrame->ShowPane(pParentBar, FALSE, FALSE, FALSE);
-		pMainFrame->RecalcLayout();
+void COutputList::OnEditClear() {
+  MessageBox(_T("Clear output"));
+}
 
-	}
+void COutputList::OnViewOutput() {
+  CDockablePane* pParentBar = DYNAMIC_DOWNCAST(CDockablePane, GetOwner());
+  CMDIFrameWndEx* pMainFrame =
+      DYNAMIC_DOWNCAST(CMDIFrameWndEx, GetTopLevelFrame());
+
+  if (pMainFrame != nullptr && pParentBar != nullptr) {
+    pMainFrame->SetFocus();
+    pMainFrame->ShowPane(pParentBar, FALSE, FALSE, FALSE);
+    pMainFrame->RecalcLayout();
+  }
 }

@@ -57,11 +57,10 @@ BOOL CSage2020Doc::OnNewDocument() {
 // CSage2020Doc serialization
 
 void CSage2020Doc::Serialize(CArchive& ar) {
-  CWaitCursor wait;
-
   POSITION pos = GetFirstViewPosition();
   CView* pView = GetNextView(pos /*in/out*/);
   CWnd* pwndStatus = NULL;
+  COutputWnd* pwndOutput = NULL;
   if (pView != NULL) {
     CFrameWnd* pParentFrame = pView->GetParentFrame();
     assert(pParentFrame != NULL);
@@ -69,6 +68,7 @@ void CSage2020Doc::Serialize(CArchive& ar) {
         pParentFrame->IsKindOf(RUNTIME_CLASS(CMainFrame))) {
       CMainFrame* pMainFrame = static_cast<CMainFrame*>(pParentFrame);
       pwndStatus = pMainFrame != NULL ? &pMainFrame->GetStatusWnd() : NULL;
+      pwndOutput = pMainFrame != NULL ? &pMainFrame->GetOutputWnd() : NULL;
     }
   }
 
@@ -76,14 +76,10 @@ void CSage2020Doc::Serialize(CArchive& ar) {
     // TODO: add storing code here
   } else {
     auto native_path = ar.GetFile()->GetFilePath();
-    std::filesystem::path path = (PCWSTR)native_path;
-    GitDiffReader git_diff_reader{path, std::string()};
+    std::filesystem::path file_path = (PCWSTR)native_path;
 
-    // Sythethesize FileVersionInstance from diffs, going from first diff
-    // (the last recorded in the git log) forward.
-    file_diffs_ = git_diff_reader.MoveDiffs();
-
-    if (file_diffs_.size() == 0) {
+    GitDiffReader git_diff_reader{file_path, std::string(), pwndOutput};
+    if (git_diff_reader.GetDiffs().size() == 0) {
       if (pwndStatus != nullptr) {
         CString strStatus;
         if (strStatus.LoadString(IDS_ERROR_LOADING_FILE)) {
@@ -93,15 +89,19 @@ void CSage2020Doc::Serialize(CArchive& ar) {
       AfxThrowArchiveException(CArchiveException::genericException);
     }
 
+    // Sythethesize FileVersionInstance from diffs, going from first diff
+    // (the last recorded in the git log) forward.
+    file_diffs_ = git_diff_reader.MoveDiffs();
     std::reverse(file_diffs_.begin(), file_diffs_.end());
 
     if (file_diffs_.front().diff_tree_.action != 'A') {
       // if the first commit is not an add, then get the file at that point.
-      std::filesystem::path parent_path = path;
+      std::filesystem::path parent_path = file_path;
 
       std::string initial_file_id =
           file_diffs_.front().diff_tree_.new_hash_string;
-      GitFileReader git_file_reader{path.parent_path(), initial_file_id};
+      GitFileReader git_file_reader{file_path.parent_path(), initial_file_id,
+                                    pwndOutput};
       file_version_instance_ = std::make_unique<FileVersionInstance>(
           std::move(git_file_reader.GetLines()), file_diffs_.front().commit_);
     } else {

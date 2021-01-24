@@ -4,11 +4,14 @@
 #include "GitFileReader.h"
 
 class GitFileStreamCache;
-
+class COutputWnd;
 struct TOK;
+
 class GitDiffReader {
  public:
-  GitDiffReader(const std::filesystem::path& file_path, const std::string& tag);
+  GitDiffReader(const std::filesystem::path& file_path,
+                const std::string& tag,
+                COutputWnd* pwndOutput = nullptr);
   virtual ~GitDiffReader();
 
   const std::vector<FileVersionDiff>& GetDiffs();

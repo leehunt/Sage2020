@@ -274,6 +274,11 @@ void CPropertiesWnd::InitPropList() {
   pPropertyGridPropertyT->AllowEdit(FALSE);
   pGroup0->AddSubItem(pPropertyGridPropertyT);
 
+  pPropertyGridPropertyT = new CMFCPropertyGridReadOnlySelectableProperty(
+      _T("Comment"), (_variant_t) _T(""), _T("The comment of the commit"));
+  pPropertyGridPropertyT->AllowEdit(FALSE);
+  pGroup0->AddSubItem(pPropertyGridPropertyT);
+
   pPropertyGridPropertyT =
       new CMFCPropertyGridColorProperty(_T("Color"), RGB(0xFF, 0xFF, 0xFF));
   pPropertyGridPropertyT->AllowEdit(FALSE);
@@ -342,28 +347,34 @@ void CPropertiesWnd::EnsureItems(CMFCPropertyGridCtrl& wndPropList, int cItem) {
     CMFCPropertyGridProperty* pPropertyGridPropertyT =
         new CMFCPropertyGridReadOnlySelectableProperty(
             _T("Commit index"), (_variant_t) _T(""),
-            _T("The Commit index that is currently selected"));
+            _T("The Commit index of a selected change"));
     pPropertyGridPropertyT->AllowEdit(FALSE);
     pGroup1->AddSubItem(pPropertyGridPropertyT);
 
     pPropertyGridPropertyT = new CMFCPropertyGridReadOnlySelectableProperty(
         _T("Commit"), (_variant_t) _T(""),
-        _T("The commit hash that is currently selected"));
+        _T("The commit hash of a selected change"));
     pPropertyGridPropertyT->AllowEdit(FALSE);
     pGroup1->AddSubItem(pPropertyGridPropertyT);
 
     pPropertyGridPropertyT = new CMFCPropertyGridReadOnlySelectableProperty(
         _T("Date"), (_variant_t) _T(""),
-        _T("The modification date and time of the change that is currently ")
-        _T("selected"));
+        _T("The modification date and time of a selected change"));
     pPropertyGridPropertyT->AllowEdit(FALSE);
     pGroup1->AddSubItem(pPropertyGridPropertyT);
 
     pPropertyGridPropertyT = new CMFCPropertyGridReadOnlySelectableProperty(
         _T("Author"), (_variant_t) _T(""),
-        _T("The author of the change that is currently selected"));
+        _T("The author of a selected change"));
     pPropertyGridPropertyT->AllowEdit(FALSE);
     pGroup1->AddSubItem(pPropertyGridPropertyT);
+
+    pPropertyGridPropertyT = new CMFCPropertyGridReadOnlySelectableProperty(
+        _T("Comment"), (_variant_t) _T(""),
+        _T("The comment of a change that is currently selected"));
+    pPropertyGridPropertyT->AllowEdit(FALSE);
+    pGroup1->AddSubItem(pPropertyGridPropertyT);
+
 
     pPropertyGridPropertyT =
         new CMFCPropertyGridColorProperty(_T("Color"), RGB(0xFF, 0xFF, 0xFF));
@@ -393,13 +404,13 @@ void CPropertiesWnd::UpdateGridBlock(
       pPropVersionVersion->SetValue(varWzNversT);
   }
 
-  std::wstring change_list;
+  std::wstring commit;
   if (file_version_diff != NULL)
-    change_list = to_wstring(file_version_diff->commit_.sha_);
+    commit = to_wstring(file_version_diff->commit_.sha_);
   CMFCPropertyGridProperty* pPropVersionCL = pPropVersionHeader->GetSubItem(1);
   ASSERT_VALID(pPropVersionCL);
   if (pPropVersionCL != NULL) {
-    _variant_t varWzChangeListT(change_list.c_str());
+    _variant_t varWzChangeListT(commit.c_str());
     if (!(pPropVersionCL->GetValue() == varWzChangeListT))
       pPropVersionCL->SetValue(varWzChangeListT);
   }
@@ -434,8 +445,22 @@ void CPropertiesWnd::UpdateGridBlock(
       pPropVersionAuthor->SetValue(varWzAuthorT);
   }
 
+  CMFCPropertyGridProperty* pPropVersionComment =
+    pPropVersionHeader->GetSubItem(4);
+  ASSERT_VALID(pPropVersionComment);
+  if (pPropVersionComment != NULL) {
+    _variant_t varWzCommentT(file_version_diff != NULL
+            ? to_wstring(file_version_diff->comment_).c_str() 
+            : _T(""));
+    if (!(pPropVersionComment->GetValue() == varWzCommentT)) {
+      pPropVersionComment->SetValue(varWzCommentT);
+      // Take over Description with comment.  THIS DOESN'T WORK (INVALIDATION ISSUES WITH Description).
+      //pPropVersionComment->SetDescription(varWzCommentT);
+    }
+  }
+
   CMFCPropertyGridProperty* pPropVersionColorT =
-      pPropVersionHeader->GetSubItem(4);
+      pPropVersionHeader->GetSubItem(5);
   CMFCPropertyGridColorProperty* pPropVersionColor =
       static_cast<CMFCPropertyGridColorProperty*>(pPropVersionColorT);
   ASSERT_VALID(pPropVersionColor);

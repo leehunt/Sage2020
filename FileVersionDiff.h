@@ -38,7 +38,7 @@ struct FileVersionDiffTree {
 struct FileVersionDiff;
 struct FileVersionDiffParent {
   GitHash commit_;
-  mutable std::unique_ptr<std::vector<FileVersionDiff>> file_version_diffs;
+  std::unique_ptr<std::vector<FileVersionDiff>> file_version_diffs_;
 #if _DEBUG_MEM_TRACE
   FileVersionDiffParent() { printf("FileVersionDiffParent\t%p\n", this); }
   ~FileVersionDiffParent() { printf("~FileVersionDiffParent\t%p\n", this); }
@@ -51,7 +51,7 @@ struct NameEmailTime {
 };
 struct FileVersionDiff {
   GitHash commit_;
-  std::vector<FileVersionDiffParent> parents_;
+  mutable std::vector<FileVersionDiffParent> parents_;
   std::vector<FileVersionDiffHunk> hunks_;
   NameEmailTime author_;
   std::string diff_command_;

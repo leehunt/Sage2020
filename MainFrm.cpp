@@ -195,6 +195,11 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct) {
   return 0;
 }
 
+BOOL CMainFrame::OnCreateClient(LPCREATESTRUCT lpcs, CCreateContext* pContext) {
+  return m_wndSplitter.Create(this, 2 /*cRow*/, 1 /*cCol*/,
+                              CSize(10, 10) /*sizMinPane*/, pContext);
+}
+
 BOOL CMainFrame::PreCreateWindow(CREATESTRUCT& cs) {
   if (!CFrameWndEx::PreCreateWindow(cs))
     return FALSE;
@@ -460,4 +465,25 @@ void CMainFrame::OnSettingChange(UINT uFlags, LPCTSTR lpszSection) {
 #if OUTPUT_PANE
   m_wndOutput.UpdateFonts();
 #endif
+}
+
+BOOL CMainFrame::OnCmdMsg(UINT nID,
+                          int nCode,
+                          void* pExtra,
+                          AFX_CMDHANDLERINFO* pHandlerInfo) {
+  // MFC is foobared when it comes to command routing for Panes.  They are not
+  // considered in the routing sequence, instead they do:
+  // 1. pump through current view FIRST
+  // 2. then pump through frame
+  // 3. last but not least, pump through app
+
+  // Note the sad lack of Pane routing (which can have focus).
+
+  CWnd* pFocus = GetFocus();
+  if (pFocus) {
+    if (pFocus->OnCmdMsg(nID, nCode, pExtra, pHandlerInfo))
+      return TRUE;
+  }
+
+  return CFrameWndEx::OnCmdMsg(nID, nCode, pExtra, pHandlerInfo);
 }
