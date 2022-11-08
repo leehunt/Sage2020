@@ -79,7 +79,7 @@ CSage2020View::~CSage2020View() {
 }
 
 BOOL CSage2020View::PreCreateWindow(CREATESTRUCT& cs) {
-	// TODO: Modify the Window class or styles here by modifying
+	// N.b. Modify the Window class or styles here by modifying
 	//  the CREATESTRUCT cs
 
 	return CView::PreCreateWindow(cs);
@@ -1043,11 +1043,9 @@ BOOL CSage2020View::OnPreparePrinting(CPrintInfo* pInfo) {
 }
 
 void CSage2020View::OnBeginPrinting(CDC* /*pDC*/, CPrintInfo* /*pInfo*/) {
-	// TODO: add extra initialization before printing
 }
 
 void CSage2020View::OnEndPrinting(CDC* /*pDC*/, CPrintInfo* /*pInfo*/) {
-	// TODO: add cleanup after printing
 }
 
 void CSage2020View::OnContextMenu(CWnd* /* pWnd */, CPoint point) {

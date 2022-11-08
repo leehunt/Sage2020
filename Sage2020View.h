@@ -34,7 +34,6 @@ class CSage2020View : public CScrollView, public Sage2020ViewDocListener {
   void SetHighlightAll(bool fHighlightAll) { m_fHighlightAll = fHighlightAll; }
   bool GetHighlightAll() const { return m_fHighlightAll; }
 
-  // TODO: Place this into a shared utility file.
   static COLORREF CrBackgroundForVersion(int nVer, int nVerMax);
 
   // Overrides

@@ -6,12 +6,12 @@
 
 
 class CSage2020App : public CWinApp {
- public:
-  CSage2020App();
+public:
+	CSage2020App();
 };
 extern CSage2020App theApp;
 
 class COutputWnd {
- public:
-  void AppendDebugTabMessage(LPCTSTR lpszItem);
+public:
+	void AppendDebugTabMessage(LPCTSTR lpszItem);
 };

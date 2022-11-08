@@ -13,404 +13,408 @@
 #include "resource.h"
 
 BEGIN_MESSAGE_MAP(CChangeHistoryPane, CDockablePane)
-ON_WM_ACTIVATE()
-ON_WM_CREATE()
-ON_WM_SIZE()
-ON_WM_SETFOCUS()
-ON_NOTIFY(TVN_ITEMEXPANDING, IDR_HISTORY_TREE, OnTreeNotifyExpanding)
-// ON_NOTIFY(TVN_DELETEITEM, IDR_HISTORY_TREE, OnTreeDeleteItem)
+	ON_WM_ACTIVATE()
+	ON_WM_CREATE()
+	ON_WM_SIZE()
+	ON_WM_SETFOCUS()
+	ON_NOTIFY(TVN_ITEMEXPANDING, IDR_HISTORY_TREE, OnTreeNotifyExpanding)
+	// ON_NOTIFY(TVN_DELETEITEM, IDR_HISTORY_TREE, OnTreeDeleteItem)
 END_MESSAGE_MAP()
 
 CChangeHistoryPane::CChangeHistoryPane() : m_pToolTipControl(NULL) {}
 
 CChangeHistoryPane::~CChangeHistoryPane() {
-  if (m_pToolTipControl)
-    CTooltipManager::DeleteToolTip(m_pToolTipControl);
+	if (m_pToolTipControl)
+		CTooltipManager::DeleteToolTip(m_pToolTipControl);
 }
 
 void CChangeHistoryPane::OnActivate(UINT nState,
-                                    CWnd* pWndOther,
-                                    BOOL bMinimized) {
-  CDockablePane::OnActivate(nState, pWndOther, bMinimized);
-  // TODO: Add your message handler code here
+	CWnd* pWndOther,
+	BOOL bMinimized) {
+	CDockablePane::OnActivate(nState, pWndOther, bMinimized);
+	// N.B. Add any message handler code here
 }
 
 int CChangeHistoryPane::OnCreate(LPCREATESTRUCT lpCreateStruct) {
-  if (CDockablePane::OnCreate(lpCreateStruct) == -1)
-    return -1;
+	if (CDockablePane::OnCreate(lpCreateStruct) == -1)
+		return -1;
 
-  CRect rectDummy;
-  rectDummy.SetRectEmpty();
+	CRect rectDummy;
+	rectDummy.SetRectEmpty();
 
-  if (!m_wndTreeCtrl.Create(WS_VISIBLE | WS_CHILD | TVS_SHOWSELALWAYS |
-                                TVS_FULLROWSELECT | TVS_HASBUTTONS |
-                                TVS_LINESATROOT | TVS_NOTOOLTIPS,
-                            rectDummy, this, IDR_HISTORY_TREE)) {
-    TRACE0("Failed to create Versions Tree \n");
-    return -1;  // fail to create
-  }
+	if (!m_wndTreeCtrl.Create(WS_VISIBLE | WS_CHILD | TVS_SHOWSELALWAYS |
+		TVS_FULLROWSELECT | TVS_HASBUTTONS |
+		TVS_LINESATROOT | TVS_NOTOOLTIPS,
+		rectDummy, this, IDR_HISTORY_TREE)) {
+		TRACE0("Failed to create Versions Tree \n");
+		return -1;  // fail to create
+	}
 
-  CTooltipManager::CreateToolTip(m_pToolTipControl /*ref*/, this,
-                                 AFX_TOOLTIP_TYPE_DEFAULT);
-  if (m_pToolTipControl != NULL) {
-    m_pToolTipControl->SetMaxTipWidth(1024);  // make multi-line
-    m_wndTreeCtrl.SetToolTips(m_pToolTipControl);
-  }
+	CTooltipManager::CreateToolTip(m_pToolTipControl /*ref*/, this,
+		AFX_TOOLTIP_TYPE_DEFAULT);
+	if (m_pToolTipControl != NULL) {
+		m_pToolTipControl->SetMaxTipWidth(1024);  // make multi-line
+		m_wndTreeCtrl.SetToolTips(m_pToolTipControl);
+	}
 
-  InitPropList();
+	InitPropList();
 
-  AdjustLayout();
-  return 0;
+	AdjustLayout();
+	return 0;
 }
 
 void CChangeHistoryPane::OnSize(UINT nType, int cx, int cy) {
-  CDockablePane::OnSize(nType, cx, cy);
+	CDockablePane::OnSize(nType, cx, cy);
 
-  AdjustLayout();
+	AdjustLayout();
 }
 
 void CChangeHistoryPane::AdjustLayout() {
-  if (GetSafeHwnd() == NULL) {
-    return;
-  }
+	if (GetSafeHwnd() == NULL) {
+		return;
+	}
 
-  CRect rectClient;
-  GetClientRect(rectClient);
+	CRect rectClient;
+	GetClientRect(rectClient);
 
-  m_wndTreeCtrl.SetWindowPos(NULL, rectClient.left, rectClient.top,
-                             rectClient.Width(), rectClient.Height(),
-                             SWP_NOACTIVATE | SWP_NOZORDER);
+	m_wndTreeCtrl.SetWindowPos(NULL, rectClient.left, rectClient.top,
+		rectClient.Width(), rectClient.Height(),
+		SWP_NOACTIVATE | SWP_NOZORDER);
 }
 
 void CChangeHistoryPane::InitPropList() {
-  SetPropListFont();
+	SetPropListFont();
 
-  if (m_imageList == NULL) {
-    VERIFY(m_imageList.Create(
-        theApp.m_bHiColorIcons ? IDB_HISTORY_TREE_HC : IDB_HISTORY_TREE, 16,
-        1 /*nGrow*/, RGB(255, 0, 255)));
-    VERIFY(m_wndTreeCtrl.SetImageList(&m_imageList, TVSIL_NORMAL) ==
-           NULL /*no prev image list*/);
-  }
+	if (m_imageList == NULL) {
+		VERIFY(m_imageList.Create(
+			theApp.m_bHiColorIcons ? IDB_HISTORY_TREE_HC : IDB_HISTORY_TREE, 16,
+			1 /*nGrow*/, RGB(255, 0, 255)));
+		VERIFY(m_wndTreeCtrl.SetImageList(&m_imageList, TVSIL_NORMAL) ==
+			NULL /*no prev image list*/);
+	}
 }
 
 void CChangeHistoryPane::SetPropListFont() {
-  ::DeleteObject(m_fntTreeCtrl.Detach());
+	::DeleteObject(m_fntTreeCtrl.Detach());
 
-  LOGFONT lf;
-  afxGlobalData.fontRegular.GetLogFont(&lf);
+	LOGFONT lf;
+	afxGlobalData.fontRegular.GetLogFont(&lf);
 
-  NONCLIENTMETRICS info;
-  info.cbSize = sizeof(info);
+	NONCLIENTMETRICS info;
+	info.cbSize = sizeof(info);
 
-  afxGlobalData.GetNonClientMetrics(info);
+	afxGlobalData.GetNonClientMetrics(info);
 
-  lf.lfHeight = info.lfMenuFont.lfHeight;
-  lf.lfWeight = info.lfMenuFont.lfWeight;
-  lf.lfItalic = info.lfMenuFont.lfItalic;
+	lf.lfHeight = info.lfMenuFont.lfHeight;
+	lf.lfWeight = info.lfMenuFont.lfWeight;
+	lf.lfItalic = info.lfMenuFont.lfItalic;
 
-  m_fntTreeCtrl.CreateFontIndirect(&lf);
+	m_fntTreeCtrl.CreateFontIndirect(&lf);
 
-  m_wndTreeCtrl.SetFont(&m_fntTreeCtrl);
+	m_wndTreeCtrl.SetFont(&m_fntTreeCtrl);
 }
 
 void CChangeHistoryPane::OnSetFocus(CWnd* pOldWnd) {
-  CDockablePane::OnSetFocus(pOldWnd);
+	CDockablePane::OnSetFocus(pOldWnd);
 
-  m_wndTreeCtrl.SetFocus();
+	m_wndTreeCtrl.SetFocus();
 }
 
 void CChangeHistoryPane::OnTreeNotifyExpanding(NMHDR* pNMHDR,
-                                               LRESULT* plResult) {
-  const NMTREEVIEW* pTreeView = reinterpret_cast<const NMTREEVIEW*>(pNMHDR);
+	LRESULT* plResult) {
+	const NMTREEVIEW* pTreeView = reinterpret_cast<const NMTREEVIEW*>(pNMHDR);
 
-  HTREEITEM htreeitem = pTreeView->itemNew.hItem;
+	HTREEITEM htreeitem = pTreeView->itemNew.hItem;
 
-  auto file_version_diff = reinterpret_cast<const FileVersionDiff*>(
-      m_wndTreeCtrl.GetItemData(htreeitem));
-  if (file_version_diff == NULL) {
-    assert(false);
-    return;
-  }
-  if (file_version_diff->parents_.size() < 2) {
-    assert(false);
-    return;
-  }
-  const auto& first_parent_commit =
-      file_version_diff->parents_[file_version_diff->parents_.size() - 1]
-          .commit_;
+	auto file_version_diff = reinterpret_cast<const FileVersionDiff*>(
+		m_wndTreeCtrl.GetItemData(htreeitem));
+	if (file_version_diff == NULL) {
+		assert(false);
+		return;
+	}
+	if (file_version_diff->parents_.size() < 2) {
+		assert(false);
+		return;
+	}
+	const auto& first_parent_commit =
+		file_version_diff->parents_[file_version_diff->parents_.size() - 1]
+		.commit_;
 
-  CWnd* pwndStatus = NULL;
-  COutputWnd* pwndOutput = NULL;
-  CFrameWnd* pParentFrame = GetParentFrame();
-  assert(pParentFrame != NULL);
-  if (pParentFrame != NULL &&
-      pParentFrame->IsKindOf(RUNTIME_CLASS(CMainFrame))) {
-    CMainFrame* pMainFrame = static_cast<CMainFrame*>(pParentFrame);
-    pwndStatus = pMainFrame != NULL ? &pMainFrame->GetStatusWnd() : NULL;
-    pwndOutput = pMainFrame != NULL ? &pMainFrame->GetOutputWnd() : NULL;
-  }
+	CWnd* pwndStatus = NULL;
+	COutputWnd* pwndOutput = NULL;
+	CFrameWnd* pParentFrame = GetParentFrame();
+	assert(pParentFrame != NULL);
+	if (pParentFrame != NULL &&
+		pParentFrame->IsKindOf(RUNTIME_CLASS(CMainFrame))) {
+		CMainFrame* pMainFrame = static_cast<CMainFrame*>(pParentFrame);
+		pwndStatus = pMainFrame != NULL ? &pMainFrame->GetStatusWnd() : NULL;
+		pwndOutput = pMainFrame != NULL ? &pMainFrame->GetOutputWnd() : NULL;
+	}
 
-  GitDiffReader git_diff_reader{file_version_diff->path_,
-                                first_parent_commit.sha_, pwndOutput};
-  if (git_diff_reader.GetDiffs().size() > 0) {
-    file_version_diff->parents_[1].file_version_diffs_ =
-        std::make_unique<std::vector<FileVersionDiff>>(
-            git_diff_reader.MoveDiffs());
-  }
+	GitDiffReader git_diff_reader{ file_version_diff->path_,
+																first_parent_commit.sha_, pwndOutput };
+	if (git_diff_reader.GetDiffs().size() > 0) {
+		file_version_diff->parents_[1].file_version_diffs_ =
+			std::make_unique<std::vector<FileVersionDiff>>(
+				git_diff_reader.MoveDiffs());
+	}
 }
 
 #if 0
 void CChangeHistoryPane::OnTreeDeleteItem(NMHDR* pNMHDR, LRESULT* plResult) {
-  const NMTREEVIEW* pTreeView = reinterpret_cast<const NMTREEVIEW*>(pNMHDR);
-  CToolTipCtrl* ptooltip = m_wndTreeCtrl.GetToolTips();
-  if (ptooltip != NULL) {
-    HTREEITEM htreeitem = pTreeView->itemNew.hItem;
+	const NMTREEVIEW* pTreeView = reinterpret_cast<const NMTREEVIEW*>(pNMHDR);
+	CToolTipCtrl* ptooltip = m_wndTreeCtrl.GetToolTips();
+	if (ptooltip != NULL) {
+		HTREEITEM htreeitem = pTreeView->itemNew.hItem;
 
-    auto file_version_diff = reinterpret_cast<const FileVersionDiff*>(
-        m_wndTreeCtrl.GetItemData(htreeitem));
+		auto file_version_diff = reinterpret_cast<const FileVersionDiff*>(
+			m_wndTreeCtrl.GetItemData(htreeitem));
 
-    CToolInfo tool_info;
-    if (ptooltip->GetToolInfo(tool_info, &m_wndTreeCtrl,
-                              reinterpret_cast<UINT_PTR>(&file_version_diff))) {
-      ptooltip->DelTool(&m_wndTreeCtrl,
-                        reinterpret_cast<UINT_PTR>(&file_version_diff));
-    }
-  }
+		CToolInfo tool_info;
+		if (ptooltip->GetToolInfo(tool_info, &m_wndTreeCtrl,
+			reinterpret_cast<UINT_PTR>(&file_version_diff))) {
+			ptooltip->DelTool(&m_wndTreeCtrl,
+				reinterpret_cast<UINT_PTR>(&file_version_diff));
+		}
+	}
 }
 #endif  // 0
 
 static void SetToolTip(CTreeCtrl& tree,
-                       const FileVersionDiff& file_version_diff,
-                       HTREEITEM htreeitem) {
-  CToolTipCtrl* ptooltip = tree.GetToolTips();
-  if (ptooltip != NULL) {
-    TCHAR wzTipLimited[1024];  // must limit tips to this size
-    wzTipLimited[0] = '\0';
-    _tcsncpy_s(wzTipLimited, to_wstring(file_version_diff.comment_).c_str(),
-               _countof(wzTipLimited) - 1);
-    RECT rcItem;
-    VERIFY(tree.GetItemRect(htreeitem, &rcItem, FALSE /*bTextOnly*/));
+	const FileVersionDiff& file_version_diff,
+	HTREEITEM htreeitem) {
+	CToolTipCtrl* ptooltip = tree.GetToolTips();
+	if (ptooltip != NULL) {
+		TCHAR wzTipLimited[1024];  // must limit tips to this size
+		wzTipLimited[0] = '\0';
+		_tcsncpy_s(wzTipLimited, to_wstring(file_version_diff.comment_).c_str(),
+			_countof(wzTipLimited) - 1);
+		RECT rcItem;
+		VERIFY(tree.GetItemRect(htreeitem, &rcItem, FALSE /*bTextOnly*/));
 
-    CToolInfo tool_info;
-    if (ptooltip->GetToolInfo(tool_info, &tree,
-                              reinterpret_cast<UINT_PTR>(&file_version_diff))) {
-      // Tool exists for this item; update its rectangle.
-      tool_info.rect = rcItem;
-      ptooltip->SetToolInfo(&tool_info);
-    } else {
-      ptooltip->AddTool(
-          &tree, wzTipLimited, &rcItem,
-          reinterpret_cast<UINT_PTR>(&file_version_diff) /*unique id*/);
-    }
-  }
+		CToolInfo tool_info;
+		if (ptooltip->GetToolInfo(tool_info, &tree,
+			reinterpret_cast<UINT_PTR>(&file_version_diff))) {
+			// Tool exists for this item; update its rectangle.
+			tool_info.rect = rcItem;
+			ptooltip->SetToolInfo(&tool_info);
+		}
+		else {
+			ptooltip->AddTool(
+				&tree, wzTipLimited, &rcItem,
+				reinterpret_cast<UINT_PTR>(&file_version_diff) /*unique id*/);
+		}
+	}
 }
 
 static std::string CreateTreeItemLabel(size_t commit_index,
-                                       const FileVersionDiff& file_diff) {
-  char time_string[64];
-  time_string[0] = '\0';
-  if (asctime_s(time_string, &file_diff.author_.time_)) {
-    // Error.
-    time_string[0] = '\0';
-  }
-  std::string label = std::to_string(commit_index) + ' ' +
-                      file_diff.author_.name_ + " <" +
-                      file_diff.author_.email_ + "> " +
-                      std::string(time_string) + ' ' + file_diff.commit_.tag_;
-  return label;
+	const FileVersionDiff& file_diff) {
+	char time_string[64];
+	time_string[0] = '\0';
+	if (asctime_s(time_string, &file_diff.author_.time_)) {
+		// Error.
+		time_string[0] = '\0';
+	}
+	std::string label = std::to_string(commit_index) + ' ' +
+		file_diff.author_.name_ + " <" +
+		file_diff.author_.email_ + "> " +
+		std::string(time_string) + ' ' + file_diff.commit_.tag_;
+	return label;
 }
 
 enum VERSION_IMAGES {
-  VERSION_IMAGELIST_PLAIN,
-  VERSION_IMAGELIST_DELETE,
-  VERSION_IMAGELIST_ADD,
-  VERSION_IMAGELIST_INTEGRATE,
-  VERSION_IMAGELIST_BRANCH,
-  VERSION_IMAGELIST_COPY,
-  VERSION_IMAGELIST_IGNORE,
+	VERSION_IMAGELIST_PLAIN,
+	VERSION_IMAGELIST_DELETE,
+	VERSION_IMAGELIST_ADD,
+	VERSION_IMAGELIST_INTEGRATE,
+	VERSION_IMAGELIST_BRANCH,
+	VERSION_IMAGELIST_COPY,
+	VERSION_IMAGELIST_IGNORE,
 
-  VERSION_IMAGELIST_MERGE_OVERLAY,
-  VERSION_IMAGELIST_BLANK_OVERLAY,
-  VERSION_IMAGELIST_EXCLAIM_OVERLAY,
+	VERSION_IMAGELIST_MERGE_OVERLAY,
+	VERSION_IMAGELIST_BLANK_OVERLAY,
+	VERSION_IMAGELIST_EXCLAIM_OVERLAY,
 };
 
 static void SetTreeItemData(CTreeCtrl& tree,
-                            HTREEITEM htreeitem,
-                            const FileVersionDiff& file_version_diff,
-                            const std::wstring& item_label) {
-  VERIFY(tree.SetItemText(htreeitem, item_label.c_str()));
-  VERIFY(tree.SetItemData(htreeitem,
-                          reinterpret_cast<DWORD_PTR>(&file_version_diff)));
+	HTREEITEM htreeitem,
+	const FileVersionDiff& file_version_diff,
+	const std::wstring& item_label) {
+	VERIFY(tree.SetItemText(htreeitem, item_label.c_str()));
+	VERIFY(tree.SetItemData(htreeitem,
+		reinterpret_cast<DWORD_PTR>(&file_version_diff)));
 
-  switch (file_version_diff.diff_tree_.action) {
-    case 'A':  // add
-    {
-      VERIFY(tree.SetItemImage(htreeitem, VERSION_IMAGELIST_ADD,
-                               VERSION_IMAGELIST_ADD));
+	switch (file_version_diff.diff_tree_.action) {
+	case 'A':  // add
+	{
+		VERIFY(tree.SetItemImage(htreeitem, VERSION_IMAGELIST_ADD,
+			VERSION_IMAGELIST_ADD));
 
-      HTREEITEM htreeitemChild = NULL;
-      while ((htreeitemChild = tree.GetChildItem(htreeitem)) != NULL)
-        tree.DeleteItem(htreeitemChild);
+		HTREEITEM htreeitemChild = NULL;
+		while ((htreeitemChild = tree.GetChildItem(htreeitem)) != NULL)
+			tree.DeleteItem(htreeitemChild);
 #if 0
-      if (file_version_diff.parents_.size() > 1) {
-        if (!tree.ItemHasChildren(htreeitem))
-          tree.InsertItem(_T("Dummy"), htreeitem);
-      }
+		if (file_version_diff.parents_.size() > 1) {
+			if (!tree.ItemHasChildren(htreeitem))
+				tree.InsertItem(_T("Dummy"), htreeitem);
+		}
 #endif  // 1
-      break;
-    }
+		break;
+	}
 #if 0
-    case 'b':  // branch
-    {
-      VERIFY(tree.SetItemImage(htreeitem, VERSION_IMAGELIST_BRANCH,
-                               VERSION_IMAGELIST_BRANCH));
+	case 'b':  // branch
+	{
+		VERIFY(tree.SetItemImage(htreeitem, VERSION_IMAGELIST_BRANCH,
+			VERSION_IMAGELIST_BRANCH));
 
-      if (!tree.ItemHasChildren(htreeitem))
-        tree.InsertItem(_T("Dummy"), htreeitem);
-      break;
-    }
+		if (!tree.ItemHasChildren(htreeitem))
+			tree.InsertItem(_T("Dummy"), htreeitem);
+		break;
+	}
 #endif
-    case 'C':  // copy
-      VERIFY(tree.SetItemImage(htreeitem, VERSION_IMAGELIST_COPY,
-                               VERSION_IMAGELIST_INTEGRATE));
-      break;
-    case 'D':  // delete
-    {
-      VERIFY(tree.SetItemImage(htreeitem, VERSION_IMAGELIST_DELETE,
-                               VERSION_IMAGELIST_DELETE));
+	case 'C':  // copy
+		VERIFY(tree.SetItemImage(htreeitem, VERSION_IMAGELIST_COPY,
+			VERSION_IMAGELIST_INTEGRATE));
+		break;
+	case 'D':  // delete
+	{
+		VERIFY(tree.SetItemImage(htreeitem, VERSION_IMAGELIST_DELETE,
+			VERSION_IMAGELIST_DELETE));
 
-      HTREEITEM htreeitemChild = NULL;
-      while ((htreeitemChild = tree.GetChildItem(htreeitem)) != NULL)
-        tree.DeleteItem(htreeitemChild);
-      break;
-    }
-    case 'M':  // modificion
-    {
-      VERIFY(tree.SetItemImage(htreeitem, VERSION_IMAGELIST_PLAIN,
-                               VERSION_IMAGELIST_PLAIN));
+		HTREEITEM htreeitemChild = NULL;
+		while ((htreeitemChild = tree.GetChildItem(htreeitem)) != NULL)
+			tree.DeleteItem(htreeitemChild);
+		break;
+	}
+	case 'M':  // modificion
+	{
+		VERIFY(tree.SetItemImage(htreeitem, VERSION_IMAGELIST_PLAIN,
+			VERSION_IMAGELIST_PLAIN));
 
-      HTREEITEM htreeitemChild = NULL;
-      while ((htreeitemChild = tree.GetChildItem(htreeitem)) != NULL)
-        tree.DeleteItem(htreeitemChild);
+		HTREEITEM htreeitemChild = NULL;
+		while ((htreeitemChild = tree.GetChildItem(htreeitem)) != NULL)
+			tree.DeleteItem(htreeitemChild);
 #if 1
-      if (file_version_diff.parents_.size() > 1) {
-        if (!tree.ItemHasChildren(htreeitem))
-          tree.InsertItem(_T("Dummy"), htreeitem);
-      }
+		if (file_version_diff.parents_.size() > 1) {
+			if (!tree.ItemHasChildren(htreeitem))
+				tree.InsertItem(_T("Dummy"), htreeitem);
+		}
 #endif  // 0
-      break;
-    }
+		break;
+	}
 #if 0
-    case 'i':
-      if (dr.szAction[1] == 'n')  // integrate
-        VERIFY(tree.SetItemImage(htreeitem, VERSION_IMAGELIST_INTEGRATE,
-                                 VERSION_IMAGELIST_INTEGRATE));
-      else {
-        assert(dr.szAction[1] == 'g');  // ignore
-        VERIFY(tree.SetItemImage(htreeitem, VERSION_IMAGELIST_INTEGRATE,
-                                 VERSION_IMAGELIST_INTEGRATE));
-      }
-      break;
-    case 'm':  // merge
-      VERIFY(tree.SetItemImage(htreeitem, VERSION_IMAGELIST_INTEGRATE,
-                               VERSION_IMAGELIST_INTEGRATE));
-      break;
+	case 'i':
+		if (dr.szAction[1] == 'n')  // integrate
+			VERIFY(tree.SetItemImage(htreeitem, VERSION_IMAGELIST_INTEGRATE,
+				VERSION_IMAGELIST_INTEGRATE));
+		else {
+			assert(dr.szAction[1] == 'g');  // ignore
+			VERIFY(tree.SetItemImage(htreeitem, VERSION_IMAGELIST_INTEGRATE,
+				VERSION_IMAGELIST_INTEGRATE));
+		}
+		break;
+	case 'm':  // merge
+		VERIFY(tree.SetItemImage(htreeitem, VERSION_IMAGELIST_INTEGRATE,
+			VERSION_IMAGELIST_INTEGRATE));
+		break;
 #endif
 
-    default: {
-      assert(false);
-      VERIFY(tree.SetItemImage(htreeitem, VERSION_IMAGELIST_PLAIN,
-                               VERSION_IMAGELIST_PLAIN));
+	default: {
+		assert(false);
+		VERIFY(tree.SetItemImage(htreeitem, VERSION_IMAGELIST_PLAIN,
+			VERSION_IMAGELIST_PLAIN));
 
-      HTREEITEM htreeitemChild = NULL;
-      while ((htreeitemChild = tree.GetChildItem(htreeitem)) != NULL)
-        tree.DeleteItem(htreeitemChild);
-      break;
-    }
-  }
+		HTREEITEM htreeitemChild = NULL;
+		while ((htreeitemChild = tree.GetChildItem(htreeitem)) != NULL)
+			tree.DeleteItem(htreeitemChild);
+		break;
+	}
+	}
 
-  // TOOD: This doesn't work reliably since it requires a |rect| to display that
-  // can move/scroll as the containing Pane is updated. Consder using
-  // TVS_INFOTIP instead whcih will ask for an item. SetToolTip(tree,
-  // file_version_diff, htreeitem);
+	// TOOD: This doesn't work reliably since it requires a |rect| to display that
+	// can move/scroll as the containing Pane is updated. Consder using
+	// TVS_INFOTIP instead whcih will ask for an item. SetToolTip(tree,
+	// file_version_diff, htreeitem);
 }
 
 // returns true if the current version has changed due to a tree selection
 /*static*/ bool CChangeHistoryPane::FEnsureTreeItemsAndSelection(
-    CTreeCtrl& tree,
-    HTREEITEM htreeitemRoot,
-    const std::vector<FileVersionDiff>& file_diffs,
-    const GitHash& selected_commit) {
-  BOOL fSelected = FALSE;
-  bool fTreeFocused = tree.GetFocus() == &tree;
+	CTreeCtrl& tree,
+	HTREEITEM htreeitemRoot,
+	const std::vector<FileVersionDiff>& file_diffs,
+	const GitHash& selected_commit) {
+	BOOL fSelected = FALSE;
+	bool fTreeFocused = tree.GetFocus() == &tree;
 
-  // Sync current items.
-  size_t commit_index = 0;
-  HTREEITEM htreeitem = htreeitemRoot;
-  while (commit_index < file_diffs.size() && htreeitem != NULL) {
-    const auto& file_diff = file_diffs[commit_index];
-    const FileVersionDiff* item_file_diff =
-        reinterpret_cast<const FileVersionDiff*>(tree.GetItemData(htreeitem));
-    if (item_file_diff == NULL ||
-        item_file_diff->commit_ != file_diff.commit_) {
-      auto item_label =
-          to_wstring(CreateTreeItemLabel(commit_index, file_diff));
-      SetTreeItemData(tree, htreeitem, file_diff, item_label);
+	// Sync current items.
+	size_t commit_index = 0;
+	HTREEITEM htreeitem = htreeitemRoot;
+	while (commit_index < file_diffs.size() && htreeitem != NULL) {
+		const auto& file_diff = file_diffs[commit_index];
+		const FileVersionDiff* item_file_diff =
+			reinterpret_cast<const FileVersionDiff*>(tree.GetItemData(htreeitem));
+		if (item_file_diff == NULL ||
+			item_file_diff->commit_ != file_diff.commit_) {
+			auto item_label =
+				to_wstring(CreateTreeItemLabel(commit_index, file_diff));
+			SetTreeItemData(tree, htreeitem, file_diff, item_label);
 
-      if (file_diff.commit_ == selected_commit) {
-        VERIFY(fSelected = tree.SelectItem(htreeitem));
-      }
-    } else {
-      if (!fTreeFocused && file_diff.commit_ == selected_commit)
-        VERIFY(fSelected = tree.SelectItem(htreeitem));
-    }
+			if (file_diff.commit_ == selected_commit) {
+				VERIFY(fSelected = tree.SelectItem(htreeitem));
+			}
+		}
+		else {
+			if (!fTreeFocused && file_diff.commit_ == selected_commit)
+				VERIFY(fSelected = tree.SelectItem(htreeitem));
+		}
 
-    auto child_item = tree.GetChildItem(htreeitem);
-    if (child_item != NULL) {
-      for (auto& parent : file_diff.parents_) {
-        if (parent.file_version_diffs_) {
-          fSelected = !FEnsureTreeItemsAndSelection(
-              tree, child_item, *parent.file_version_diffs_,
-              (*parent.file_version_diffs_)[0].commit_);
-        }
-      }
-    }
+		auto child_item = tree.GetChildItem(htreeitem);
+		if (child_item != NULL) {
+			for (auto& parent : file_diff.parents_) {
+				if (parent.file_version_diffs_) {
+					fSelected = !FEnsureTreeItemsAndSelection(
+						tree, child_item, *parent.file_version_diffs_,
+						(*parent.file_version_diffs_)[0].commit_);
+				}
+			}
+		}
 
-    commit_index++;
-    htreeitem = tree.GetNextItem(htreeitem, TVGN_NEXT);
-  }
+		commit_index++;
+		htreeitem = tree.GetNextItem(htreeitem, TVGN_NEXT);
+	}
 
-  // Add any new items.
-  if (commit_index < file_diffs.size()) {
-    HTREEITEM htreeitemParent = tree.GetParentItem(htreeitemRoot);
-    do {
-      const auto& file_diff = file_diffs[commit_index];
-      auto item_label =
-          to_wstring(CreateTreeItemLabel(commit_index, file_diff));
-      HTREEITEM htreeitemNew = tree.InsertItem(
-          item_label.c_str(), htreeitemParent);  // inserts at end
-      if (htreeitemNew != NULL) {
-        SetTreeItemData(tree, htreeitemNew, file_diff, item_label);
+	// Add any new items.
+	if (commit_index < file_diffs.size()) {
+		HTREEITEM htreeitemParent = tree.GetParentItem(htreeitemRoot);
+		do {
+			const auto& file_diff = file_diffs[commit_index];
+			auto item_label =
+				to_wstring(CreateTreeItemLabel(commit_index, file_diff));
+			HTREEITEM htreeitemNew = tree.InsertItem(
+				item_label.c_str(), htreeitemParent);  // inserts at end
+			if (htreeitemNew != NULL) {
+				SetTreeItemData(tree, htreeitemNew, file_diff, item_label);
 
-        if (file_diff.commit_ == selected_commit)
-          VERIFY(fSelected = tree.SelectItem(htreeitemNew));
-      } else {
-        if (!fTreeFocused && file_diff.commit_ == selected_commit)
-          VERIFY(fSelected = tree.SelectItem(htreeitem));
-      }
-      commit_index++;
-    } while (commit_index < file_diffs.size());
-  } else if (htreeitem != NULL) {
-    do {
+				if (file_diff.commit_ == selected_commit)
+					VERIFY(fSelected = tree.SelectItem(htreeitemNew));
+			}
+			else {
+				if (!fTreeFocused && file_diff.commit_ == selected_commit)
+					VERIFY(fSelected = tree.SelectItem(htreeitem));
+			}
+			commit_index++;
+		} while (commit_index < file_diffs.size());
+	}
+	else if (htreeitem != NULL) {
+		do {
 #if _DEBUG
-      TVITEM tvitem = {};
-      tree.GetItem(&tvitem);
+			TVITEM tvitem = {};
+			tree.GetItem(&tvitem);
 #endif  // _DEBUG
-      VERIFY(tree.DeleteItem(htreeitem));
+			VERIFY(tree.DeleteItem(htreeitem));
 
-      htreeitem = tree.GetNextItem(htreeitem, TVGN_NEXT);
-    } while (htreeitem != NULL);
-  }
-  return !fSelected;
+			htreeitem = tree.GetNextItem(htreeitem, TVGN_NEXT);
+		} while (htreeitem != NULL);
+	}
+	return !fSelected;
 }
