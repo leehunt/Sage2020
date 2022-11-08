@@ -66,7 +66,10 @@ CSage2020View::CSage2020View() noexcept
 	m_fHighlightAll(true),
 	m_pDocListened(nullptr),
 	m_currentFileVersionInstance(nullptr),
-	m_sizChar(0, 0) {}
+	m_sizChar(0, 0),
+	m_fontGenerationIndex(0),
+	m_sizCharFontGenerationIndex(0)
+{}
 
 CSage2020View::~CSage2020View() {
 	if (m_pDocListened != NULL) {
@@ -99,7 +102,7 @@ void CSage2020View::OnInitialUpdate()  // called first time after
 	UpdateScrollSizes(rcClient.bottom);
 }
 
-CFont* CSage2020View::GetCustomFont() {
+CFont* CSage2020View::GetCustomFont(int* pFontGenerationIndex) {
 
 	if (!(HKEY)m_accesibilityScaleKey) {
 		m_accesibilityScaleKey.Open(HKEY_CURRENT_USER, _T("Software\\Microsoft\\Accessibility"), KEY_READ);
@@ -144,6 +147,9 @@ CFont* CSage2020View::GetCustomFont() {
 			if (m_font.CreateFontIndirect(&lf)) {
 				if (hfont != NULL)
 					::DeleteObject(hfont);
+				m_fontGenerationIndex++;
+				if (pFontGenerationIndex)
+					*pFontGenerationIndex = m_fontGenerationIndex;
 				return &m_font;
 			}
 			else {
@@ -162,10 +168,13 @@ void CSage2020View::UpdateScrollSizes(int cy) {
 
 	CDC* pDC = GetDC();
 	if (pDC != NULL) {
-		CFont* pfontOld = pDC->SelectObject(GetCustomFont());
+		int fontGenerationIndex;
+		CFont* pfontOld = pDC->SelectObject(GetCustomFont(&fontGenerationIndex));
 
-		if (!m_sizChar.cx)
+		if (!m_sizChar.cx || fontGenerationIndex != m_sizCharFontGenerationIndex) {
 			m_sizChar = pDC->GetTextExtent(_T("W"), 1);
+			m_sizCharFontGenerationIndex = fontGenerationIndex;
+		}
 
 		m_sizAll = m_sizChar;
 		m_sizAll.cx *= 256;

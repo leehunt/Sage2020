@@ -46,7 +46,7 @@ class CSage2020View : public CScrollView, public Sage2020ViewDocListener {
   virtual BOOL OnScrollBy(CSize sizeScroll, BOOL bDoScroll);
 
   // Implementation
-  CFont* GetCustomFont();
+  CFont* GetCustomFont(int* pFontGenerationIndex = nullptr);
   void UpdateScrollSizes(int dx);
 
   // REVIEW: MFC has 'CView::OnUpdate' that should be used to update /
@@ -70,6 +70,7 @@ class CSage2020View : public CScrollView, public Sage2020ViewDocListener {
   CSize m_sizChar;
   CSize m_sizPage;
   CSize m_sizAll;
+  int m_sizCharFontGenerationIndex;
 
   int m_iSelStart;
   int m_iSelEnd;
@@ -85,6 +86,7 @@ class CSage2020View : public CScrollView, public Sage2020ViewDocListener {
   CSage2020Doc* m_pDocListened;
 
   CFont m_font;
+  int m_fontGenerationIndex;
   CRegKey m_accesibilityScaleKey;
   SmartWindowsHandle m_accessibityRegKeyModificationEvent;
 
