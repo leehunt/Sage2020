@@ -120,7 +120,7 @@
       <SubSystem>Console</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
-      <AdditionalDependencies>Utility.obj;GitFileStreamCache.obj;Sage2020ViewDocListener.obj;GitFileReader.obj;GitDiffReader.obj;LineTokenizer.obj;FileVersionInstance.obj;FileVersionInstanceEditor.obj;FileVersionDiff.obj;pch.obj;$(MSBuildThisFileDirectory)..\packages\Microsoft.googletest.v140.windesktop.msvcstl.static.rt-static.1.8.1.3\build\native\..\..\lib\native\v140\windesktop\msvcstl\static\rt-static\x86\Release\gtest_main.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Utility.obj;GitFileStreamCache.obj;Sage2020ViewDocListener.obj;GitFileReader.obj;GitDiffReader.obj;LineTokenizer.obj;FileVersionInstance.obj;FileVersionInstanceEditor.obj;FileVersionDiff.obj;pch.obj;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(OutDir)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
