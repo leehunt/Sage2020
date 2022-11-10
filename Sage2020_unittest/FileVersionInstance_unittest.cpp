@@ -22,16 +22,11 @@ TEST(FileVersionInstanceTest, Load) {
     EXPECT_EQ(line.size(), 0);
     EXPECT_STREQ(line.c_str(), "");
     EXPECT_EQ(file_version_instance.GetLineInfo(i).commit_index(), 0);
-    // TODO
-#if 0
-    EXPECT_STREQ(FileVersionInstanceTest::GetCommitFromIndex(
-                     file_version_instance,
-                     file_version_instance.GetLineInfo(i).commit_index())
-                     .c_str(),
-                 commit_id.c_str());
-#endif  // 0
     i++;
   }
+  EXPECT_TRUE(commit.IsValid());
+  EXPECT_EQ(file_version_instance.GetCommit(), commit);
+
   i = 0;
   for (const auto& file_version_line : file_version_instance.GetLines()) {
     EXPECT_EQ(file_version_line.size(), some_lines_copy[i].size());

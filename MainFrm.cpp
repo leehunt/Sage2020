@@ -169,7 +169,7 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct) {
 	}
 
 	// enable menu personalization (most-recently used commands)
-	// TODO: define your own basic commands, ensuring that each pulldown menu has
+	// FUTURE: define your own basic commands, ensuring that each pulldown menu has
 	// at least one basic command.
 	CList<UINT, UINT> lstBasicCommands;
 
