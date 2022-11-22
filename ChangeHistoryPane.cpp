@@ -124,6 +124,9 @@ void CChangeHistoryPane::OnTreeNotifyExpanding(NMHDR* pNMHDR,
 	LRESULT* plResult) {
 	const NMTREEVIEW* pTreeView = reinterpret_cast<const NMTREEVIEW*>(pNMHDR);
 
+	if (pTreeView->action != TVE_EXPAND)
+		return;
+
 	HTREEITEM htreeitem = pTreeView->itemNew.hItem;
 
 	auto file_version_diff = reinterpret_cast<const FileVersionDiff*>(
@@ -136,6 +139,7 @@ void CChangeHistoryPane::OnTreeNotifyExpanding(NMHDR* pNMHDR,
 		assert(false);
 		return;
 	}
+	// TODO: this must be upgraded to handle > 2 parents.
 	const auto& first_parent_commit =
 		file_version_diff->parents_[file_version_diff->parents_.size() - 1]
 		.commit_;
@@ -151,8 +155,10 @@ void CChangeHistoryPane::OnTreeNotifyExpanding(NMHDR* pNMHDR,
 		pwndOutput = pMainFrame != NULL ? &pMainFrame->GetOutputWnd() : NULL;
 	}
 
+	std::string secondary_parent_revision_range = file_version_diff->parents_[0].commit_.sha_ + ".." + file_version_diff->parents_[1].commit_.sha_;
 	GitDiffReader git_diff_reader{ file_version_diff->path_,
-																first_parent_commit.sha_, pwndOutput };
+																secondary_parent_revision_range, pwndOutput
+	};
 	if (git_diff_reader.GetDiffs().size() > 0) {
 		file_version_diff->parents_[1].file_version_diffs_ =
 			std::make_unique<std::vector<FileVersionDiff>>(
@@ -331,9 +337,9 @@ static void SetTreeItemData(CTreeCtrl& tree,
 	}
 	}
 
-	// TOOD: This doesn't work reliably since it requires a |rect| to display that
+	// TODO: This doesn't work reliably since it requires a |rect| to display that
 	// can move/scroll as the containing Pane is updated. Consder using
-	// TVS_INFOTIP instead whcih will ask for an item. SetToolTip(tree,
+	// TVS_INFOTIP instead which will ask for an item. SetToolTip(tree,
 	// file_version_diff, htreeitem);
 }
 
