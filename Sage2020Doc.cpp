@@ -306,15 +306,16 @@ void CSage2020Doc::Dump(CDumpContext& dc) const {
 // CSage2020Doc commands
 
 BOOL CSage2020Doc::OnOpenDocument(LPCTSTR lpszPathName) {
+	// N.b. This must be done before |CDocument::OnOpenDocument| to reset any current selection.
+	if (m_pDocListenerHead) {
+		m_pDocListenerHead->NotifyAllListenersOfVersionChange(-1);
+	}
+
 	if (!CDocument::OnOpenDocument(lpszPathName))
 		return FALSE;
 
 	m_fNewDoc = true;  // HACK (Consider adding Sage2020ViewDocListener to
 	// CChangeHistoryPane).
-
-	if (m_pDocListenerHead) {
-		m_pDocListenerHead->NotifyAllListenersOfVersionChange(-1);
-	}
 
 	viewport_origin() = CPoint();
 
