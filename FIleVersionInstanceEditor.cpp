@@ -4,6 +4,8 @@
 #include "Sage2020ViewDocListener.h"
 
 void FileVersionInstanceEditor::AddDiff(const FileVersionDiff& diff) {
+	file_version_instance_.commit_ = diff.commit_;
+
 	assert(file_version_instance_.commit_index_ >= -1);
 	file_version_instance_.commit_index_++;
 	assert(file_version_instance_.commit_index_ >= 0);
@@ -18,7 +20,9 @@ void FileVersionInstanceEditor::AddDiff(const FileVersionDiff& diff) {
 	}
 }
 
-void FileVersionInstanceEditor::RemoveDiff(const FileVersionDiff& diff) {
+void FileVersionInstanceEditor::RemoveDiff(const FileVersionDiff& diff, const GitHash& new_commit) {
+	file_version_instance_.commit_ = new_commit;
+
 	assert(file_version_instance_.commit_index_ >= 0);
 	file_version_instance_.commit_index_--;
 	assert(file_version_instance_.commit_index_ >= -1);
@@ -82,7 +86,7 @@ bool FileVersionInstanceEditor::GoToIndex(
 		static_cast<int>(commit_index)) {
 		// N.b. Make a 'diff' copy since commit_index_ is modfied by RemoveDiff().
 		const auto& diff = diffs[file_version_instance_.commit_index_];
-		RemoveDiff(diff);
+		RemoveDiff(diff, diffs[file_version_instance_.commit_index_ - 1].commit_);
 		edited = true;
 	}
 	while (file_version_instance_.commit_index_ <

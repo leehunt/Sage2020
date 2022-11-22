@@ -218,18 +218,18 @@ void CSage2020Doc::OnUpdateHistoryTree(CCmdUI* pCmdUI) {
 	if (GetFileVersionInstance() == nullptr)
 		return;
 
-	auto commit_index = GetFileVersionInstance()->GetCommitIndex();
+	auto commit = GetFileVersionInstance()->GetCommit();
 	const auto& file_diffs = GetFileDiffs();
 	if (CChangeHistoryPane::FEnsureTreeItemsAndSelection(
 		*pTree, pTree->GetRootItem(), file_diffs,
-		file_diffs[commit_index].commit_)) {
+		commit)) {
 		HTREEITEM htreeitemSelected = pTree->GetSelectedItem();
 		if (htreeitemSelected != NULL) {
 			FileVersionDiff* selected_file_diff = reinterpret_cast<FileVersionDiff*>(
 				pTree->GetItemData(htreeitemSelected));
 			assert(selected_file_diff != NULL);
 			if (selected_file_diff) {
-				if (file_diffs[commit_index].commit_ != selected_file_diff->commit_) {
+				if (commit != selected_file_diff->commit_) {
 					FileVersionInstanceEditor editor(*file_version_instance_.get(),
 						m_pDocListenerHead);
 					CWaitCursor wait;

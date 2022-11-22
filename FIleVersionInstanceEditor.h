@@ -13,7 +13,7 @@ class FileVersionInstanceEditor {
         listener_head_(listener_head) {}
 
   void AddDiff(const FileVersionDiff& diff);
-  void RemoveDiff(const FileVersionDiff& diff);
+  void RemoveDiff(const FileVersionDiff& diff, const GitHash& new_commit);
 
   bool GoToCommit(const GitHash& commit,
                   const std::vector<FileVersionDiff>& diffs);
