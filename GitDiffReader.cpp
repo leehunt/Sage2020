@@ -622,7 +622,7 @@ void GitDiffReader::ProcessDiffLines(FILE* stream) {
 	}
 }
 
-const std::vector<FileVersionDiff>& GitDiffReader::GetDiffs() {
+const std::vector<FileVersionDiff>& GitDiffReader::GetDiffs() const {
 	return diffs_;
 }
 

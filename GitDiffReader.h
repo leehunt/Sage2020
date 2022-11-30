@@ -14,7 +14,7 @@ class GitDiffReader {
                 COutputWnd* pwndOutput = nullptr);
   virtual ~GitDiffReader();
 
-  const std::vector<FileVersionDiff>& GetDiffs();
+  const std::vector<FileVersionDiff>& GetDiffs() const;
 
   std::vector<FileVersionDiff> MoveDiffs();
 

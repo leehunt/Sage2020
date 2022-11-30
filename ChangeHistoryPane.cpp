@@ -350,7 +350,7 @@ static void SetTreeItemData(CTreeCtrl& tree,
 	const std::vector<FileVersionDiff>& file_diffs,
 	const GitHash& selected_commit) {
 	BOOL fSelected = FALSE;
-	bool fTreeFocused = tree.GetFocus() == &tree;
+	const bool fTreeFocused = tree.GetFocus() == &tree;
 
 	// Sync current items.
 	size_t commit_index = 0;
@@ -380,7 +380,7 @@ static void SetTreeItemData(CTreeCtrl& tree,
 				if (parent.file_version_diffs_) {
 					fSelected = !FEnsureTreeItemsAndSelection(
 						tree, child_item, *parent.file_version_diffs_,
-						(*parent.file_version_diffs_)[0].commit_);
+						selected_commit);
 				}
 			}
 		}
