@@ -58,6 +58,9 @@ struct FileVersionDiff {
   NameEmailTime committer_;
   std::string comment_;
   std::string tree_;
+  // N.b. In the more genernal case; when getting info from a commit *not*
+  // filtered to a file (i.e. |path_| here), there could be multiple instances
+  // of |diff_tree_| per commit.
   FileVersionDiffTree diff_tree_;
   std::string index_;
   std::filesystem::path path_;

@@ -4,8 +4,6 @@
 #include "Sage2020ViewDocListener.h"
 
 void FileVersionInstanceEditor::AddDiff(const FileVersionDiff& diff) {
-  file_version_instance_.commit_ = diff.commit_;
-
   assert(file_version_instance_.commit_index_ >= -1);
   file_version_instance_.commit_index_++;
   assert(file_version_instance_.commit_index_ >= 0);
@@ -13,6 +11,8 @@ void FileVersionInstanceEditor::AddDiff(const FileVersionDiff& diff) {
   for (auto& hunk : diff.hunks_) {
     AddHunk(hunk);
   }
+
+  file_version_instance_.commit_ = diff.commit_;
 
   if (listener_head_ != nullptr) {
     listener_head_->NotifyAllListenersOfVersionChange(
@@ -22,8 +22,6 @@ void FileVersionInstanceEditor::AddDiff(const FileVersionDiff& diff) {
 
 void FileVersionInstanceEditor::RemoveDiff(const FileVersionDiff& diff,
                                            const GitHash& parent_commit) {
-  file_version_instance_.commit_ = parent_commit;
-
   assert(file_version_instance_.commit_index_ >= 0);
   file_version_instance_.commit_index_--;
   assert(file_version_instance_.commit_index_ >= -1);
@@ -31,6 +29,8 @@ void FileVersionInstanceEditor::RemoveDiff(const FileVersionDiff& diff,
   for (auto it = diff.hunks_.crbegin(); it != diff.hunks_.crend(); it++) {
     RemoveHunk(*it);
   }
+
+  file_version_instance_.commit_ = parent_commit;
 
 #if _DEBUG
 #if USE_SPARSE_INDEX_ARRAY
@@ -60,28 +60,28 @@ void FileVersionInstanceEditor::RemoveDiff(const FileVersionDiff& diff,
 
 bool FileVersionInstanceEditor::GoToCommit(
     const GitHash& commit,
-    const std::vector<FileVersionDiff>& diffs) {
+    const std::vector<FileVersionDiff>& diffs_root) {
   bool edited = false;
 
   // Check if requested commit is on same branch.
-  auto new_commit_path = GetCommitTreePath(commit, diffs);
+  auto new_commit_path = GetCommitTreePath(commit, diffs_root);
   if (!new_commit_path.size()) {
     // Commit not found (!).
     return false;
   }
 
   auto current_commit_path =
-      GetCommitTreePath(file_version_instance_.commit_, diffs);
+      GetCommitTreePath(file_version_instance_.commit_, diffs_root);
   if (!current_commit_path.size()) {
     // Current commit not found (!!).
     VERIFY(FALSE);
     return false;
   }
 
-  if (current_commit_path == new_commit_path) {
-    for (size_t commit_index = 0; commit_index < diffs.size(); commit_index++) {
-      if (diffs[commit_index].commit_ == commit) {
-        edited = GoToIndex(commit_index, diffs);
+  if (current_commit_path.HasSameParent(new_commit_path)) {
+    for (size_t diff_index = 0; diff_index < diffs_root.size(); diff_index++) {
+      if (diffs_root[diff_index].commit_ == commit) {
+        edited = GoToIndex(diff_index, diffs_root);
         return edited;
       }
     }
@@ -123,7 +123,8 @@ bool FileVersionInstanceEditor::GoToIndex(
   bool edited = false;
   while (file_version_instance_.commit_index_ >
          static_cast<int>(commit_index)) {
-    // N.b. Make a 'diff' copy since commit_index_ is modfied by RemoveDiff().
+    // N.b. Make a 'diff' copy reference since commit_index_ is modfied by
+    // RemoveDiff().
     const auto& diff = diffs[file_version_instance_.commit_index_];
     RemoveDiff(diff,
                diffs[(size_t)file_version_instance_.commit_index_ - 1].commit_);
@@ -131,7 +132,8 @@ bool FileVersionInstanceEditor::GoToIndex(
   }
   while (file_version_instance_.commit_index_ <
          static_cast<int>(commit_index)) {
-    // N.b. Make a 'diff' copy since commit_index_ is modfied by AddDiff().
+    // N.b. Make a 'diff' copy reference since commit_index_ is modfied by
+    // AddDiff().
     const auto& diff = diffs[(size_t)file_version_instance_.commit_index_ + 1];
     AddDiff(diff);
     edited = true;
@@ -282,7 +284,9 @@ FileVersionInstanceEditor::GetCommitTreePath(
   int i = 0;
   for (const auto& diff : diffs) {
     if (diff.commit_ == commit) {
-      auto item = CommitTreePathItem().setCurrentBranchIndex(i).setSubBranchRoot(&diffs);
+      auto item =
+          CommitTreePathItem().setCurrentBranchIndex(i).setSubBranchRoot(
+              &diffs);
       CommitTreePath path;
       path.push_back(item);
 

@@ -2,6 +2,7 @@
 // Microsoft Visual C++ generated include file.
 // Used by Sage2020.rc
 //
+// clang-format off
 #define IDD_ABOUTBOX                    100
 #define IDP_OLE_INIT_FAILED             100
 #define IDS_CHANGE_HISTORY              101
@@ -103,3 +104,4 @@
 #define _APS_NEXT_SYMED_VALUE           310
 #endif
 #endif
+// clang-format on

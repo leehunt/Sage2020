@@ -14,18 +14,18 @@ class FileVersionInstanceTest : public testing::Test {
 TEST(FileVersionInstanceTest, Load) {
   std::deque<std::string> some_lines = {"Hello\n", "World!\n", "Thanks!\n"};
   std::deque<std::string> some_lines_copy = some_lines;
-  GitHash commit;
-  commit.sha_ = "01234567890abcdef01234567890abcdef01234567";
-  FileVersionInstance file_version_instance(some_lines, commit);
+  GitHash parent_commit;
+  parent_commit.sha_ = "01234567890abcdef01234567890abcdef01234567";
+  FileVersionInstance file_version_instance(some_lines, parent_commit);
   int i = 0;
   for (const auto& line : some_lines) {
     EXPECT_EQ(line.size(), 0);
     EXPECT_STREQ(line.c_str(), "");
-    EXPECT_EQ(file_version_instance.GetLineInfo(i).commit_index(), 0);
+    EXPECT_EQ(file_version_instance.GetLineInfo(i).commit_index(), -1);
     i++;
   }
-  EXPECT_TRUE(commit.IsValid());
-  EXPECT_EQ(file_version_instance.GetCommit(), commit);
+  EXPECT_TRUE(parent_commit.IsValid());
+  EXPECT_EQ(file_version_instance.GetCommit(), parent_commit);
 
   i = 0;
   for (const auto& file_version_line : file_version_instance.GetLines()) {

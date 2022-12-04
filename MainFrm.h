@@ -69,7 +69,7 @@ class CMainFrame : public CFrameWndEx {
 
  protected:
   CSplitterWnd m_wndSplitter;
-  
+
   // control bar embedded members
   CMFCMenuBar m_wndMenuBar;
   CMFCToolBar m_wndToolBar;

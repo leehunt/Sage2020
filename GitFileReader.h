@@ -8,7 +8,7 @@ class COutputWnd;
 class GitFileReader {
  public:
   GitFileReader(const std::filesystem::path& directory,
-                const std::string& hash,
+                const std::string& revision,
                 COutputWnd* pwndOutput = nullptr);
   virtual ~GitFileReader();
 

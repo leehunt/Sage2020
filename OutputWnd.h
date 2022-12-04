@@ -19,13 +19,13 @@ class COutputList : public CListBox {
 
  protected:
   afx_msg void OnContextMenu(CWnd* pWnd, CPoint point);
-  
+
   afx_msg void OnEditCopy(CCmdUI* pCmdUI);
   afx_msg void OnEditCopy();
-  
+
   afx_msg void OnEditClear(CCmdUI* pCmdUI);
   afx_msg void OnEditClear();
-  
+
   afx_msg void OnViewOutput();
 
   DECLARE_MESSAGE_MAP()

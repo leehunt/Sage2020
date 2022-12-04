@@ -30,7 +30,7 @@ class GitDiffReader {
   bool FReadCommit(TOK* ptok);
   bool FReadTree(TOK* ptok);
   bool FReadNameEmailAndTime(TOK* ptok, NameEmailTime& name_email_time);
-  bool FReadParent(TOK * ptok);
+  bool FReadParent(TOK* ptok);
   bool FReadAuthor(TOK* ptok);
   bool FReadCommitter(TOK* ptok);
   bool FReadDiff(TOK* ptok);

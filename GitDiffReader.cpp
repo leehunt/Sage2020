@@ -13,187 +13,188 @@
 #include "Utility.h"
 
 constexpr TCHAR kGitMostRecentCommitForFileCommand[] =
-_T("git --no-pager log %S -n 1 -- %s");
+    _T("git --no-pager log %S -n 1 -- %s");
 constexpr TCHAR kGitDiffCommand[] =
-_T("git --no-pager log %S -p -U0 --raw --no-color --first-parent ")
-_T("--pretty=raw -- %s");
+    _T("git --no-pager log %S -p -U0 --raw --no-color --first-parent ")
+    _T("--pretty=raw -- %s");  // TODO: Add '--reverse' and remove all uses of
+                               // 'std::reverse()'.
 constexpr TCHAR kGitLogNameTagCommandFromStdIn[] =
-_T("git --no-pager name-rev --stdin");
+    _T("git --no-pager name-rev --stdin");
 
 static std::string GetTextToWhitespace(TOK* ptok) {
-	std::string text;
-	char* szStart = ptok->szVal;
+  std::string text;
+  char* szStart = ptok->szVal;
 
-	while (ptok->tk != TK::tkWSPC && ptok->tk != TK::tkNEWLINE &&
-		ptok->tk != TK::tkNil) {
-		if (!FGetTokDirect(ptok))
-			break;
-	}
+  while (ptok->tk != TK::tkWSPC && ptok->tk != TK::tkNEWLINE &&
+         ptok->tk != TK::tkNil) {
+    if (!FGetTokDirect(ptok))
+      break;
+  }
 
-	char chSav = ptok->szVal[0];
-	ptok->szVal[0] = L'\0';
+  char chSav = ptok->szVal[0];
+  ptok->szVal[0] = L'\0';
 
-	text = szStart;
+  text = szStart;
 
-	ptok->szVal[0] = chSav;
+  ptok->szVal[0] = chSav;
 
-	return text;
+  return text;
 }
 
 static std::string GetTextToToken(TOK* ptok, TK tk, int cch_tok_to_include) {
-	std::string text;
-	char* szStart = ptok->szVal;
+  std::string text;
+  char* szStart = ptok->szVal;
 
-	while (ptok->tk != tk && ptok->tk != TK::tkNil) {
-		if (!FGetTok(ptok))
-			break;
-	}
+  while (ptok->tk != tk && ptok->tk != TK::tkNil) {
+    if (!FGetTok(ptok))
+      break;
+  }
 
-	char chSav = ptok->szVal[cch_tok_to_include];
-	ptok->szVal[cch_tok_to_include] = L'\0';
+  char chSav = ptok->szVal[cch_tok_to_include];
+  ptok->szVal[cch_tok_to_include] = L'\0';
 
-	text = szStart;
+  text = szStart;
 
-	ptok->szVal[cch_tok_to_include] = chSav;
+  ptok->szVal[cch_tok_to_include] = chSav;
 
-	return text;
+  return text;
 }
 
 static std::string GetTextToEndOfLine(TOK* ptok) {
-	// Keep any ending '\n' by setting |cch_tok_to_include| to 1 (if there
-	// is no |tk| then we still simply just add another '\0').
-	return GetTextToToken(ptok, TK::tkNEWLINE, 1 /*cch_tok_to_include*/);
+  // Keep any ending '\n' by setting |cch_tok_to_include| to 1 (if there
+  // is no |tk| then we still simply just add another '\0').
+  return GetTextToToken(ptok, TK::tkNEWLINE, 1 /*cch_tok_to_include*/);
 }
 
 bool GitDiffReader::FReadGitHash(TOK* ptok, GitHash& hash) {
-	if (!FGetTok(ptok))
-		return false;
-	hash.sha_ = GetTextToWhitespace(ptok);
+  if (!FGetTok(ptok))
+    return false;
+  hash.sha_ = GetTextToWhitespace(ptok);
 
-	if (!FGetTok(ptok))
-		return false;
-	hash.tag_ = GetTextToWhitespace(ptok);
+  if (!FGetTok(ptok))
+    return false;
+  hash.tag_ = GetTextToWhitespace(ptok);
 
-	return true;
+  return true;
 }
 
 bool GitDiffReader::FReadCommit(TOK* ptok) {
-	// Format: "commit <sha1> (<tag>)".
-	if (ptok->tk != TK::tkWORD)
-		return false;
-	assert(!strcmp(ptok->szVal, "commit"));
+  // Format: "commit <sha1> (<tag>)".
+  if (ptok->tk != TK::tkWORD)
+    return false;
+  assert(!strcmp(ptok->szVal, "commit"));
 
-	// Start new diff.  REVIEW: is there a better way to determine diff edges?
-	diffs_.push_back({});
-	current_diff_ = &diffs_.back();
+  // Start new diff.  REVIEW: is there a better way to determine diff edges?
+  diffs_.push_back({});
+  current_diff_ = &diffs_.back();
 
-	current_diff_->path_ = path_;
+  current_diff_->path_ = path_;
 
-	return FReadGitHash(ptok, current_diff_->commit_);
+  return FReadGitHash(ptok, current_diff_->commit_);
 }
 
 bool GitDiffReader::FReadTree(TOK* ptok) {
-	if (ptok->tk != TK::tkWORD)
-		return false;
-	assert(!strcmp(ptok->szVal, "tree"));
+  if (ptok->tk != TK::tkWORD)
+    return false;
+  assert(!strcmp(ptok->szVal, "tree"));
 
-	if (!FGetTok(ptok))
-		return false;
-	current_diff_->tree_ = GetTextToEndOfLine(ptok);
+  if (!FGetTok(ptok))
+    return false;
+  current_diff_->tree_ = GetTextToEndOfLine(ptok);
 
-	return true;
+  return true;
 }
 
 bool GitDiffReader::FReadParent(TOK* ptok) {
-	if (ptok->tk != TK::tkWORD)
-		return false;
-	assert(!strcmp(ptok->szVal, "parent"));
+  if (ptok->tk != TK::tkWORD)
+    return false;
+  assert(!strcmp(ptok->szVal, "parent"));
 
-	current_diff_->parents_.push_back({});
-	return FReadGitHash(ptok, current_diff_->parents_.back().commit_);
+  current_diff_->parents_.push_back({});
+  return FReadGitHash(ptok, current_diff_->parents_.back().commit_);
 }
 
 bool GitDiffReader::FReadNameEmailAndTime(TOK* ptok,
-	NameEmailTime& name_email_time) {
-	// name <email> time [+|-]dddd
-	name_email_time.name_ = GetTextToToken(ptok, TK::tkLESSTHAN, 0);
-	if (name_email_time.name_.size() > 0 &&
-		name_email_time.name_[name_email_time.name_.size() - 1] == ' ') {
-		// Trim any trailing space.
-		name_email_time.name_ =
-			name_email_time.name_.substr(0, name_email_time.name_.size() - 1);
-	}
+                                          NameEmailTime& name_email_time) {
+  // name <email> time [+|-]dddd
+  name_email_time.name_ = GetTextToToken(ptok, TK::tkLESSTHAN, 0);
+  if (name_email_time.name_.size() > 0 &&
+      name_email_time.name_[name_email_time.name_.size() - 1] == ' ') {
+    // Trim any trailing space.
+    name_email_time.name_ =
+        name_email_time.name_.substr(0, name_email_time.name_.size() - 1);
+  }
 
-	// skip TK::tkLESSTHAN
-	if (!FGetTok(ptok))
-		return false;
-	name_email_time.email_ = GetTextToToken(ptok, TK::tkGREATERTHAN, 0);
+  // skip TK::tkLESSTHAN
+  if (!FGetTok(ptok))
+    return false;
+  name_email_time.email_ = GetTextToToken(ptok, TK::tkGREATERTHAN, 0);
 
-	// skip TK::tkGREATERTHAN
-	if (!FGetTok(ptok))
-		return false;
-	auto tm_string = GetTextToEndOfLine(ptok);
-	auto time_val = static_cast<time_t>(_atoi64(tm_string.c_str()));
-	gmtime_s(&name_email_time.time_, &time_val);
+  // skip TK::tkGREATERTHAN
+  if (!FGetTok(ptok))
+    return false;
+  auto tm_string = GetTextToEndOfLine(ptok);
+  auto time_val = static_cast<time_t>(_atoi64(tm_string.c_str()));
+  gmtime_s(&name_email_time.time_, &time_val);
 
-	return ptok->tk != TK::tkNil;
+  return ptok->tk != TK::tkNil;
 }
 
 bool GitDiffReader::FReadAuthor(TOK* ptok) {
-	if (ptok->tk != TK::tkWORD)
-		return false;
-	assert(!strcmp(ptok->szVal, "author"));
+  if (ptok->tk != TK::tkWORD)
+    return false;
+  assert(!strcmp(ptok->szVal, "author"));
 
-	if (!FGetTok(ptok))
-		return false;
+  if (!FGetTok(ptok))
+    return false;
 
-	return FReadNameEmailAndTime(ptok, current_diff_->author_);
+  return FReadNameEmailAndTime(ptok, current_diff_->author_);
 }
 
 bool GitDiffReader::FReadCommitter(TOK* ptok) {
-	if (ptok->tk != TK::tkWORD)
-		return false;
-	assert(!strcmp(ptok->szVal, "committer"));
+  if (ptok->tk != TK::tkWORD)
+    return false;
+  assert(!strcmp(ptok->szVal, "committer"));
 
-	if (!FGetTok(ptok))
-		return false;
+  if (!FGetTok(ptok))
+    return false;
 
-	return FReadNameEmailAndTime(ptok, current_diff_->committer_);
+  return FReadNameEmailAndTime(ptok, current_diff_->committer_);
 }
 
 bool GitDiffReader::FReadDiff(TOK* ptok) {
-	if (ptok->tk != TK::tkWORD)
-		return false;
-	assert(!strcmp(ptok->szVal, "diff"));
+  if (ptok->tk != TK::tkWORD)
+    return false;
+  assert(!strcmp(ptok->szVal, "diff"));
 
-	if (!FGetTok(ptok))
-		return false;
-	current_diff_->diff_command_ = GetTextToEndOfLine(ptok);
+  if (!FGetTok(ptok))
+    return false;
+  current_diff_->diff_command_ = GetTextToEndOfLine(ptok);
 
-	return true;
+  return true;
 }
 
 bool GitDiffReader::FReadIndex(TOK* ptok) {
-	if (ptok->tk != TK::tkWORD)
-		return false;
-	assert(!strcmp(ptok->szVal, "index"));
+  if (ptok->tk != TK::tkWORD)
+    return false;
+  assert(!strcmp(ptok->szVal, "index"));
 
-	if (!FGetTok(ptok))
-		return false;
-	current_diff_->index_ = GetTextToEndOfLine(ptok);
+  if (!FGetTok(ptok))
+    return false;
+  current_diff_->index_ = GetTextToEndOfLine(ptok);
 
-	return true;
+  return true;
 }
 
 bool GitDiffReader::FReadComment(TOK* ptok) {
-	if (ptok->tk != TK::tkWSPC)
-		return false;
+  if (ptok->tk != TK::tkWSPC)
+    return false;
 
-	if (!FGetTok(ptok))
-		return false;
-	current_diff_->comment_.append(GetTextToEndOfLine(ptok));
+  if (!FGetTok(ptok))
+    return false;
+  current_diff_->comment_.append(GetTextToEndOfLine(ptok));
 
-	return true;
+  return true;
 }
 
 // See https://git-scm.com/docs/diff-format
@@ -233,31 +234,31 @@ rewrites.
 sync with the index.
 */
 bool GitDiffReader::FReadGitDiffTreeColon(TOK* ptok) {
-	if (ptok->tk != TK::tkCOLON)
-		return false;
+  if (ptok->tk != TK::tkCOLON)
+    return false;
 
-	if (!FGetTok(ptok))
-		return false;
+  if (!FGetTok(ptok))
+    return false;
 
-	// e.g. "100644 100644 285ecec5de92e c90011667b640 M chrome/app/chrome_exe.rc"
-	auto diff_tree_line = GetTextToEndOfLine(ptok);
-	int num_args = sscanf_s(
-		diff_tree_line.c_str(), "%o %o %s %s %c %s",
-		&current_diff_->diff_tree_.old_mode,                             // %o
-		&current_diff_->diff_tree_.new_mode,                             // %o
-		current_diff_->diff_tree_.old_hash_string,                       // %s
-		(unsigned)std::size(current_diff_->diff_tree_.old_hash_string),  // %s len
-		current_diff_->diff_tree_.new_hash_string,                       // %s
-		(unsigned)std::size(current_diff_->diff_tree_.new_hash_string),  // %s len
-		&current_diff_->diff_tree_.action,                               // %c
-		(unsigned)sizeof(current_diff_->diff_tree_.action),              // %c len
-		current_diff_->diff_tree_.file_path,                             // %s
-		(unsigned)std::size(current_diff_->diff_tree_.file_path)         // %s len
-	);
-	if (num_args != 6)
-		return false;
+  // e.g. "100644 100644 285ecec5de92e c90011667b640 M chrome/app/chrome_exe.rc"
+  auto diff_tree_line = GetTextToEndOfLine(ptok);
+  int num_args = sscanf_s(
+      diff_tree_line.c_str(), "%o %o %s %s %c %s",
+      &current_diff_->diff_tree_.old_mode,                             // %o
+      &current_diff_->diff_tree_.new_mode,                             // %o
+      current_diff_->diff_tree_.old_hash_string,                       // %s
+      (unsigned)std::size(current_diff_->diff_tree_.old_hash_string),  // %s len
+      current_diff_->diff_tree_.new_hash_string,                       // %s
+      (unsigned)std::size(current_diff_->diff_tree_.new_hash_string),  // %s len
+      &current_diff_->diff_tree_.action,                               // %c
+      (unsigned)sizeof(current_diff_->diff_tree_.action),              // %c len
+      current_diff_->diff_tree_.file_path,                             // %s
+      (unsigned)std::size(current_diff_->diff_tree_.file_path)         // %s len
+  );
+  if (num_args != 6)
+    return false;
 
-	return true;
+  return true;
 }
 
 // https://en.wikipedia.org/wiki/Diff (Unified Format)
@@ -265,6 +266,8 @@ bool GitDiffReader::FReadGitDiffTreeColon(TOK* ptok) {
 //
 // Add line:
 // @@ -l,s +l,s @@ optional section heading
+// N.b. If the line count (",s" above) is missing, it is assumed to be 1.
+//
 // E.g.:
 //@@ -65,0 +66 @@ IDR_MAINFRAME           ICON "theme\google_chrome\chrome.ico"
 //+IDR_MAINFRAME_2         ICON "theme\google_chrome\chrome2.ico"
@@ -282,350 +285,339 @@ bool GitDiffReader::FReadGitDiffTreeColon(TOK* ptok) {
 // N.b. There are (number of parents + 1) @ characters in the chunk header for
 // combined diff format. E.g.:
 //@@@ <from-file-range> <from-file-range> <to-file-range> @@@
+
 bool GitDiffReader::FReadHunkHeader(TOK* ptok) {
-	if (ptok->tk != TK::tkATSIGN)
-		return false;
+  if (ptok->tk != TK::tkATSIGN)
+    return false;
 
-	if (!FGetTok(ptok))
-		return false;
-	if (ptok->tk != TK::tkATSIGN)
-		return false;
+  if (!FGetTok(ptok))
+    return false;
+  if (ptok->tk != TK::tkATSIGN)
+    return false;
 
-	if (!FGetTok(ptok))
-		return false;
+  if (!FGetTok(ptok))
+    return false;
 
-	FileVersionDiffHunk hunk;
+  FileVersionDiffHunk hunk;
 
-	// Get removed lines.
-	if (ptok->tk != TK::tkMINUS)
-		return false;
+  // Get removed lines.
+  if (ptok->tk != TK::tkMINUS)
+    return false;
 
-	if (!FGetTok(ptok))
-		return false;
-	if (ptok->tk != TK::tkINTEGER)
-		return false;
-	hunk.remove_location_ = atol(ptok->szVal);
+  if (!FGetTok(ptok))
+    return false;
+  if (ptok->tk != TK::tkINTEGER)
+    return false;
+  hunk.remove_location_ = atol(ptok->szVal);
 
-	if (!FGetTok(ptok))
-		return false;
-	if (ptok->tk == TK::tkCOMMA) {
-		if (!FGetTok(ptok))
-			return false;
-		if (ptok->tk != TK::tkINTEGER)
-			return false;
-		hunk.remove_line_count_ = atol(ptok->szVal);
+  if (!FGetTok(ptok))
+    return false;
+  if (ptok->tk == TK::tkCOMMA) {
+    if (!FGetTok(ptok))
+      return false;
+    if (ptok->tk != TK::tkINTEGER)
+      return false;
+    hunk.remove_line_count_ = atol(ptok->szVal);
 
-		if (!FGetTok(ptok))
-			return false;
-	}
-	else {
-		hunk.remove_line_count_ = 1;
-	}
+    if (!FGetTok(ptok))
+      return false;
+  } else {
+    hunk.remove_line_count_ = 1;
+  }
 
-	// Get added lines.
-	if (ptok->tk != TK::tkPLUS)
-		return false;
+  // Get added lines.
+  if (ptok->tk != TK::tkPLUS)
+    return false;
 
-	if (!FGetTok(ptok))
-		return false;
-	if (ptok->tk != TK::tkINTEGER)
-		return false;
-	hunk.add_location_ = atol(ptok->szVal);
+  if (!FGetTok(ptok))
+    return false;
+  if (ptok->tk != TK::tkINTEGER)
+    return false;
+  hunk.add_location_ = atol(ptok->szVal);
 
-	if (!FGetTok(ptok))
-		return false;
-	if (ptok->tk == TK::tkCOMMA) {
-		if (!FGetTok(ptok))
-			return false;
-		if (ptok->tk != TK::tkINTEGER)
-			return false;
-		hunk.add_line_count_ = atol(ptok->szVal);
+  if (!FGetTok(ptok))
+    return false;
+  if (ptok->tk == TK::tkCOMMA) {
+    if (!FGetTok(ptok))
+      return false;
+    if (ptok->tk != TK::tkINTEGER)
+      return false;
+    hunk.add_line_count_ = atol(ptok->szVal);
 
-		if (!FGetTok(ptok))
-			return false;
-	}
-	else {
-		hunk.add_line_count_ = 1;
-	}
+    if (!FGetTok(ptok))
+      return false;
+  } else {
+    hunk.add_line_count_ = 1;
+  }
 
-	if (ptok->tk != TK::tkATSIGN)
-		return false;
-	if (!FGetTok(ptok))
-		return false;
+  if (ptok->tk != TK::tkATSIGN)
+    return false;
+  if (!FGetTok(ptok))
+    return false;
 
-	if (ptok->tk != TK::tkATSIGN)
-		return false;
-	if (!FGetTok(ptok))
-		return false;
+  if (ptok->tk != TK::tkATSIGN)
+    return false;
+  if (!FGetTok(ptok))
+    return false;
 
-	hunk.start_context_ = GetTextToEndOfLine(ptok);
+  hunk.start_context_ = GetTextToEndOfLine(ptok);
 
-	// Create new Hunk series.
-	current_diff_->hunks_.push_back(std::move(hunk));
+  // Create new Hunk series.
+  current_diff_->hunks_.push_back(std::move(hunk));
 
-	return true;
+  return true;
 }
 
 bool GitDiffReader::FReadAddLine(TOK* ptok) {
-	if (ptok->tk != TK::tkPLUS)
-		return false;
-	// N.b. ensure we get direct tokens here else we'll trim any leading
-	// whitespace.
-	if (!FGetTokDirect(ptok))
-		return false;
+  if (ptok->tk != TK::tkPLUS)
+    return false;
+  // N.b. ensure we get direct tokens here else we'll trim any leading
+  // whitespace.
+  if (!FGetTokDirect(ptok))
+    return false;
 
-	// If size() == 0, this is due to the '+++' or '---' line
-	if (current_diff_->hunks_.size() > 0) {
-		current_diff_->hunks_.back().add_lines_.push_back(GetTextToEndOfLine(ptok));
-	}
-	else {
-		if (ptok->tk != TK::tkPLUS)
-			return false;
+  // If size() == 0, this is due to the '+++' line.
+  if (current_diff_->hunks_.size() > 0) {
+    current_diff_->hunks_.back().add_lines_.push_back(GetTextToEndOfLine(ptok));
+  } else {
+    if (ptok->tk != TK::tkPLUS)
+      return false;
 
-		if (!FGetTok(ptok))
-			return false;
-		if (ptok->tk != TK::tkPLUS)
-			return false;
-	}
+    if (!FGetTok(ptok))
+      return false;
+    if (ptok->tk != TK::tkPLUS)
+      return false;
+  }
 
-	return true;
+  return true;
 }
 
 bool GitDiffReader::FReadRemoveLine(TOK* ptok) {
-	if (ptok->tk != TK::tkMINUS)
-		return false;
-	if (!FGetTokDirect(ptok))
-		return false;
+  if (ptok->tk != TK::tkMINUS)
+    return false;
+  if (!FGetTokDirect(ptok))
+    return false;
 
-	// If size() == 0, this is due to the '+++' or '---' line
-	if (current_diff_->hunks_.size() > 0) {
-		current_diff_->hunks_.back().remove_lines_.push_back(
-			GetTextToEndOfLine(ptok));
-	}
-	else {
-		if (ptok->tk != TK::tkMINUS)
-			return false;
+  // If size() == 0, this is due to the '---' line.
+  if (current_diff_->hunks_.size() > 0) {
+    current_diff_->hunks_.back().remove_lines_.push_back(
+        GetTextToEndOfLine(ptok));
+  } else {
+    if (ptok->tk != TK::tkMINUS)
+      return false;
 
-		if (!FGetTok(ptok))
-			return false;
-		if (ptok->tk != TK::tkMINUS)
-			return false;
-	}
+    if (!FGetTok(ptok))
+      return false;
+    if (ptok->tk != TK::tkMINUS)
+      return false;
+  }
 
-	return true;
+  return true;
 }
 
 bool GitDiffReader::FParseNamedLine(TOK* ptok) {
-	if (ptok->tk != TK::tkWORD)
-		return false;
+  if (ptok->tk != TK::tkWORD)
+    return false;
 
-	if (!strcmp(ptok->szVal, "commit")) {
-		return FReadCommit(ptok);
-	}
-	else if (!strcmp(ptok->szVal, "tree")) {
-		return FReadTree(ptok);
-	}
-	else if (!strcmp(ptok->szVal, "parent")) {
-		return FReadParent(ptok);
-	}
-	else if (!strcmp(ptok->szVal, "author")) {
-		return FReadAuthor(ptok);
-	}
-	else if (!strcmp(ptok->szVal, "committer")) {
-		return FReadCommitter(ptok);
-	}
-	else if (!strcmp(ptok->szVal, "diff")) {
-		return FReadDiff(ptok);
-	}
-	else if (!strcmp(ptok->szVal, "index")) {
-		return FReadIndex(ptok);
-	}
+  if (!strcmp(ptok->szVal, "commit")) {
+    return FReadCommit(ptok);
+  } else if (!strcmp(ptok->szVal, "tree")) {
+    return FReadTree(ptok);
+  } else if (!strcmp(ptok->szVal, "parent")) {
+    return FReadParent(ptok);
+  } else if (!strcmp(ptok->szVal, "author")) {
+    return FReadAuthor(ptok);
+  } else if (!strcmp(ptok->szVal, "committer")) {
+    return FReadCommitter(ptok);
+  } else if (!strcmp(ptok->szVal, "diff")) {
+    return FReadDiff(ptok);
+  } else if (!strcmp(ptok->szVal, "index")) {
+    return FReadIndex(ptok);
+  }
 
-	return true;
+  return true;
 }
 bool GitDiffReader::ProcessLogLine(char* line) {
-	bool is_done = false;
-	TOK tok;
-	AttachTokToLine(&tok, line);
-	if (!FGetTokDirect(&tok)) {
-		is_done = true;
-		goto LDone;
-	}
+  bool is_done = false;
+  TOK tok;
+  AttachTokToLine(&tok, line);
+  if (!FGetTokDirect(&tok)) {
+    is_done = true;
+    goto LDone;
+  }
 
-	switch (tok.tk) {
-	case TK::tkWORD: {
-		is_done = !FParseNamedLine(&tok);
-		break;
-	}
-	case TK::tkCOLON: {
-		is_done = !FReadGitDiffTreeColon(&tok);
-		break;
-	}
-	case TK::tkWSPC: {
-		is_done = !FReadComment(&tok);
-		break;
-	}
-	case TK::tkATSIGN: {
-		is_done = !FReadHunkHeader(&tok);
-		break;
-	}
-	case TK::tkPLUS: {
-		// One of:
-		// "+++ b/chrome/app/chrome_exe.rc"
-		// or
-		// "+Added lines"
-		is_done = !FReadAddLine(&tok);
-		break;
-	}
-	case TK::tkMINUS: {
-		// One of:
-		// "--- a/chrome/app/chrome_exe.rc"
-		// or
-		// "-Removed lines"
-		is_done = !FReadRemoveLine(&tok);
-		break;
-	}
-	}
+  switch (tok.tk) {
+    case TK::tkWORD: {
+      is_done = !FParseNamedLine(&tok);
+      break;
+    }
+    case TK::tkCOLON: {
+      is_done = !FReadGitDiffTreeColon(&tok);
+      break;
+    }
+    case TK::tkWSPC: {
+      is_done = !FReadComment(&tok);
+      break;
+    }
+    case TK::tkATSIGN: {
+      is_done = !FReadHunkHeader(&tok);
+      break;
+    }
+    case TK::tkPLUS: {
+      // One of:
+      // "+++ b/chrome/app/chrome_exe.rc"
+      // or
+      // "+Added lines"
+      is_done = !FReadAddLine(&tok);
+      break;
+    }
+    case TK::tkMINUS: {
+      // One of:
+      // "--- a/chrome/app/chrome_exe.rc"
+      // or
+      // "-Removed lines"
+      is_done = !FReadRemoveLine(&tok);
+      break;
+    }
+  }
 
 LDone:
-	UnattachTok(&tok);
-	return !is_done;
+  UnattachTok(&tok);
+  return !is_done;
 }
 
 GitDiffReader::GitDiffReader(const std::filesystem::path& file_path,
-	const std::string& tag,
-	COutputWnd* pwndOutput)
-	: current_diff_(nullptr), path_(file_path) {
-	TCHAR command[1024];
+                             const std::string& tag,
+                             COutputWnd* pwndOutput)
+    : current_diff_(nullptr), path_(file_path) {
+  TCHAR command[1024];
 
-	CWaitCursor wait;
+  CWaitCursor wait;
 
-	if (pwndOutput != nullptr) {
-		CString message;
-		message.FormatMessage(
-			_T("Reading git diff history for: '%1!s!' %2!S!:"),
-			file_path.c_str(), tag.c_str());
-		pwndOutput->AppendDebugTabMessage(message);
-	}
+  if (pwndOutput != nullptr) {
+    CString message;
+    message.FormatMessage(_T("Reading git diff history for: '%1!s!' %2!S!:"),
+                          file_path.c_str(), tag.c_str());
+    pwndOutput->AppendDebugTabMessage(message);
+  }
 
-	std::string tag_no_parentheses = tag;
-	if (!tag_no_parentheses.empty()) {
-		if (tag_no_parentheses.front() == '(')
-			tag_no_parentheses = tag_no_parentheses.substr(1);
-		if (!tag_no_parentheses.empty() && tag_no_parentheses.back() == ')')
-			tag_no_parentheses =
-			tag_no_parentheses.substr(0, tag_no_parentheses.size() - 1);
-	}
-	wsprintf(command, kGitMostRecentCommitForFileCommand,
-		tag_no_parentheses.c_str(), file_path.filename().c_str());
-	if (pwndOutput != nullptr) {
-		CString message;
-		message.FormatMessage(_T("   Checking current hash: '%1!s!'"), command);
-		pwndOutput->AppendDebugTabMessage(message);
-	}
-	ProcessPipe process_pipe_git_commit(command, file_path.parent_path().c_str());
+  std::string tag_no_parentheses = tag;
+  if (!tag_no_parentheses.empty()) {
+    if (tag_no_parentheses.front() == '(')
+      tag_no_parentheses = tag_no_parentheses.substr(1);
+    if (!tag_no_parentheses.empty() && tag_no_parentheses.back() == ')')
+      tag_no_parentheses =
+          tag_no_parentheses.substr(0, tag_no_parentheses.size() - 1);
+  }
+  wsprintf(command, kGitMostRecentCommitForFileCommand,
+           tag_no_parentheses.c_str(), file_path.filename().c_str());
+  if (pwndOutput != nullptr) {
+    CString message;
+    message.FormatMessage(_T("   Checking current hash: '%1!s!'"), command);
+    pwndOutput->AppendDebugTabMessage(message);
+  }
+  ProcessPipe process_pipe_git_commit(command, file_path.parent_path().c_str());
 
-	FILE* stream = process_pipe_git_commit.GetStandardOutput();
-	if (stream == nullptr) {
-		if (pwndOutput != nullptr) {
-			CString message;
-			message.FormatMessage(_T("   Error getting current git hash."));
-			pwndOutput->AppendDebugTabMessage(message);
-		}
-		return;
-	}
+  FILE* stream = process_pipe_git_commit.GetStandardOutput();
+  if (stream == nullptr) {
+    if (pwndOutput != nullptr) {
+      CString message;
+      message.FormatMessage(_T("   Error getting current git hash."));
+      pwndOutput->AppendDebugTabMessage(message);
+    }
+    return;
+  }
 
-	char header_line[1024];
-	if (!fgets(header_line, (int)std::size(header_line), stream)) {
-		if (pwndOutput != nullptr) {
-			CString message;
-			message.FormatMessage(_T("   Error reading hash command output."));
-			pwndOutput->AppendDebugTabMessage(message);
-		}
-		return;
-	}
+  char header_line[1024];
+  if (!fgets(header_line, (int)std::size(header_line), stream)) {
+    if (pwndOutput != nullptr) {
+      CString message;
+      message.FormatMessage(_T("   Error reading hash command output."));
+      pwndOutput->AppendDebugTabMessage(message);
+    }
+    return;
+  }
 
-	file_stream_cache_ = std::make_unique<GitFileStreamCache>(file_path);
+  file_stream_cache_ = std::make_unique<GitFileStreamCache>(file_path);
 
-	// Sniff header of stream to see if we have commit cached.
-	ProcessLogLine(header_line);
-	if (!current_diff_ || !current_diff_->commit_.IsValid()) {
-		if (pwndOutput != nullptr) {
-			CString message;
-			message.FormatMessage(_T("   Cache header line is missing or invalid."));
-			pwndOutput->AppendDebugTabMessage(message);
-		}
-	}
-	auto cache_stream =
-		file_stream_cache_->GetStream(current_diff_->commit_.sha_);
+  // Sniff header of stream to see if we have commit cached.
+  ProcessLogLine(header_line);
+  if (!current_diff_ || !current_diff_->commit_.IsValid()) {
+    if (pwndOutput != nullptr) {
+      CString message;
+      message.FormatMessage(_T("   Cache header line is missing or invalid."));
+      pwndOutput->AppendDebugTabMessage(message);
+    }
+  }
+  auto cache_stream =
+      file_stream_cache_->GetStream(current_diff_->commit_.sha_);
 
-	if (cache_stream) {
-		if (pwndOutput != nullptr) {
-			CString message;
-			message.FormatMessage(
-				_T("   Cache hit for commit '%1!S!', reading diff history from: ")
-				_T("'%2!s!'"),
-				current_diff_->commit_.sha_.c_str(),
-				file_stream_cache_->GetItemCachePath(current_diff_->commit_.sha_)
-				.c_str());
-			pwndOutput->AppendDebugTabMessage(message);
-		}
-		ProcessDiffLines(cache_stream.get());
-	}
-	else {
-		wsprintf(command, kGitDiffCommand, tag_no_parentheses.c_str(),
-			file_path.filename().c_str());
-		if (pwndOutput != nullptr) {
-			CString message;
-			message.FormatMessage(
-				_T("   Cache miss for commit '%1!S!', reading full diff history: ")
-				_T("'%2!s!'"),
-				current_diff_->commit_.sha_.c_str(), command);
-			pwndOutput->AppendDebugTabMessage(message);
-		}
-		ProcessPipe process_pipe_git_log(command, file_path.parent_path().c_str());
+  if (cache_stream) {
+    if (pwndOutput != nullptr) {
+      CString message;
+      message.FormatMessage(
+          _T("   Cache hit for commit '%1!S!', reading diff history from: ")
+          _T("'%2!s!'"),
+          current_diff_->commit_.sha_.c_str(),
+          file_stream_cache_->GetItemCachePath(current_diff_->commit_.sha_)
+              .c_str());
+      pwndOutput->AppendDebugTabMessage(message);
+    }
+    ProcessDiffLines(cache_stream.get());
+  } else {
+    wsprintf(command, kGitDiffCommand, tag_no_parentheses.c_str(),
+             file_path.filename().c_str());
+    if (pwndOutput != nullptr) {
+      CString message;
+      message.FormatMessage(
+          _T("   Cache miss for commit '%1!S!', reading full diff history: ")
+          _T("'%2!s!'"),
+          current_diff_->commit_.sha_.c_str(), command);
+      pwndOutput->AppendDebugTabMessage(message);
+    }
+    ProcessPipe process_pipe_git_log(command, file_path.parent_path().c_str());
 
-		if (pwndOutput != nullptr) {
-			CString message;
-			message.FormatMessage(_T("   Processing tags from last command: '%1!s!'"),
-				kGitLogNameTagCommandFromStdIn);
-			pwndOutput->AppendDebugTabMessage(message);
-		}
-		ProcessPipe process_pipe_git_tag(kGitLogNameTagCommandFromStdIn,
-			file_path.parent_path().c_str(),
-			process_pipe_git_log.GetStandardOutput());
+    if (pwndOutput != nullptr) {
+      CString message;
+      message.FormatMessage(_T("   Processing tags from last command: '%1!s!'"),
+                            kGitLogNameTagCommandFromStdIn);
+      pwndOutput->AppendDebugTabMessage(message);
+    }
+    ProcessPipe process_pipe_git_tag(kGitLogNameTagCommandFromStdIn,
+                                     file_path.parent_path().c_str(),
+                                     process_pipe_git_log.GetStandardOutput());
 
-		auto file_stream = file_stream_cache_->SaveStream(
-			process_pipe_git_tag.GetStandardOutput(), current_diff_->commit_.sha_);
-		if (file_stream) {
-			ProcessDiffLines(file_stream.get());
-		}
-	}
-	if (pwndOutput != nullptr) {
-		CString message;
-		message.FormatMessage(_T("   Done."));
-		pwndOutput->AppendDebugTabMessage(message);
-	}
+    auto file_stream = file_stream_cache_->SaveStream(
+        process_pipe_git_tag.GetStandardOutput(), current_diff_->commit_.sha_);
+    if (file_stream) {
+      ProcessDiffLines(file_stream.get());
+    }
+  }
+  if (pwndOutput != nullptr) {
+    CString message;
+    message.FormatMessage(_T("   Done."));
+    pwndOutput->AppendDebugTabMessage(message);
+  }
 }
 
 GitDiffReader::~GitDiffReader() {}
 
 void GitDiffReader::ProcessDiffLines(FILE* stream) {
-	assert(!current_diff_ ^ diffs_.size());
-	diffs_.clear();
-	current_diff_ = nullptr;
+  assert(!current_diff_ ^ diffs_.size());
+  diffs_.clear();
+  current_diff_ = nullptr;
 
-	char stream_line[1024];
-	while (fgets(stream_line, (int)std::size(stream_line), stream)) {
-		if (!ProcessLogLine(stream_line))
-			break;
-	}
+  char stream_line[1024];
+  while (fgets(stream_line, (int)std::size(stream_line), stream)) {
+    if (!ProcessLogLine(stream_line))
+      break;
+  }
 }
 
 const std::vector<FileVersionDiff>& GitDiffReader::GetDiffs() const {
-	return diffs_;
+  return diffs_;
 }
 
 std::vector<FileVersionDiff> GitDiffReader::MoveDiffs() {
-	return std::move(diffs_);
+  return std::move(diffs_);
 }

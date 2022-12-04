@@ -16,7 +16,7 @@ class FileVersionInstanceEditor {
   void RemoveDiff(const FileVersionDiff& diff, const GitHash& parent_commit);
 
   bool GoToCommit(const GitHash& commit,
-                  const std::vector<FileVersionDiff>& diffs);
+                  const std::vector<FileVersionDiff>& diffs_root);
 
   bool GoToIndex(size_t commit_index,
                  const std::vector<FileVersionDiff>& diffs);
@@ -56,6 +56,9 @@ class FileVersionInstanceEditor {
       return current_branch_index_ == item.current_branch_index_ &&
              parent_index_ == item.parent_index_;
     }
+    bool operator!=(const CommitTreePathItem& item) const {
+      return !(*this == item);
+    }
 
     size_t currentBranchIndex() const { return current_branch_index_; }
     size_t parentIndex() const { return parent_index_; }
@@ -68,7 +71,24 @@ class FileVersionInstanceEditor {
     size_t parent_index_;
     const std::vector<FileVersionDiff>* sub_branch_root_;
   };
-  typedef std::vector<CommitTreePathItem> CommitTreePath;
+
+  // TODO: Move this struct into its own header or maybe into
+  // FileVersionInstance.h.
+  struct CommitTreePath : std::vector<CommitTreePathItem> {
+    bool HasSameParent(const CommitTreePath& other) const {
+      if (size() != other.size())
+        return false;
+      if (empty())
+        return true;
+
+      // Check if the parents are the same.
+      for (size_t i = 0; i < size() - 1; i++) {
+        if ((*this)[i] != other[i])
+          return false;
+      }
+      return true;
+    }
+  };
   CommitTreePath GetCommitTreePath(const GitHash& commit,
                                    const std::vector<FileVersionDiff>& diffs);
 
