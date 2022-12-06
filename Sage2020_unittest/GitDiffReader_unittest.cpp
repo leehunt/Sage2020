@@ -188,28 +188,28 @@ static void TraverseAndVerifyAllBranchesRecur(
                                            original_instance));
 }
 
-TEST(GitDiffReaderTest, LoadAndCompareWithFileAllBranches) {
-  std::filesystem::path file_path = __FILE__;
-  // This file has an interesting branch history.
-  file_path = file_path.parent_path().parent_path() / "FileVersionInstance.cpp";
-  std::string tag;
-  GitDiffReader git_diff_reader(file_path, tag);
-  EXPECT_GT(git_diff_reader.GetDiffs().size(), 0U);
+static void LoadFileAndCompareAllBranches(
+    const std::filesystem::path& file_path,
+    std::vector<FileVersionDiff>& diffs) {
+  EXPECT_GT(diffs.size(), 0U);
 
-  auto diffs = std::move(git_diff_reader.MoveDiffs());
   std::reverse(diffs.begin(), diffs.end());
+
   LoadAllBranchesRecur(file_path, diffs);
 
   // Load current starting parent, if any.
-  GitHash parent_commit = diffs.empty() || diffs.front().parents_.empty()
-                              ? GitHash{}
-                              : diffs.front().parents_[0].commit_;
-  std::string parent_revision =
-      parent_commit.sha_ + ":" + file_path.filename().string();
-  GitFileReader git_file_reader_head{file_path.parent_path(), parent_revision};
-
-  FileVersionInstance file_version_instance(
-      std::move(git_file_reader_head.GetLines()), parent_commit);
+  const GitHash parent_commit = diffs.empty() || diffs.front().parents_.empty()
+                                    ? GitHash{}
+                                    : diffs.front().parents_[0].commit_;
+  std::deque<std::string> lines;
+  if (parent_commit.IsValid()) {
+    const std::string parent_revision =
+        parent_commit.sha_ + ":" + file_path.filename().string();
+    GitFileReader git_file_reader_head{file_path.parent_path(),
+                                       parent_revision};
+    lines = std::move(git_file_reader_head.GetLines());
+  }
+  FileVersionInstance file_version_instance(std::move(lines), parent_commit);
   Sage2020ViewDocListener* listener_head = nullptr;
   FileVersionInstanceEditor editor(file_version_instance, listener_head);
 
@@ -220,5 +220,28 @@ TEST(GitDiffReaderTest, LoadAndCompareWithFileAllBranches) {
   EXPECT_TRUE(GitDiffReaderTest::GetLinesInfo(file_version_instance).IsEmpty());
 #else
   EXPECT_EQ(GitDiffReaderTest::GetLinesInfo(file_version_instance).size(), 0);
+#endif
+}
+
+TEST(GitDiffReaderTest, LoadAndCompareWithFileAllBranches) {
+  const std::filesystem::path anchor_file_path = __FILE__;
+#if 0
+  for (auto const& file_path : std::filesystem::recursive_directory_iterator{
+           anchor_file_path.parent_path().parent_path()}) {
+    std::string empty_tag;
+    GitDiffReader git_diff_reader(file_path, empty_tag);
+    if (!git_diff_reader.GetDiffs().empty()) {
+      LoadFileAndCompareAllBranches(file_path, std::move(git_diff_reader.MoveDiffs()));
+    }
+  }
+#else
+  auto const file_path =
+      anchor_file_path.parent_path().parent_path() / "ChangeHistoryPane.cpp";
+  std::string empty_tag;
+  GitDiffReader git_diff_reader(file_path, empty_tag);
+  if (!git_diff_reader.GetDiffs().empty()) {
+    LoadFileAndCompareAllBranches(file_path,
+                                  std::move(git_diff_reader.MoveDiffs()));
+  }
 #endif
 }

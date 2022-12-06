@@ -593,6 +593,19 @@ GitDiffReader::GitDiffReader(const std::filesystem::path& file_path,
       ProcessDiffLines(file_stream.get());
     }
   }
+
+  #if 0
+  // Fix up diffs_:
+  // 1. Reverse.
+  std::reverse(diffs_.begin(), diffs_.end());
+  // 2. Add file_parent_diff_.
+  GitHash file_parent_commit;
+  for (auto& diff : diffs_) {
+    diff.file_parent_commit_ = file_parent_commit;
+    file_parent_commit = diff.commit_;
+  }
+#endif 
+
   if (pwndOutput != nullptr) {
     CString message;
     message.FormatMessage(_T("   Done."));
