@@ -67,7 +67,6 @@ TEST(GitDiffReaderTest, LoadAndCompareWithFile) {
 
   auto diffs = git_diff_reader.MoveDiffs();
   EXPECT_GT(diffs.size(), 0U);
-  std::reverse(diffs.begin(), diffs.end());
   // Sythethesize FileVersionInstance from diffs, going from first diff (the
   // last recorded in the git log) forward.
   FileVersionInstance file_version_instance;
@@ -84,15 +83,9 @@ TEST(GitDiffReaderTest, LoadAndCompareWithFile) {
   // Now go backwards in time (but forward in the diffs vector) down to nothing,
   // or at least the first known version.
   for (auto it = diffs.crbegin(); it != diffs.crend(); it++) {
-    // auto parent_commit =
-    //     it->parents_.empty() ? GitHash{} : it->parents_[0].commit_;
-    const auto& new_commit =
-        it != diffs.crbegin() ? (it - 1)->commit_ : GitHash{};
-    // N.b.  The |parent_commit| is not often not |new_commit| because diffs
-    // only record changes to the given file; not all changes to the branch.
-    // EXPECT_EQ(new_commit, parent_commit);
-    editor.RemoveDiff(*it, new_commit);
-    EXPECT_EQ(file_version_instance.GetCommit(), new_commit);
+    const auto& diff = *it;
+    editor.RemoveDiff(diff);
+    EXPECT_EQ(file_version_instance.GetCommit(), diff.file_parent_commit_);
   }
 
   EXPECT_EQ(file_version_instance.GetLines().size(), 0);
@@ -110,17 +103,32 @@ static void LoadAllBranchesRecur(const std::filesystem::path& file_path,
          secondary_parent_index < diff.parents_.size();
          secondary_parent_index++) {
       std::string secondary_parent_revision_range =
-          diff.parents_[0].commit_.sha_ + ".." +
+          // diff.parents_[0].commit_.sha_ + ".." +
+          diff.file_parent_commit_.sha_ + ".." +
           diff.parents_[secondary_parent_index].commit_.sha_;
       GitDiffReader git_branch_diff_reader{file_path,
                                            secondary_parent_revision_range};
       diff.parents_[secondary_parent_index].file_version_diffs_ =
           std::make_unique<std::vector<FileVersionDiff>>(
               std::move(git_branch_diff_reader.MoveDiffs()));
-      auto& diffs_ref =
+      auto& parent_diffs_ref =
           *diff.parents_[secondary_parent_index].file_version_diffs_;
-      std::reverse(diffs_ref.begin(), diffs_ref.end());
-      LoadAllBranchesRecur(file_path, diffs_ref);
+      if (!parent_diffs_ref.empty()) {
+        assert(!parent_diffs_ref.front().file_parent_commit_.IsValid());
+        // Tricky: get the set of diffs from the *first* diff in the branch
+        // (right after it was branched). Then the next diff entry will be the
+        // parent for this file (or empty if it doesn't exist).
+        GitDiffReader git_branch_to_head_diff_reader{
+            file_path, parent_diffs_ref.front().commit_.sha_};
+
+        const auto& diff_to_head_diffs =
+            git_branch_to_head_diff_reader.GetDiffs();
+        if (diff_to_head_diffs.size() > 1) {
+          parent_diffs_ref.front().file_parent_commit_ =
+              diff_to_head_diffs[diff_to_head_diffs.size() - 2].commit_;
+        }
+      }
+      LoadAllBranchesRecur(file_path, parent_diffs_ref);
     }
   }
 }
@@ -137,21 +145,17 @@ static void TraverseAndVerifyAllBranchesRecur(
     for (size_t secondary_parent_index = 1;
          secondary_parent_index < diff.parents_.size();
          secondary_parent_index++) {
-      // We add new branches releative to the *parent*
-      // of the diffs, so remove it here.
-      // auto new_commit =
-      //    ((it + 1) != diffs.cbegin()) ? (it + 1)->commit_ : GitHash{};
-      // editor.RemoveDiff(diff, new_commit);
-      const auto& child_diffs =
+      const auto& secondary_parent_diffs =
           *diff.parents_[secondary_parent_index].file_version_diffs_;
-      const auto& last_child_parent_commit =
-          child_diffs.empty() || child_diffs.front().parents_.empty()
+      const auto& last_secondary_parent_commit =
+          secondary_parent_diffs.empty()
               ? GitHash{}
-              : child_diffs.front().parents_[0].commit_;
+              : secondary_parent_diffs.front().file_parent_commit_;
       const auto current_commit = editor.GetFileVersionInstance().GetCommit();
-      editor.GoToCommit(last_child_parent_commit, diffs);
+      editor.GoToCommit(last_secondary_parent_commit, diffs);
 
-      TraverseAndVerifyAllBranchesRecur(editor, file_path, child_diffs);
+      TraverseAndVerifyAllBranchesRecur(editor, file_path,
+                                        secondary_parent_diffs);
 
       editor.GoToCommit(current_commit, diffs);
     }
@@ -161,6 +165,7 @@ static void TraverseAndVerifyAllBranchesRecur(
   }
 
   const auto& last_commit = diffs.empty() ? GitHash{} : diffs.back().commit_;
+  EXPECT_EQ(editor.GetFileVersionInstance().GetCommit(), last_commit);
   CompareFileInstanceToCommit(editor.GetFileVersionInstance(), file_path,
                               last_commit);
 
@@ -169,19 +174,9 @@ static void TraverseAndVerifyAllBranchesRecur(
   // the last commit is the initial commit.
   for (auto it = diffs.crbegin(); it != diffs.crend(); it++) {
     const auto& diff = *it;
-
-    // N.b. The |parent_commit| is not often not |previous_commit| because diffs
-    // only record changes to the given file; not all changes to the branch.
-    // That is, the follow is not always true:
-    // auto parent_commit =
-    //     it->parents_.empty() ? GitHash{} : it->parents_[0].commit_;
-    const auto previous_commit =
-        (it + 1) != diffs.crend()
-            ? (it + 1)->commit_
-            : (diff.parents_.empty() ? GitHash{} : diff.parents_[0].commit_);
-    // EXPECT_EQ(new_commit, parent_commit);
-    editor.RemoveDiff(diff, previous_commit);
-    EXPECT_EQ(editor.GetFileVersionInstance().GetCommit(), previous_commit);
+    editor.RemoveDiff(diff);
+    EXPECT_EQ(editor.GetFileVersionInstance().GetCommit(),
+              diff.file_parent_commit_);
   }
 
   EXPECT_TRUE(GitDiffReaderTest::IsTheSame(editor.GetFileVersionInstance(),
@@ -193,14 +188,12 @@ static void LoadFileAndCompareAllBranches(
     std::vector<FileVersionDiff>& diffs) {
   EXPECT_GT(diffs.size(), 0U);
 
-  std::reverse(diffs.begin(), diffs.end());
-
   LoadAllBranchesRecur(file_path, diffs);
 
   // Load current starting parent, if any.
   const GitHash parent_commit = diffs.empty() || diffs.front().parents_.empty()
                                     ? GitHash{}
-                                    : diffs.front().parents_[0].commit_;
+                                    : diffs.front().file_parent_commit_;
   std::deque<std::string> lines;
   if (parent_commit.IsValid()) {
     const std::string parent_revision =
@@ -235,8 +228,8 @@ TEST(GitDiffReaderTest, LoadAndCompareWithFileAllBranches) {
     }
   }
 #else
-  auto const file_path =
-      anchor_file_path.parent_path().parent_path() / "ChangeHistoryPane.cpp";
+  auto const file_path = anchor_file_path.parent_path().parent_path() /
+                         "FileVersionDiff.h";  // "ChangeHistoryPane.cpp";
   std::string empty_tag;
   GitDiffReader git_diff_reader(file_path, empty_tag);
   if (!git_diff_reader.GetDiffs().empty()) {

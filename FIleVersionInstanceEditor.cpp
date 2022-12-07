@@ -20,8 +20,7 @@ void FileVersionInstanceEditor::AddDiff(const FileVersionDiff& diff) {
   }
 }
 
-void FileVersionInstanceEditor::RemoveDiff(const FileVersionDiff& diff,
-                                           const GitHash& parent_commit) {
+void FileVersionInstanceEditor::RemoveDiff(const FileVersionDiff& diff) {
   assert(file_version_instance_.commit_index_ >= 0);
   file_version_instance_.commit_index_--;
   assert(file_version_instance_.commit_index_ >= -1);
@@ -30,7 +29,7 @@ void FileVersionInstanceEditor::RemoveDiff(const FileVersionDiff& diff,
     RemoveHunk(*it);
   }
 
-  file_version_instance_.commit_ = parent_commit;
+  file_version_instance_.commit_ = diff.file_parent_commit_;
 
 #if _DEBUG
 #if USE_SPARSE_INDEX_ARRAY
@@ -126,8 +125,7 @@ bool FileVersionInstanceEditor::GoToIndex(
     // N.b. Make a 'diff' copy reference since commit_index_ is modfied by
     // RemoveDiff().
     const auto& diff = diffs[file_version_instance_.commit_index_];
-    RemoveDiff(diff,
-               diffs[(size_t)file_version_instance_.commit_index_ - 1].commit_);
+    RemoveDiff(diff);
     edited = true;
   }
   while (file_version_instance_.commit_index_ <

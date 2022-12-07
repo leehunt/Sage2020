@@ -11,7 +11,7 @@ extern CSage2020App theApp;
 
 constexpr char kGitGetRootCommand[] = "git rev-parse --show-toplevel";
 
-constexpr char kFileCacheVersionLine[] = "Cache file version: 6\n";
+constexpr char kFileCacheVersionLine[] = "Cache file version: 7\n";
 
 GitFileStreamCache::GitFileStreamCache(const std::filesystem::path& file_path)
     : file_path_(std::filesystem::canonical(file_path)) {}
@@ -19,7 +19,7 @@ GitFileStreamCache::GitFileStreamCache(const std::filesystem::path& file_path)
 AUTO_CLOSE_FILE_POINTER GitFileStreamCache::GetStream(const std::string& hash) {
   const auto cache_file_path = GetItemCachePath(hash);
   const auto& native_file_path = cache_file_path.native();
-  std::unique_ptr<FILE, decltype(&fclose)> file_cache_stream(
+  AUTO_CLOSE_FILE_POINTER file_cache_stream(
       _wfopen(native_file_path.c_str(), L"r"), &fclose);
 
   if (!file_cache_stream) {
@@ -51,7 +51,7 @@ AUTO_CLOSE_FILE_POINTER GitFileStreamCache::SaveStream(
   const auto cache_file_path = GetItemCachePath(hash);
   std::filesystem::create_directories(cache_file_path.parent_path());
   // Create output file, failing if it already exists.
-  std::unique_ptr<FILE, decltype(&fclose)> file_cache_stream(
+  AUTO_CLOSE_FILE_POINTER file_cache_stream(
       _wfopen(cache_file_path.native().c_str(), L"w+"), &fclose);
 
   fpos_t pos;

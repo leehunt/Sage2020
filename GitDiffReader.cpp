@@ -16,10 +16,13 @@ constexpr TCHAR kGitMostRecentCommitForFileCommand[] =
     _T("git --no-pager log %S -n 1 -- %s");
 constexpr TCHAR kGitDiffCommand[] =
     _T("git --no-pager log %S -p -U0 --raw --no-color --first-parent ")
-    _T("--pretty=raw -- %s");  // TODO: Add '--reverse' and remove all uses of
-                               // 'std::reverse()'.
+    _T("--pretty=raw -- %s");  // FUTURE: Consider adding '--reverse' instead of
+                               // calling 'std::reverse()' after processing the
+                               // diffs (not currently doing so since
+                               // std::reverse() is fast and it may take longer
+                               // for git to reverse the diffs).
 constexpr TCHAR kGitLogNameTagCommandFromStdIn[] =
-    _T("git --no-pager name-rev --stdin");
+    _T("git --no-pager name-rev --annotate-stdin");
 
 static std::string GetTextToWhitespace(TOK* ptok) {
   std::string text;
@@ -509,48 +512,57 @@ GitDiffReader::GitDiffReader(const std::filesystem::path& file_path,
       tag_no_parentheses =
           tag_no_parentheses.substr(0, tag_no_parentheses.size() - 1);
   }
-  wsprintf(command, kGitMostRecentCommitForFileCommand,
-           tag_no_parentheses.c_str(), file_path.filename().c_str());
-  if (pwndOutput != nullptr) {
-    CString message;
-    message.FormatMessage(_T("   Checking current hash: '%1!s!'"), command);
-    pwndOutput->AppendDebugTabMessage(message);
-  }
-  ProcessPipe process_pipe_git_commit(command, file_path.parent_path().c_str());
-
-  FILE* stream = process_pipe_git_commit.GetStandardOutput();
-  if (stream == nullptr) {
+  std::string file_cache_hash;
+  if (tag_no_parentheses.empty()) {
+    wsprintf(command, kGitMostRecentCommitForFileCommand,
+             tag_no_parentheses.c_str(), file_path.filename().c_str());
     if (pwndOutput != nullptr) {
       CString message;
-      message.FormatMessage(_T("   Error getting current git hash."));
+      message.FormatMessage(_T("   Checking current hash: '%1!s!'"), command);
       pwndOutput->AppendDebugTabMessage(message);
     }
-    return;
-  }
+    ProcessPipe process_pipe_git_commit(command,
+                                        file_path.parent_path().c_str());
 
-  char header_line[1024];
-  if (!fgets(header_line, (int)std::size(header_line), stream)) {
-    if (pwndOutput != nullptr) {
-      CString message;
-      message.FormatMessage(_T("   Error reading hash command output."));
-      pwndOutput->AppendDebugTabMessage(message);
+    FILE* stream = process_pipe_git_commit.GetStandardOutput();
+    if (stream == nullptr) {
+      if (pwndOutput != nullptr) {
+        CString message;
+        message.FormatMessage(_T("   Error getting current git hash."));
+        pwndOutput->AppendDebugTabMessage(message);
+      }
+      return;
     }
-    return;
+
+    char header_line[1024];
+    if (!fgets(header_line, (int)std::size(header_line), stream)) {
+      if (pwndOutput != nullptr) {
+        CString message;
+        message.FormatMessage(_T("   Error reading hash command output."));
+        pwndOutput->AppendDebugTabMessage(message);
+      }
+      return;
+    }
+
+    // Sniff header of stream to see if we have commit cached.
+    ProcessLogLine(header_line);
+    if (!current_diff_ || !current_diff_->commit_.IsValid()) {
+      if (pwndOutput != nullptr) {
+        CString message;
+        message.FormatMessage(
+            _T("   Cache header line is missing or invalid."));
+        pwndOutput->AppendDebugTabMessage(message);
+      }
+    } else {
+      file_cache_hash = current_diff_->commit_.sha_;
+    }
+  } else {
+    file_cache_hash = tag_no_parentheses;
   }
 
   file_stream_cache_ = std::make_unique<GitFileStreamCache>(file_path);
 
-  // Sniff header of stream to see if we have commit cached.
-  ProcessLogLine(header_line);
-  if (!current_diff_ || !current_diff_->commit_.IsValid()) {
-    if (pwndOutput != nullptr) {
-      CString message;
-      message.FormatMessage(_T("   Cache header line is missing or invalid."));
-      pwndOutput->AppendDebugTabMessage(message);
-    }
-  }
-  auto cache_stream =
-      file_stream_cache_->GetStream(current_diff_->commit_.sha_);
+  auto cache_stream = file_stream_cache_->GetStream(file_cache_hash);
 
   if (cache_stream) {
     if (pwndOutput != nullptr) {
@@ -559,7 +571,7 @@ GitDiffReader::GitDiffReader(const std::filesystem::path& file_path,
           _T("   Cache hit for commit '%1!S!', reading diff history from: ")
           _T("'%2!s!'"),
           current_diff_->commit_.sha_.c_str(),
-          file_stream_cache_->GetItemCachePath(current_diff_->commit_.sha_)
+          file_stream_cache_->GetItemCachePath(file_cache_hash)
               .c_str());
       pwndOutput->AppendDebugTabMessage(message);
     }
@@ -588,23 +600,21 @@ GitDiffReader::GitDiffReader(const std::filesystem::path& file_path,
                                      process_pipe_git_log.GetStandardOutput());
 
     auto file_stream = file_stream_cache_->SaveStream(
-        process_pipe_git_tag.GetStandardOutput(), current_diff_->commit_.sha_);
+        process_pipe_git_tag.GetStandardOutput(), file_cache_hash);
     if (file_stream) {
       ProcessDiffLines(file_stream.get());
     }
   }
 
-  #if 0
   // Fix up diffs_:
-  // 1. Reverse.
+  // 1. Reverse such that oldest diffs come first.
   std::reverse(diffs_.begin(), diffs_.end());
-  // 2. Add file_parent_diff_.
+  // 2. Generate file_parent_commit_.
   GitHash file_parent_commit;
   for (auto& diff : diffs_) {
     diff.file_parent_commit_ = file_parent_commit;
     file_parent_commit = diff.commit_;
   }
-#endif 
 
   if (pwndOutput != nullptr) {
     CString message;

@@ -1092,8 +1092,7 @@ BOOL CSage2020View::OnMouseWheel(UINT nFlags, short zDelta, CPoint pt) {
         } else if (zDelta < 0) {
           // Remove diff
           if (commit_index > 0) {
-            editor.RemoveDiff(diffs[commit_index],
-                              diffs[commit_index - 1].commit_);
+            editor.RemoveDiff(diffs[commit_index]);
             pDoc->UpdateAllViews(NULL);  // NULL - also update this view
           }
         }

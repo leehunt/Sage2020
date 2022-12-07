@@ -94,7 +94,6 @@ void CSage2020Doc::Serialize(CArchive& ar) {
     // Sythethesize FileVersionInstance from diffs, going from first diff
     // (the last recorded in the git log) forward.
     file_diffs_ = git_diff_reader.MoveDiffs();
-    std::reverse(file_diffs_.begin(), file_diffs_.end());
 
     if (file_diffs_.front().diff_tree_.action != 'A') {
       // if the first commit is not an add, then get the file at that point.

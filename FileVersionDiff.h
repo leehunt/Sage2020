@@ -51,10 +51,10 @@ struct NameEmailTime {
 };
 struct FileVersionDiff {
   GitHash commit_;
+  mutable std::vector<FileVersionDiffParent> parents_;
   GitHash file_parent_commit_;  // Sometimes the same as parents_[0].commit_,
                                 // but will always point to a commit that has
                                 // changes to the current file.
-  mutable std::vector<FileVersionDiffParent> parents_;
   std::vector<FileVersionDiffHunk> hunks_;
   NameEmailTime author_;
   std::string diff_command_;
