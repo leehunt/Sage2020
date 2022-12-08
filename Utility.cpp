@@ -6,6 +6,8 @@
 #include <cassert>
 #include "Utility.h"
 
+constexpr char kGitGetRootCommand[] = "git rev-parse --show-toplevel";
+
 std::wstring to_wstring(const std::string& s) {
   // Check for all ANSI (speedy).
   if (std::find_if(s.cbegin(), s.cend(),
@@ -32,8 +34,8 @@ ProcessPipe::ProcessPipe(const TCHAR command_line[],
     : file_(NULL) {
   pi_ = {};
 
-  int my_pipe[_PIPE_MAX] = {};
-  if (_pipe(my_pipe, 1024 * 16, _O_TEXT))
+  int my_pipes[_PIPE_MAX] = {};
+  if (_pipe(my_pipes, 1024 * 16, _O_TEXT))
     return;
 
   STARTUPINFO si = {
@@ -43,10 +45,11 @@ ProcessPipe::ProcessPipe(const TCHAR command_line[],
   si.dwFlags = STARTF_USESTDHANDLES;
   if (std_in != NULL)
     si.hStdInput = reinterpret_cast<HANDLE>(_get_osfhandle(_fileno(std_in)));
-  // reinterpret_cast<HANDLE>(_get_osfhandle(rgfdPipe[PIPE_READ]));
-  si.hStdOutput = reinterpret_cast<HANDLE>(_get_osfhandle(my_pipe[PIPE_WRITE]));
+  // reinterpret_cast<HANDLE>(_get_osfhandle(my_pipes[PIPE_READ]));
+  si.hStdOutput =
+      reinterpret_cast<HANDLE>(_get_osfhandle(my_pipes[PIPE_WRITE]));
   // si.hStdError =
-  // reinterpret_cast<HANDLE>(_get_osfhandle(rgfdPipe[PIPE_WRITE]));
+  // reinterpret_cast<HANDLE>(_get_osfhandle(my_pipes[PIPE_WRITE]));
 
   // Copy command line so that it may be changed (::CreateProcess() may modify
   // it).
@@ -66,15 +69,16 @@ ProcessPipe::ProcessPipe(const TCHAR command_line[],
   ) {
     DWORD err = ::GetLastError();
     assert(false);
-    _close(my_pipe[PIPE_READ]);
-    _close(my_pipe[PIPE_WRITE]);
+    _close(my_pipes[PIPE_READ]);
+    _close(my_pipes[PIPE_WRITE]);
     return;
   }
-  _close(my_pipe[PIPE_WRITE]);  // This has been inherited by the child process.
+  _close(
+      my_pipes[PIPE_WRITE]);  // This has been inherited by the child process.
 
-  file_ = _fdopen(my_pipe[PIPE_READ], "r");
+  file_ = _fdopen(my_pipes[PIPE_READ], "r");
   if (!file_)
-    _close(my_pipe[PIPE_READ]);
+    _close(my_pipes[PIPE_READ]);
 }
 
 ProcessPipe::~ProcessPipe() {
@@ -97,4 +101,19 @@ ProcessPipe::~ProcessPipe() {
 void ProcessPipe::Join() {
   if (pi_.hProcess)
     ::WaitForSingleObject(pi_.hProcess, 120 * 1000 /*ms*/);
+}
+
+std::filesystem::path GetGitRoot(const std::filesystem::path& file_path) {
+  ProcessPipe process_pipe(to_wstring(kGitGetRootCommand).c_str(),
+                           file_path.parent_path().c_str());
+
+  char stream_line[1024];
+  if (!fgets(stream_line, (int)std::size(stream_line),
+             process_pipe.GetStandardOutput())) {
+    return {};
+  }
+  auto len = strlen(stream_line);
+  if (len > 0 && stream_line[len - 1] == '\n')
+    stream_line[len - 1] = '\0';
+  return std::filesystem::path(stream_line);
 }

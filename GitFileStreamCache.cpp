@@ -9,8 +9,6 @@
 
 extern CSage2020App theApp;
 
-constexpr char kGitGetRootCommand[] = "git rev-parse --show-toplevel";
-
 constexpr char kFileCacheVersionLine[] = "Cache file version: 7\n";
 
 GitFileStreamCache::GitFileStreamCache(const std::filesystem::path& file_path)
@@ -89,21 +87,6 @@ AUTO_CLOSE_FILE_POINTER GitFileStreamCache::SaveStream(
   return file_cache_stream;
 }
 
-std::filesystem::path GitFileStreamCache::GetGitRoot() {
-  ProcessPipe process_pipe(to_wstring(kGitGetRootCommand).c_str(),
-                           file_path_.parent_path().c_str());
-
-  char stream_line[1024];
-  if (!fgets(stream_line, (int)std::size(stream_line),
-             process_pipe.GetStandardOutput())) {
-    return {};
-  }
-  auto len = strlen(stream_line);
-  if (len > 0 && stream_line[len - 1] == '\n')
-    stream_line[len - 1] = '\0';
-  return std::filesystem::path(stream_line);
-}
-
 std::filesystem::path GitFileStreamCache::GetItemCachePath(
     const std::string& hash) {
   // Look for file in
@@ -111,7 +94,7 @@ std::filesystem::path GitFileStreamCache::GetItemCachePath(
 
   // Get relative file path of |file_path_| relative to the git root.
   assert(file_path_.is_absolute());
-  auto git_root = std::filesystem::canonical(GetGitRoot());
+  auto git_root = std::filesystem::canonical(GetGitRoot(file_path_));
   auto git_relative_path = file_path_.lexically_relative(git_root);
 
   TCHAR local_app_data[MAX_PATH];

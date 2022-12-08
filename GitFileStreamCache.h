@@ -15,7 +15,7 @@ class GitFileStreamCache {
   std::filesystem::path GetItemCachePath(const std::string& hash);
 
  private:
-  std::filesystem::path GetGitRoot();
+  ;
 
  private:
   const std::filesystem::path file_path_;

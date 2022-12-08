@@ -4,6 +4,7 @@
 #include "../FileVersionInstanceEditor.h"
 #include "../GitDiffReader.h"
 #include "../GitFileReader.h"
+#include "../Utility.h"
 
 // Gtest 'friend' forwarders.
 class GitDiffReaderTest : public testing::Test {
@@ -24,8 +25,9 @@ static void CompareFileInstanceToHead(
     const FileVersionInstance& file_version_instance_from_diffs) {
   std::string blob_hash =
       diffs.size() > 0 ? diffs.back().diff_tree_.new_hash_string : "";
-  // REVIEW: We could also use a revision of |<commit>:<file-name>|, which
-  // may be more clean/orthogonal as we don't use blob hashes elsewhere.
+  // REVIEW: We could also use a revision of
+  // |<commit>:<releative-git-file-path>|, which may be more clean/orthogonal as
+  // we don't use blob hashes elsewhere.
   GitFileReader git_file_reader_latest{file_path.parent_path(), blob_hash};
   auto file_version_instance_loaded = std::make_unique<FileVersionInstance>(
       std::move(git_file_reader_latest.GetLines()),
@@ -47,10 +49,31 @@ static void CompareFileInstanceToCommit(
     const FileVersionInstance& file_version_instance_from_diffs,
     const std::filesystem::path& file_path,
     const GitHash& commit) {
-  std::string file_revision = commit.sha_ + ":" + file_path.filename().string();
+  // Skip empty files; assume they are binary.
+  if (file_version_instance_from_diffs.GetLines().empty())
+    return;
+
+  // REVIEW:  Using the relative file name is more cumbersome that anticipated;
+  // consider passing in the diff file tree hash instead.
+
+  // Read file (aside: git oddly doesn't have a clean way to find binary files).
+  const auto git_directory_root = GetGitRoot(file_path);
+  const auto relative_path_native =
+      file_path.lexically_relative(git_directory_root);
+  // HACK: Convert to Git-friendly forward slashes.
+  std::string git_releative_path = relative_path_native.string();
+  for (auto& ch : git_releative_path) {
+    if (ch == '\\')
+      ch = '/';
+  }
+  std::string file_revision = commit.sha_ + ":" + git_releative_path;
   GitFileReader git_file_reader_commit{file_path.parent_path(), file_revision};
+
+  // Check for same number of lines.
   EXPECT_EQ(file_version_instance_from_diffs.GetLines().size(),
             git_file_reader_commit.GetLines().size());
+
+  // Check for identical contents.
   for (size_t i = 0; i < git_file_reader_commit.GetLines().size(); i++) {
     const auto& file_version_line_commit = git_file_reader_commit.GetLines()[i];
     const auto& file_version_line_from_diffs =
@@ -218,18 +241,29 @@ static void LoadFileAndCompareAllBranches(
 
 TEST(GitDiffReaderTest, LoadAndCompareWithFileAllBranches) {
   const std::filesystem::path anchor_file_path = __FILE__;
-#if 0
-  for (auto const& file_path : std::filesystem::recursive_directory_iterator{
-           anchor_file_path.parent_path().parent_path()}) {
+#if 1
+  for (auto i =
+           std::filesystem::recursive_directory_iterator{
+               anchor_file_path.parent_path().parent_path()};
+       i != std::filesystem::recursive_directory_iterator(); i++) {
+    auto const& directory_entry = *i;
+    if (directory_entry.is_directory()) {
+      if (*directory_entry.path().filename().string().c_str() == '.')
+        i.disable_recursion_pending();  // Skip past all '.' starting dirs like
+                                        // '.git'.
+      continue;
+    }
     std::string empty_tag;
-    GitDiffReader git_diff_reader(file_path, empty_tag);
+    GitDiffReader git_diff_reader(directory_entry, empty_tag);
     if (!git_diff_reader.GetDiffs().empty()) {
-      LoadFileAndCompareAllBranches(file_path, std::move(git_diff_reader.MoveDiffs()));
+      LoadFileAndCompareAllBranches(directory_entry,
+                                    std::move(git_diff_reader.MoveDiffs()));
     }
   }
 #else
   auto const file_path = anchor_file_path.parent_path().parent_path() /
-                         "FileVersionDiff.h";  // "ChangeHistoryPane.cpp";
+                         "Sage2020_unittest/FileVersionInstance_unittest.cpp";
+  //"FileVersionDiff.h";  // "ChangeHistoryPane.cpp";
   std::string empty_tag;
   GitDiffReader git_diff_reader(file_path, empty_tag);
   if (!git_diff_reader.GetDiffs().empty()) {

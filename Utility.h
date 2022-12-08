@@ -1,5 +1,7 @@
 #pragma once
 
+#include <windows.h>
+#include <filesystem>
 #include <memory>
 #include <string>
 
@@ -41,3 +43,5 @@ class SmartWindowsHandle
       CloseHandle(handle);
   }
 };
+
+std::filesystem::path GetGitRoot(const std::filesystem::path& file_path);
