@@ -256,17 +256,20 @@ TEST(GitDiffReaderTest, LoadAndCompareWithFileAllBranches) {
     std::string empty_tag;
     GitDiffReader git_diff_reader(directory_entry, empty_tag);
     if (!git_diff_reader.GetDiffs().empty()) {
+      printf("Processing %s...\n", directory_entry.path().string().c_str());
       LoadFileAndCompareAllBranches(directory_entry,
                                     std::move(git_diff_reader.MoveDiffs()));
     }
   }
 #else
-  auto const file_path = anchor_file_path.parent_path().parent_path() /
-                         "Sage2020_unittest/FileVersionInstance_unittest.cpp";
-  //"FileVersionDiff.h";  // "ChangeHistoryPane.cpp";
+  auto const file_path =
+      anchor_file_path.parent_path().parent_path() / "res/Sage.rc2";
+                         //"Sage2020_unittest/FileVersionInstance_unittest.cpp";
+                         //"FileVersionDiff.h";  // "ChangeHistoryPane.cpp";
   std::string empty_tag;
   GitDiffReader git_diff_reader(file_path, empty_tag);
   if (!git_diff_reader.GetDiffs().empty()) {
+    printf("Processing %s...\n", file_path.string().c_str());
     LoadFileAndCompareAllBranches(file_path,
                                   std::move(git_diff_reader.MoveDiffs()));
   }
