@@ -584,7 +584,7 @@ GitDiffReader::GitDiffReader(const std::filesystem::path& file_path,
       message.FormatMessage(
           _T("   Cache miss for commit '%1!S!', reading full diff history: ")
           _T("'%2!s!'"),
-          current_diff_->commit_.sha_.c_str(), command);
+        file_cache_hash.c_str(), command);
       pwndOutput->AppendDebugTabMessage(message);
     }
     ProcessPipe process_pipe_git_log(command, file_path.parent_path().c_str());
