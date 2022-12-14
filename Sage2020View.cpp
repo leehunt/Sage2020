@@ -336,8 +336,9 @@ void CSage2020View::OnDraw(CDC* pDC) {
           ? static_cast<int>(file_version_instance->GetLines().size())
           : 0;
   const int cchFind = m_strSearchLast.GetLength();
-  for (int y = yScrollPos / m_sizChar.cy * m_sizChar.cy;
-       y < rcClient.bottom + yScrollPos; y += m_sizChar.cy) {
+
+  int y = yScrollPos / m_sizChar.cy * m_sizChar.cy;
+  for (; y < rcClient.bottom + yScrollPos; y += m_sizChar.cy) {
     int i = y / m_sizChar.cy;
 
     // REVIEW: Not sure why rcClient.bottom would track cLine * m_sizChar.cy 's
@@ -436,6 +437,17 @@ void CSage2020View::OnDraw(CDC* pDC) {
 
       pDC->SetTextAlign(uAlignPrev);
     }
+  }
+
+  // File any remaining undrawn portion.
+  if (y < rcClient.bottom) {
+    RECT rcRemain = rcClient;
+    rcRemain.top = y;
+    HBRUSH window_background_brush =
+        (HBRUSH)::GetClassLongPtr(*this, GCLP_HBRBACKGROUND);
+    CBrush background_brush;
+    background_brush.FromHandle(window_background_brush);
+    pDC->FillRect(&rcRemain, &background_brush);
   }
 
   pDC->SelectObject(pfontOld);
@@ -665,8 +677,9 @@ void CSage2020View::DocEditNotification(int iLine, int cLine) {
   }
 }
 
-void CSage2020View::DocVersionChangedNotification(size_t nVer) {
-  if (nVer == -1) {
+void CSage2020View::DocVersionChangedNotification(
+    const DiffTreePath& commit_path) {
+  if (commit_path.empty()) {
     m_currentFileVersionInstance = NULL;
 
     m_iSelStart = m_iSelEnd = -1;

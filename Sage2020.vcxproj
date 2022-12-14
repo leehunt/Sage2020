@@ -195,6 +195,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="ChangeHistoryPane.h" />
+    <ClInclude Include="DiffTreePath.h" />
     <ClInclude Include="FileVersionDiff.h" />
     <ClInclude Include="FIleVersionInstanceEditor.h" />
     <ClInclude Include="GitDiffReader.h" />
@@ -218,6 +219,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ChangeHistoryPane.cpp" />
+    <ClCompile Include="DiffTreePath.cpp" />
     <ClCompile Include="FileVersionDiff.cpp" />
     <ClCompile Include="FIleVersionInstanceEditor.cpp" />
     <ClCompile Include="GitDiffReader.cpp" />

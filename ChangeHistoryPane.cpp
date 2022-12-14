@@ -102,8 +102,7 @@ void CChangeHistoryPane::SetPropListFont() {
   LOGFONT lf;
   afxGlobalData.fontRegular.GetLogFont(&lf);
 
-  NONCLIENTMETRICS info;
-  info.cbSize = sizeof(info);
+  NONCLIENTMETRICS info{sizeof(info)};
 
   afxGlobalData.GetNonClientMetrics(info);
 
@@ -141,11 +140,6 @@ void CChangeHistoryPane::OnTreeNotifyExpanding(NMHDR* pNMHDR,
     assert(false);
     return;
   }
-  // TODO: this must be upgraded to handle > 2 parents.
-  const auto& first_parent_commit =
-      file_version_diff->parents_[file_version_diff->parents_.size() - 1]
-          .commit_;
-
   CWnd* pwndStatus = NULL;
   COutputWnd* pwndOutput = NULL;
   CFrameWnd* pParentFrame = GetParentFrame();
@@ -157,15 +151,29 @@ void CChangeHistoryPane::OnTreeNotifyExpanding(NMHDR* pNMHDR,
     pwndOutput = pMainFrame != NULL ? &pMainFrame->GetOutputWnd() : NULL;
   }
 
+  // TODO: This needs to be upgraded to handle > 2 parents.
+  auto& file_version_diff_parent = file_version_diff->parents_[1];
+
   std::string secondary_parent_revision_range =
       file_version_diff->parents_[0].commit_.sha_ + ".." +
-      file_version_diff->parents_[1].commit_.sha_;
+      file_version_diff_parent.commit_.sha_;
   GitDiffReader git_diff_reader{file_version_diff->path_,
                                 secondary_parent_revision_range, pwndOutput};
   if (git_diff_reader.GetDiffs().size() > 0) {
-    file_version_diff->parents_[1].file_version_diffs_ =
+    file_version_diff_parent.file_version_diffs_ =
         std::make_unique<std::vector<FileVersionDiff>>(
             git_diff_reader.MoveDiffs());
+
+    // Find the common ancestor branch commit of this sub-branch.
+    std::string common_parent_rev =
+        file_version_diff_parent.file_version_diffs_->back().commit_.sha_ +
+        "^^";
+    GitDiffReader git_diff_reader_parent{file_version_diff->path_,
+                                         common_parent_rev, pwndOutput};
+    if (!git_diff_reader_parent.GetDiffs().empty()) {
+      file_version_diff_parent.file_parent_commit_ =
+          git_diff_reader_parent.GetDiffs().back().commit_;
+    }
   }
 }
 
@@ -411,7 +419,7 @@ static void SetTreeItemData(CTreeCtrl& tree,
     } while (commit_index < file_diffs.size());
   } else if (htreeitem != NULL) {
     do {
-#if _DEBUG
+#ifdef _DEBUG
       TVITEM tvitem = {};
       tree.GetItem(&tvitem);
 #endif  // _DEBUG

@@ -84,7 +84,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
       <AdditionalLibraryDirectories>$(OutDir)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>Utility.obj;GitFileStreamCache.obj;Sage2020ViewDocListener.obj;GitFileReader.obj;GitDiffReader.obj;LineTokenizer.obj;FileVersionInstance.obj;FileVersionInstanceEditor.obj;FileVersionDiff.obj;pch.obj;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Utility.obj;GitFileStreamCache.obj;Sage2020ViewDocListener.obj;GitFileReader.obj;GitDiffReader.obj;LineTokenizer.obj;FileVersionInstance.obj;FileVersionInstanceEditor.obj;FileVersionDiff.obj;DiffTreePath.obj;pch.obj;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -101,7 +101,7 @@
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>Utility.obj;GitFileStreamCache.obj;Sage2020ViewDocListener.obj;GitFileReader.obj;GitDiffReader.obj;LineTokenizer.obj;FileVersionInstance.obj;FileVersionInstanceEditor.obj;FileVersionDiff.obj;pch.obj;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Utility.obj;GitFileStreamCache.obj;Sage2020ViewDocListener.obj;GitFileReader.obj;GitDiffReader.obj;LineTokenizer.obj;FileVersionInstance.obj;FileVersionInstanceEditor.obj;FileVersionDiff.obj;DiffTreePath.obj;pch.obj;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(OutDir)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
@@ -120,7 +120,7 @@
       <SubSystem>Console</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
-      <AdditionalDependencies>Utility.obj;GitFileStreamCache.obj;Sage2020ViewDocListener.obj;GitFileReader.obj;GitDiffReader.obj;LineTokenizer.obj;FileVersionInstance.obj;FileVersionInstanceEditor.obj;FileVersionDiff.obj;pch.obj;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Utility.obj;GitFileStreamCache.obj;Sage2020ViewDocListener.obj;GitFileReader.obj;GitDiffReader.obj;LineTokenizer.obj;FileVersionInstance.obj;FileVersionInstanceEditor.obj;FileVersionDiff.obj;DiffTreePath.obj;pch.obj;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(OutDir)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
@@ -139,7 +139,7 @@
       <SubSystem>Console</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
-      <AdditionalDependencies>Utility.obj;GitFileStreamCache.obj;Sage2020ViewDocListener.obj;GitFileReader.obj;GitDiffReader.obj;LineTokenizer.obj;FileVersionInstance.obj;FileVersionInstanceEditor.obj;FileVersionDiff.obj;pch.obj;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Utility.obj;GitFileStreamCache.obj;Sage2020ViewDocListener.obj;GitFileReader.obj;GitDiffReader.obj;LineTokenizer.obj;FileVersionInstance.obj;FileVersionInstanceEditor.obj;FileVersionDiff.obj;DiffTreePath.obj;pch.obj;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(OutDir)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>

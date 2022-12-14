@@ -4,9 +4,7 @@
 #include "Sage2020ViewDocListener.h"
 
 void FileVersionInstanceEditor::AddDiff(const FileVersionDiff& diff) {
-  assert(file_version_instance_.commit_index_ >= -1);
-  file_version_instance_.commit_index_++;
-  assert(file_version_instance_.commit_index_ >= 0);
+  ++file_version_instance_.commit_index_;
 
   for (auto& hunk : diff.hunks_) {
     AddHunk(hunk);
@@ -21,9 +19,7 @@ void FileVersionInstanceEditor::AddDiff(const FileVersionDiff& diff) {
 }
 
 void FileVersionInstanceEditor::RemoveDiff(const FileVersionDiff& diff) {
-  assert(file_version_instance_.commit_index_ >= 0);
-  file_version_instance_.commit_index_--;
-  assert(file_version_instance_.commit_index_ >= -1);
+  --file_version_instance_.commit_index_;
 
   for (auto it = diff.hunks_.crbegin(); it != diff.hunks_.crend(); it++) {
     RemoveHunk(*it);
@@ -31,7 +27,7 @@ void FileVersionInstanceEditor::RemoveDiff(const FileVersionDiff& diff) {
 
   file_version_instance_.commit_ = diff.file_parent_commit_;
 
-#if _DEBUG
+#ifdef _DEBUG 
 #if USE_SPARSE_INDEX_ARRAY
   for (int line_index = 0;
        line_index < file_version_instance_.file_lines_info_.MaxLineIndex();
@@ -45,8 +41,9 @@ void FileVersionInstanceEditor::RemoveDiff(const FileVersionDiff& diff) {
        line_index < file_version_instance_.file_lines_info_.size();
        line_index++) {
     auto& info = file_version_instance_.file_lines_info_[line_index];
-    assert(static_cast<int>(info.commit_index()) <=
-           file_version_instance_.commit_index_);
+    // TODO: Reimplement.
+    // assert(static_cast<int>(info.commit_index()) <=
+    //       file_version_instance_.commit_index_);
   }
 #endif
 #endif
@@ -63,14 +60,14 @@ bool FileVersionInstanceEditor::GoToCommit(
   bool edited = false;
 
   // Check if requested commit is on same branch.
-  auto new_commit_path = GetCommitTreePath(commit, diffs_root);
+  auto new_commit_path = GetDiffTreePath(commit, diffs_root);
   if (!new_commit_path.size()) {
     // Commit not found (!).
     return false;
   }
 
   auto current_commit_path =
-      GetCommitTreePath(file_version_instance_.commit_, diffs_root);
+      GetDiffTreePath(file_version_instance_.commit_, diffs_root);
   if (!current_commit_path.size()) {
     // Current commit not found (!!).
     VERIFY(FALSE);
@@ -78,9 +75,10 @@ bool FileVersionInstanceEditor::GoToCommit(
   }
 
   if (current_commit_path.HasSameParent(new_commit_path)) {
-    for (size_t diff_index = 0; diff_index < diffs_root.size(); diff_index++) {
-      if (diffs_root[diff_index].commit_ == commit) {
-        edited = GoToIndex(diff_index, diffs_root);
+    const auto& diffs = *current_commit_path.back().subBranchRoot();
+    for (size_t diff_index = 0; diff_index < diffs.size(); diff_index++) {
+      if (diffs[diff_index].commit_ == commit) {
+        edited = GoToIndex(diff_index, diffs);
         return edited;
       }
     }
@@ -99,13 +97,38 @@ bool FileVersionInstanceEditor::GoToCommit(
   }
 
   // 2. Traverse to common parent.
-  for (size_t i = current_commit_path.size(); i > common_path_index_max; i--) {
-    edited = GoToIndex(current_commit_path[i].currentBranchIndex(),
-                       *current_commit_path[i].subBranchRoot());
+  size_t i = current_commit_path.size() - 1;
+  for (; i > common_path_index_max; i--) {
+    if (i > 0 && current_commit_path[i - 1].subBranchRoot() !=
+                     current_commit_path[i].subBranchRoot()) {
+      // Get ready to leave branch.
+      edited |= GoToIndex(0, *current_commit_path[i].subBranchRoot());
+      const auto& old_diff = current_commit_path[i].subBranchRoot()->front();
+      RemoveDiff(old_diff);
+      file_version_instance_.commit_index_ =
+          current_commit_path.GetAncestors(i);
+      continue;
+    }
+    edited |= GoToIndex(current_commit_path[i].currentBranchIndex(),
+                        *current_commit_path[i].subBranchRoot());
   }
 
   // 3. Traverse up to new commit.
-  // !! TODO !!
+  for (; i < new_commit_path.size(); i++) {
+    if (i > 0 && new_commit_path[i - 1].subBranchRoot() !=
+                     new_commit_path[i].subBranchRoot()) {
+      const auto& old_path = new_commit_path[i - 1];
+      // First go to branch root when changing braches.
+      const auto& new_diff = new_commit_path[i].subBranchRoot()->front();
+      AddDiff(new_diff);
+      file_version_instance_.commit_index_ = new_commit_path.GetAncestors(i);
+      // Denote that we're at the root of the sub-branch.
+      file_version_instance_.commit_index_.push_back(DiffTreePathItem());
+      edited = true;
+    }
+    edited |= GoToIndex(new_commit_path[i].currentBranchIndex(),
+                        *new_commit_path[i].subBranchRoot());
+  }
 
   return edited;
 }
@@ -195,7 +218,7 @@ void FileVersionInstanceEditor::AddHunk(const FileVersionDiffHunk& hunk) {
     single_infos.push_front(file_version_line_info);
     file_version_instance_.AddLineInfo(hunk.add_location_, hunk.add_line_count_,
                                        single_infos);
-#if _DEBUG
+#ifdef _DEBUG
     for (auto line_num = hunk.add_location_;
          line_num < hunk.add_location_ + hunk.add_line_count_; line_num++) {
       //  assert(file_version_instance_.GetCommitFromIndex(
@@ -256,7 +279,7 @@ void FileVersionInstanceEditor::RemoveHunk(const FileVersionDiffHunk& hunk) {
     file_version_instance_.AddLineInfo(add_location_index + 1,
                                        hunk.remove_line_count_,
                                        *hunk.line_info_to_restore_);
-#if _DEBUG
+#ifdef _DEBUG
     for (auto line_index = add_location_index;
          line_index < add_location_index + hunk.remove_line_count_;
          line_index++) {
@@ -275,18 +298,16 @@ void FileVersionInstanceEditor::RemoveHunk(const FileVersionDiffHunk& hunk) {
   }
 }
 
-FileVersionInstanceEditor::CommitTreePath
-FileVersionInstanceEditor::GetCommitTreePath(
+DiffTreePath FileVersionInstanceEditor::GetDiffTreePath(
     const GitHash& commit,
     const std::vector<FileVersionDiff>& diffs) {
   int i = 0;
   for (const auto& diff : diffs) {
     if (diff.commit_ == commit) {
-      auto item =
-          CommitTreePathItem().setCurrentBranchIndex(i).setSubBranchRoot(
-              &diffs);
-      CommitTreePath path;
-      path.push_back(item);
+      auto& item =
+          DiffTreePathItem().setCurrentBranchIndex(i).setSubBranchRoot(&diffs);
+      DiffTreePath path;
+      path.push_back(std::move(item));
 
       return path;
     }
@@ -294,14 +315,27 @@ FileVersionInstanceEditor::GetCommitTreePath(
     for (size_t parent_index = 1; parent_index < diff.parents_.size();
          parent_index++) {
       if (diff.parents_[parent_index].file_version_diffs_) {
-        auto subpath = GetCommitTreePath(
-            commit, *diff.parents_[parent_index].file_version_diffs_);
+        const auto& parent_diffs =
+            *diff.parents_[parent_index].file_version_diffs_;
+        auto subpath = GetDiffTreePath(commit, parent_diffs);
         if (subpath.size() > 0) {
-          auto item = CommitTreePathItem()
-                          .setCurrentBranchIndex(i)
-                          .setParentIndex(parent_index)
-                          .setSubBranchRoot(&diffs);
-          subpath.insert(subpath.cbegin(), item);
+          // Look for index of |file_parent_commit_| in |diffs| (i.e. the commit
+          // from which the sub-branch was created).
+          auto child_index_it = std::find_if(
+              diffs.cbegin(), diffs.cend(),
+              [&diff, parent_index](const FileVersionDiff& cmp_diff) {
+                return cmp_diff.commit_ ==
+                       diff.parents_[parent_index].file_parent_commit_;
+              });
+          auto& parent_item = DiffTreePathItem()
+                                  .setCurrentBranchIndex(
+                                      child_index_it == diffs.cend()
+                                          ? (size_t)-1
+                                          : (child_index_it - diffs.cbegin()))
+                                  .setParentIndex(parent_index)
+                                  .setSubBranchRoot(&diffs);
+          // Prepend the parent item to returned |subpath|.
+          subpath.insert(subpath.cbegin(), std::move(parent_item));
           return subpath;
         }
       }

@@ -78,6 +78,9 @@
     <ClInclude Include="OutputWnd.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="DiffTreePath.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Sage2020.cpp">
@@ -129,6 +132,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="OutputWnd.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DiffTreePath.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

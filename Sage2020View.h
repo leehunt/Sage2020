@@ -51,7 +51,8 @@ class CSage2020View : public CScrollView, public Sage2020ViewDocListener {
   // REVIEW: MFC has 'CView::OnUpdate' that should be used to update /
   // invalidate the View (but NOT draw) in response to Doc updates.
   virtual void DocEditNotification(int iLine, int cLine);   // REVIEW: virtual?
-  virtual void DocVersionChangedNotification(size_t nVer);  // REVIEW: virtual?
+  virtual void DocVersionChangedNotification(
+      const DiffTreePath& commit_path);  // REVIEW: virtual?
 
   virtual BOOL OnPreparePrinting(CPrintInfo* pInfo);
   virtual void OnBeginPrinting(CDC* pDC, CPrintInfo* pInfo);

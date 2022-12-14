@@ -512,7 +512,8 @@ GitDiffReader::GitDiffReader(const std::filesystem::path& file_path,
       tag_no_parentheses =
           tag_no_parentheses.substr(0, tag_no_parentheses.size() - 1);
   }
-  std::string file_cache_hash;
+
+  std::string file_cache_revision;
   if (tag_no_parentheses.empty()) {
     wsprintf(command, kGitMostRecentCommitForFileCommand,
              tag_no_parentheses.c_str(), file_path.filename().c_str());
@@ -554,24 +555,24 @@ GitDiffReader::GitDiffReader(const std::filesystem::path& file_path,
         pwndOutput->AppendDebugTabMessage(message);
       }
     } else {
-      file_cache_hash = current_diff_->commit_.sha_;
+      file_cache_revision = current_diff_->commit_.sha_;
     }
   } else {
-    file_cache_hash = tag_no_parentheses;
+    file_cache_revision = tag_no_parentheses;
   }
 
   file_stream_cache_ = std::make_unique<GitFileStreamCache>(file_path);
 
-  auto cache_stream = file_stream_cache_->GetStream(file_cache_hash);
+  auto cache_stream = file_stream_cache_->GetStream(file_cache_revision);
 
   if (cache_stream) {
     if (pwndOutput != nullptr) {
       CString message;
       message.FormatMessage(
-          _T("   Cache hit for commit '%1!S!', reading diff history from: ")
+          _T("   Cache hit for revision '%1!S!', reading diff history from: ")
           _T("'%2!s!'"),
-          current_diff_->commit_.sha_.c_str(),
-          file_stream_cache_->GetItemCachePath(file_cache_hash)
+          file_cache_revision.c_str(),
+          file_stream_cache_->GetItemCachePath(file_cache_revision)
               .c_str());
       pwndOutput->AppendDebugTabMessage(message);
     }
@@ -582,9 +583,9 @@ GitDiffReader::GitDiffReader(const std::filesystem::path& file_path,
     if (pwndOutput != nullptr) {
       CString message;
       message.FormatMessage(
-          _T("   Cache miss for commit '%1!S!', reading full diff history: ")
+          _T("   Cache miss for revision '%1!S!', reading full diff history: ")
           _T("'%2!s!'"),
-        file_cache_hash.c_str(), command);
+          file_cache_revision.c_str(), command);
       pwndOutput->AppendDebugTabMessage(message);
     }
     ProcessPipe process_pipe_git_log(command, file_path.parent_path().c_str());
@@ -600,7 +601,7 @@ GitDiffReader::GitDiffReader(const std::filesystem::path& file_path,
                                      process_pipe_git_log.GetStandardOutput());
 
     auto file_stream = file_stream_cache_->SaveStream(
-        process_pipe_git_tag.GetStandardOutput(), file_cache_hash);
+        process_pipe_git_tag.GetStandardOutput(), file_cache_revision);
     if (file_stream) {
       ProcessDiffLines(file_stream.get());
     }

@@ -215,7 +215,7 @@ void CSage2020Doc::OnUpdateHistoryTree(CCmdUI* pCmdUI) {
   if (GetFileVersionInstance() == nullptr)
     return;
 
-  auto commit = GetFileVersionInstance()->GetCommit();
+  const auto& commit = GetFileVersionInstance()->GetCommit();
   const auto& file_diffs = GetFileDiffs();
   if (CChangeHistoryPane::FEnsureTreeItemsAndSelection(
           *pTree, pTree->GetRootItem(), file_diffs, commit)) {
@@ -304,7 +304,7 @@ BOOL CSage2020Doc::OnOpenDocument(LPCTSTR lpszPathName) {
   // N.b. This must be done before |CDocument::OnOpenDocument| to reset any
   // current selection.
   if (m_pDocListenerHead) {
-    m_pDocListenerHead->NotifyAllListenersOfVersionChange(-1);
+    m_pDocListenerHead->NotifyAllListenersOfVersionChange({});
   }
 
   if (!CDocument::OnOpenDocument(lpszPathName))

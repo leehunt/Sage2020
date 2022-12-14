@@ -5,6 +5,8 @@
 #include <map>
 #include <set>
 #include <vector>
+
+#include "DiffTreePath.h"
 #include "GitHash.h"
 
 #define USE_SPARSE_INDEX_ARRAY 0
@@ -87,6 +89,7 @@ typedef SparseIndexArray LineToFileVersionLineInfo;
 typedef std::deque<FileVersionLineInfo> LineToFileVersionLineInfo;
 #endif
 
+struct FileVersionDiff;
 class FileVersionInstance {
  public:
   FileVersionInstance();
@@ -95,7 +98,7 @@ class FileVersionInstance {
   virtual ~FileVersionInstance() {}
 
   const GitHash& GetCommit() const { return commit_; }
-  size_t GetCommitIndex() const { return commit_index_; }
+  int GetCommitIndex() const { return commit_index_; }
 
   const std::deque<std::string>& GetLines() const { return file_lines_; }
 
@@ -128,14 +131,11 @@ class FileVersionInstance {
     file_lines_ = source.file_lines_;
     file_lines_info_ = source.file_lines_info_;
     commit_ = source.commit_;
-    commit_index_ = source.commit_index_;
   }
 
   // Note: can be expensive; use only for testing.
   bool operator==(const FileVersionInstance& source) const {
     if (commit_ != source.commit_)
-      return false;
-    if (commit_index_ != source.commit_index_)
       return false;
     if (file_lines_info_ != source.file_lines_info_)
       return false;
@@ -149,7 +149,8 @@ class FileVersionInstance {
   std::deque<std::string> file_lines_;
   LineToFileVersionLineInfo file_lines_info_;
   GitHash commit_;
-  int commit_index_;
+  DiffTreePath commit_index_;  // TODO: This is misleading; call this
+                               // |commit_path_| or similar.
 
   // REVIEW: Is there a better way to express this relationship?
   friend FileVersionInstanceEditor;

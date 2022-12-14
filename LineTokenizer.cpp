@@ -539,11 +539,11 @@ void AttachTokToLine(TOK* ptok, __in_z char* szLine) {
 }
 
 void UnattachTok(TOK* ptok) {
-#if _DEBUG
+#ifdef _DEBUG
   ptok->szVal = NULL;
 #endif                          // DBG
   *ptok->pchEnd = ptok->chSav;  // restore NIL
-#if _DEBUG
+#ifdef _DEBUG
   ptok->pchEnd = NULL;
   ptok->tk = TK::tkERROR;
 #endif  // DBG
