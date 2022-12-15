@@ -6,11 +6,12 @@
 void FileVersionInstanceEditor::AddDiff(const FileVersionDiff& diff) {
   ++file_version_instance_.commit_index_;
 
+  // N.b. This must be set here because AddHunk uses it.
+  file_version_instance_.commit_ = diff.commit_;
+
   for (auto& hunk : diff.hunks_) {
     AddHunk(hunk);
   }
-
-  file_version_instance_.commit_ = diff.commit_;
 
   if (listener_head_ != nullptr) {
     listener_head_->NotifyAllListenersOfVersionChange(
@@ -212,7 +213,7 @@ void FileVersionInstanceEditor::AddHunk(const FileVersionDiffHunk& hunk) {
     }
     // Add line info
     auto file_version_line_info = FileVersionLineInfo{
-        static_cast<size_t>(file_version_instance_.commit_index_)};
+        file_version_instance_.commit_.sha_};
 
     LineToFileVersionLineInfo single_infos;
     single_infos.push_front(file_version_line_info);

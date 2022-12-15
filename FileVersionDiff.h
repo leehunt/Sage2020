@@ -64,7 +64,7 @@ struct FileVersionDiffTree {
   char action;
   char file_path[FILENAME_MAX];
 
-#ifdef _DEBUG 
+#ifdef _DEBUG
   bool operator==(const FileVersionDiffTree& other) const {
     if (this == &other)
       return true;
@@ -86,7 +86,7 @@ struct FileVersionDiffTree {
   bool operator!=(const FileVersionDiffTree& other) const {
     return !(*this == other);
   }
-#endif // _DEBUG
+#endif  // _DEBUG
 };
 struct FileVersionDiff;
 struct FileVersionDiffParent {
@@ -208,3 +208,5 @@ struct FileVersionDiff {
 // ~FileVersionDiff() { printf("~FileVersionDiff\t%p\n", this); }
 #endif
 };
+
+//struct FileVersionDiffs : std::vector<FileVersionDiff> {};

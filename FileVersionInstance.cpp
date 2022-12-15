@@ -7,10 +7,10 @@ FileVersionInstance::FileVersionInstance() {}
 
 FileVersionInstance::FileVersionInstance(std::deque<std::string>& lines,
                                          const GitHash& parent_commit)
-    : commit_(parent_commit) {  // N.b. When set to the parent_commit
-                                // |commit_index_| is empty.
+    : commit_(parent_commit) {
   LineToFileVersionLineInfo infos;
-  infos.push_back(FileVersionLineInfo(commit_index_));
+  infos.push_back(commit_.IsValid() ? FileVersionLineInfo(commit_.sha_)
+                                    : FileVersionLineInfo());
   AddLineInfo(1, static_cast<int>(lines.size()), infos);
   for (auto& line : lines) {
     file_lines_.push_back(std::move(line));
@@ -80,7 +80,7 @@ SparseIndexArray::const_iterator SparseIndexArray::LowerFloor(
     --it;
   } else {
     // Where's the ending marker?
-    assert(it->second.commit_index() == static_cast<size_t>(-1));
+    assert(it->second.is_eof());
   }
   return it;
 }
@@ -118,7 +118,7 @@ void SparseIndexArray::Add(size_t line_index,
   assert(it != end());
 
   // Add the item.
-  if (it->second.commit_index() != line_info.commit_index()) {
+  if (strcmp(it->second.commit_sha(), line_info.commit_sha())) {
     const auto itInsertHint = std::next(it);
     emplace_hint(itInsertHint, line_index, line_info);
   } else if (it->first > line_index) {

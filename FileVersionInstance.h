@@ -20,28 +20,32 @@ class SparseIndexArray;
 // "FileVersionDiff.h".
 class FileVersionLineInfo {
  public:
-  FileVersionLineInfo(size_t commit_index) : commit_index_(commit_index) {
-    // N.b. a commit_index of -1 indicates the parent_commit
+  FileVersionLineInfo(const char commit_sha[41]) {
+    strcpy_s(commit_sha_, commit_sha);
+    // N.b. an empty indicates the parent_commit
     // (i.e. initial starting file state/contents that can never be undone).
-    assert(static_cast<int>(commit_index) >= -1);
+    assert(!is_eof());
   }
   // Ending terminator (special case).
   // REVIEW: now that we allow -1 to be the parent_commit, does this still make
   // sense?
-  FileVersionLineInfo() : commit_index_(static_cast<size_t>(-1)) {}
+  FileVersionLineInfo() { commit_sha_[0] = 0; }
 
   bool operator==(const FileVersionLineInfo& other) const {
-    return commit_index_ == other.commit_index_;
+    return !strcmp(commit_sha_, other.commit_sha_);
   }
 
+  // For testing/contaier use only.
   bool operator<(const FileVersionLineInfo& other) const {
-    return commit_index_ < other.commit_index_;
+    return strcmp(commit_sha_, other.commit_sha_) < 0;
   }
+ 
+  const char* commit_sha() const { return commit_sha_; };
 
-  const size_t commit_index() const { return commit_index_; };
+  bool is_eof() const { return !commit_sha_[0]; }
 
  private:
-  size_t commit_index_;  // TODO: !! Replace this with a CommitTreePath. !!
+  char commit_sha_[41];
 
   friend SparseIndexArray;
 };

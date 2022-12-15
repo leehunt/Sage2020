@@ -66,7 +66,7 @@ static void CompareFileInstanceToCommit(
     if (ch == '\\')
       ch = '/';
   }
-  std::string file_revision = commit.sha_ + ":" + git_releative_path;
+  std::string file_revision = commit.sha_ + std::string(":") + git_releative_path;
   GitFileReader git_file_reader_commit{file_path.parent_path(), file_revision};
 
   // Check for same number of lines.
@@ -127,7 +127,7 @@ static void LoadAllBranchesRecur(const std::filesystem::path& file_path,
          secondary_parent_index++) {
       std::string secondary_parent_revision_range =
           // diff.parents_[0].commit_.sha_ + ".." +
-          diff.file_parent_commit_.sha_ + ".." +
+          diff.file_parent_commit_.sha_ + std::string("..") +
           diff.parents_[secondary_parent_index].commit_.sha_;
       GitDiffReader git_branch_diff_reader{file_path,
                                            secondary_parent_revision_range};
@@ -220,7 +220,7 @@ static void LoadFileAndCompareAllBranches(
   std::deque<std::string> lines;
   if (parent_commit.IsValid()) {
     const std::string parent_revision =
-        parent_commit.sha_ + ":" + file_path.filename().string();
+        parent_commit.sha_ + std::string(":") + file_path.filename().string();
     GitFileReader git_file_reader_head{file_path.parent_path(),
                                        parent_revision};
     lines = std::move(git_file_reader_head.GetLines());

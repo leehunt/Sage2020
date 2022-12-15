@@ -288,6 +288,18 @@ BOOL CSage2020View::OnEraseBkgnd(CDC* pDC) {
   return TRUE;  // we will erase when drawing
 }
 
+static int GetDiffIndexFromSha(const std::vector<FileVersionDiff>& diffs,
+                               const char sha[40]) {
+  int index = 0;
+  for (auto it = diffs.cbegin(); it != diffs.cend(); it++, index++) {
+    if (!strcmp(it->commit_.sha_, sha)) {
+      return index;
+    }
+  }
+
+  return -1;
+}
+
 void CSage2020View::OnDraw(CDC* pDC) {
   CSage2020Doc* pDoc = GetDocument();
   ASSERT_VALID(pDoc);
@@ -348,10 +360,8 @@ void CSage2020View::OnDraw(CDC* pDC) {
       break;
 
     // set colors
-    int nVer = file_version_instance != NULL
-                   ? static_cast<int>(
-                         file_version_instance->GetLineInfo(i).commit_index())
-                   : 0;
+    int nVer = GetDiffIndexFromSha(
+        diffs, file_version_instance->GetLineInfo(i).commit_sha());
     const int nVerMax = static_cast<int>(diffs.size());
     COLORREF crBack = CrBackgroundForVersion(nVer + 1, nVerMax);
     COLORREF crFore = RGB(0x00, 0x00, 0x00);
@@ -574,8 +584,8 @@ void CSage2020View::OnUpdatePropertiesPaneGrid(CCmdUI* pCmdUI) {
     ASSERT_VALID(pPropVersionHeader);
     if (pPropVersionHeader == NULL)
       return;
-    int nVerSel = static_cast<int>(version_line_info.commit_index());
 
+    int nVerSel = GetDiffIndexFromSha(diffs, version_line_info.commit_sha());
     const FileVersionDiff* file_version_diff =
         nVerSel != -1 ? &diffs[nVerSel] : NULL;
 

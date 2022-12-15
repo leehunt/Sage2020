@@ -72,7 +72,7 @@ static std::string GetTextToEndOfLine(TOK* ptok) {
 bool GitDiffReader::FReadGitHash(TOK* ptok, GitHash& hash) {
   if (!FGetTok(ptok))
     return false;
-  hash.sha_ = GetTextToWhitespace(ptok);
+  strcpy_s(hash.sha_, GetTextToWhitespace(ptok).c_str());
 
   if (!FGetTok(ptok))
     return false;
