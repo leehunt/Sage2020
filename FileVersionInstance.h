@@ -69,6 +69,8 @@ class SparseIndexArray : std::map<size_t, FileVersionLineInfo> {
 
   size_t MaxLineIndex() const { return std::prev(end())->first; }
 
+  size_t Size() const { return size(); }
+
   SparseIndexArray::iterator SubtractMapKey(SparseIndexArray::iterator it,
                                             size_t to_subtract);
 

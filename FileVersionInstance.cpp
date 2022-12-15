@@ -124,8 +124,9 @@ void SparseIndexArray::Add(size_t line_index,
   if (strcmp(it->second.commit_sha(), line_info.commit_sha())) {
     // Different sha: insert new item.
     const auto itInsertHint = std::next(it);
-    bool need_to_split =
-        itInsertHint != end() && itInsertHint->first > line_index + line_count;
+    bool need_to_split = itInsertHint != end() &&
+                         it->first < line_index + line_count &&
+                         itInsertHint->first > line_index + line_count;
     auto itNewElement = emplace_hint(
         itInsertHint, line_index,
         line_info);  // REVIEW: Should |itInsertHint| instead be |it|?
@@ -204,6 +205,18 @@ void SparseIndexArray::Remove(size_t line_index, size_t line_count) {
       assert(itPrev->first <= itLim->first);
       it = erase(itPrev, itLim);
       assert(it == itLim);
+
+      // Merge any previously split item.
+      if (it != cbegin()) {
+        itPrev = std::prev(it);
+        if (itPrev->second == it->second) {
+          itLim = std::next(it);
+          assert(itLim != end());  // There should always be at least a
+                                   // terminator at the end, or terminators
+                                   // will never merge.
+          it = erase(it, itLim);
+        }
+      }
     }
 
     // Offset any remaining range(s).
