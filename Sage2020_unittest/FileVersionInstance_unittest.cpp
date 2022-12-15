@@ -22,7 +22,7 @@ TEST(FileVersionInstanceTest, Load) {
     EXPECT_EQ(line.size(), 0);
     EXPECT_STREQ(line.c_str(), "");
     EXPECT_STREQ(file_version_instance.GetLineInfo(i).commit_sha(),
-              parent_commit.sha_);
+                 parent_commit.sha_);
     i++;
   }
   EXPECT_TRUE(parent_commit.IsValid());
@@ -91,21 +91,41 @@ TEST(FileVersionInstanceTest, SparseIndexArrayDown) {
   EXPECT_EQ(sparse_index_array.Get(0), FileVersionLineInfo{});
 
   sparse_index_array.Add(0, 10, "99");
-  for (size_t i = 10; i > 0;) {
+  // index:  0   1   2   3   4   5   6   7   8   9
+  // value: |                  99                 |
+  int end_pos = 10;
+  EXPECT_EQ(sparse_index_array.Get(end_pos - 1), FileVersionLineInfo{"99"});
+  EXPECT_EQ(sparse_index_array.Get(end_pos), FileVersionLineInfo{});
+  // Insert new single length items at indexes [9, 0] going backwards.
+  // E.g.
+  // First insert:
+  // index:  0   1   2   3   4   5   6   7   8   9   10
+  // value: |                99                | 9 | 99|
+  // Second insert:
+  // index:  0   1   2   3   4   5   6   7   8   9   10  11
+  // value: |              99              | 8 | 99| 9 | 99|
+  // ...
+  for (int i = 10; i > 0;) {
+    EXPECT_EQ(sparse_index_array.Get(0), FileVersionLineInfo{"99"});
     i--;
     char sha[40];
-    _itoa_s(i, sha, 10);
+    _itoa_s(i, sha, 16);
     sparse_index_array.Add(i, 1, sha);
     auto& line_info = sparse_index_array.Get(i);
     EXPECT_EQ(line_info, FileVersionLineInfo{sha});
+    end_pos++;
+    EXPECT_EQ(sparse_index_array.Get(end_pos), FileVersionLineInfo{});
   }
 
-  EXPECT_EQ(sparse_index_array.Get(0), FileVersionLineInfo{"0"});
-  EXPECT_EQ(sparse_index_array.Get(11), FileVersionLineInfo{"5"});
-  EXPECT_EQ(sparse_index_array.Get(11), FileVersionLineInfo{"5"});
-  EXPECT_EQ(sparse_index_array.Get(18), FileVersionLineInfo{"9"});
-  EXPECT_EQ(sparse_index_array.Get(19), FileVersionLineInfo{"9"});
-  EXPECT_EQ(sparse_index_array.Get(20), FileVersionLineInfo{});
+  const char* expected_values[] = {"0",  "99", "1",  "99", "2",  "99", "3",
+                                   "99", "4",  "99", "5",  "99", "6",  "99",
+                                   "7",  "99", "8",  "99", "9",  "99"};
+  int i = 0;
+  for (auto expected_value : expected_values) {
+    EXPECT_EQ(sparse_index_array.Get(i), FileVersionLineInfo{expected_value});
+    i++;
+  }
+  EXPECT_EQ(sparse_index_array.Get(i), FileVersionLineInfo{});
   EXPECT_EQ(sparse_index_array.Get(21), FileVersionLineInfo{});
   EXPECT_EQ(sparse_index_array.Get(999), FileVersionLineInfo{});
 }
@@ -114,7 +134,7 @@ TEST(FileVersionInstanceTest, SparseIndexRemove) {
   SparseIndexArray sparse_index_array;
   for (size_t i = 0; i < 10; i++) {
     char sha[40];
-    _itoa_s(i, sha, 10);
+    _itoa_s(i, sha, 16);
     sparse_index_array.Add(i, 1, sha);
     auto& line_info = sparse_index_array.Get(i);
     EXPECT_EQ(line_info, FileVersionLineInfo{sha});

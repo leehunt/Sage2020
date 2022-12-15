@@ -6,14 +6,17 @@
 FileVersionInstance::FileVersionInstance() {}
 
 FileVersionInstance::FileVersionInstance(std::deque<std::string>& lines,
-                                         const GitHash& parent_commit)
-    : commit_(parent_commit) {
-  LineToFileVersionLineInfo infos;
-  infos.push_back(commit_.IsValid() ? FileVersionLineInfo(commit_.sha_)
-                                    : FileVersionLineInfo());
-  AddLineInfo(1, static_cast<int>(lines.size()), infos);
-  for (auto& line : lines) {
-    file_lines_.push_back(std::move(line));
+                                         const GitHash& commit)
+    : commit_(commit) {
+  if (commit_.IsValid()) {
+    LineToFileVersionLineInfo infos;
+    infos.emplace_back(FileVersionLineInfo(commit_.sha_));
+    AddLineInfo(1, static_cast<int>(lines.size()), infos);
+    for (auto& line : lines) {
+      file_lines_.push_back(std::move(line));
+    }
+  } else {
+    assert(lines.empty());
   }
 }
 
@@ -72,15 +75,11 @@ std::set<FileVersionLineInfo> FileVersionInstance::GetVersionsFromLines(
 SparseIndexArray::const_iterator SparseIndexArray::LowerFloor(
     size_t index) const {
   auto it = upper_bound(index);
-  if (it == end()) {
-    // Out of range, return ending marker.
-    it = --end();
-  } else if (it != begin()) {
-    assert(it != begin());
-    --it;
-  } else {
-    // Where's the ending marker?
+  if (it == begin()) {
+    // Ensure that the ending marker is present.
     assert(it->second.is_eof());
+  } else {
+    --it;
   }
   return it;
 }
@@ -99,34 +98,51 @@ void SparseIndexArray::Add(size_t line_index,
                            const FileVersionLineInfo& line_info) {
   assert(cbegin()->first == 0);
   assert(std::prev(end())->second == FileVersionLineInfo());
+  assert(!line_info.is_eof());
 
   if (line_count == 0)
     return;
 
   // Pull all higher items up first so that any inserts done later will
   // iterated correctly. Use forward iterators to skip extra deference (and
-  // they're move intuitative when using .base()).
+  // they're move intuitative when using .key()).
   auto it = end();
+  assert(it != begin());  // There should always be at least the terminator.
   for (; it != begin();) {
     --it;
     if (it->first < line_index)
       break;
+    // Update the node's key to the new shifted down position.
     auto node_handle = extract(it);
     node_handle.key() += line_count;
     it = insert(begin(), std::move(node_handle));
   }
+
   assert(it != end());
 
   // Add the item.
   if (strcmp(it->second.commit_sha(), line_info.commit_sha())) {
+    // Different sha: insert new item.
     const auto itInsertHint = std::next(it);
-    emplace_hint(itInsertHint, line_index, line_info);
+    bool need_to_split =
+        itInsertHint != end() && itInsertHint->first > line_index + line_count;
+    auto itNewElement = emplace_hint(
+        itInsertHint, line_index,
+        line_info);  // REVIEW: Should |itInsertHint| instead be |it|?
+    // Split current element as necessary.
+    if (need_to_split) {
+      assert(!it->second.is_eof());
+      emplace_hint(itNewElement, line_index + line_count, it->second);
+    }
   } else if (it->first > line_index) {
+    assert(!it->second.is_eof());
     const auto itInsertHint = std::next(it);
     // Extend range to line_index.
     auto node_handle = extract(it);
     node_handle.key() = line_index;
-    insert(itInsertHint, std::move(node_handle));
+    insert(itInsertHint,
+           std::move(
+               node_handle));  // REVIEW: Should |itInsertHint| instead be |it|?
   } else {
     // Nothing to do; the range is already that commit index.
     assert(it->first < line_index);

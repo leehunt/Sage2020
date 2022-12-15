@@ -22,13 +22,11 @@ class FileVersionLineInfo {
  public:
   FileVersionLineInfo(const char commit_sha[41]) {
     strcpy_s(commit_sha_, commit_sha);
-    // N.b. an empty indicates the parent_commit
-    // (i.e. initial starting file state/contents that can never be undone).
+    // It important that every added commit is not is_eof(), as that is a
+    // reserved value at the end of any sparse array.
     assert(!is_eof());
   }
   // Ending terminator (special case).
-  // REVIEW: now that we allow -1 to be the parent_commit, does this still make
-  // sense?
   FileVersionLineInfo() { commit_sha_[0] = 0; }
 
   bool operator==(const FileVersionLineInfo& other) const {
@@ -39,7 +37,7 @@ class FileVersionLineInfo {
   bool operator<(const FileVersionLineInfo& other) const {
     return strcmp(commit_sha_, other.commit_sha_) < 0;
   }
- 
+
   const char* commit_sha() const { return commit_sha_; };
 
   bool is_eof() const { return !commit_sha_[0]; }
@@ -98,7 +96,7 @@ class FileVersionInstance {
  public:
   FileVersionInstance();
   FileVersionInstance(std::deque<std::string>& lines,
-                      const GitHash& parent_commit);  // N.b. *moves* |lines|
+                      const GitHash& commit);  // N.b. *moves* |lines|
   virtual ~FileVersionInstance() {}
 
   const GitHash& GetCommit() const { return commit_; }
