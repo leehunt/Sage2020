@@ -92,13 +92,6 @@ struct FileVersionDiff;
 struct FileVersionDiffParent {
   GitHash commit_;  // The *newest* commit (head of the branch that was merged
                     // back in to parent).
-  // N.b. This commit is used insead of the oldest commit (i.e. when branched)
-  // because it will always be present in a file-filtered git log command,
-  // whereas the parent branch merge commit may not be listed in the file-filted
-  // git history if there are no changes to the file commit.
-  GitHash file_parent_commit_;  // The commit on the parent file-filtered branch
-                                // where the branch denoted by |commit_| was
-                                // branched from.
   std::unique_ptr<std::vector<FileVersionDiff>> file_version_diffs_;
 
 #ifdef _DEBUG

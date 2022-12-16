@@ -171,8 +171,11 @@ void CChangeHistoryPane::OnTreeNotifyExpanding(NMHDR* pNMHDR,
     GitDiffReader git_diff_reader_parent{file_version_diff->path_,
                                          common_parent_rev, pwndOutput};
     if (!git_diff_reader_parent.GetDiffs().empty()) {
-      file_version_diff_parent.file_parent_commit_ =
+      file_version_diff_parent.file_version_diffs_->front()
+          .file_parent_commit_ =
           git_diff_reader_parent.GetDiffs().back().commit_;
+      assert(file_version_diff_parent.file_version_diffs_->front()
+                 .file_parent_commit_.IsValid());
     }
   }
 }

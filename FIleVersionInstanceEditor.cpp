@@ -7,6 +7,7 @@ void FileVersionInstanceEditor::AddDiff(const FileVersionDiff& diff) {
   ++file_version_instance_.commit_index_;
 
   // N.b. This must be set here because AddHunk uses it.
+  assert(diff.commit_.IsValid());
   file_version_instance_.commit_ = diff.commit_;
 
   for (auto& hunk : diff.hunks_) {
@@ -26,9 +27,11 @@ void FileVersionInstanceEditor::RemoveDiff(const FileVersionDiff& diff) {
     RemoveHunk(*it);
   }
 
+  assert(diff.file_parent_commit_.IsValid() ||
+         file_version_instance_.commit_index_.empty());
   file_version_instance_.commit_ = diff.file_parent_commit_;
 
-#ifdef _DEBUG 
+#ifdef _DEBUG
 #if USE_SPARSE_INDEX_ARRAY
   for (int line_index = 0;
        line_index < file_version_instance_.file_lines_info_.MaxLineIndex();
@@ -212,8 +215,8 @@ void FileVersionInstanceEditor::AddHunk(const FileVersionDiffHunk& hunk) {
       ++it_insert;
     }
     // Add line info
-    auto file_version_line_info = FileVersionLineInfo{
-        file_version_instance_.commit_.sha_};
+    auto file_version_line_info =
+        FileVersionLineInfo{file_version_instance_.commit_.sha_};
 
     LineToFileVersionLineInfo single_infos;
     single_infos.push_front(file_version_line_info);
@@ -320,14 +323,16 @@ DiffTreePath FileVersionInstanceEditor::GetDiffTreePath(
             *diff.parents_[parent_index].file_version_diffs_;
         auto subpath = GetDiffTreePath(commit, parent_diffs);
         if (subpath.size() > 0) {
+          assert(!parent_diffs.empty());  // This should be ensured by the
+                                          // "subpath.size() > 0" check.
           // Look for index of |file_parent_commit_| in |diffs| (i.e. the commit
           // from which the sub-branch was created).
-          auto child_index_it = std::find_if(
-              diffs.cbegin(), diffs.cend(),
-              [&diff, parent_index](const FileVersionDiff& cmp_diff) {
-                return cmp_diff.commit_ ==
-                       diff.parents_[parent_index].file_parent_commit_;
-              });
+          auto child_index_it =
+              std::find_if(diffs.cbegin(), diffs.cend(),
+                           [&parent_diffs](const FileVersionDiff& cmp_diff) {
+                             return cmp_diff.commit_ ==
+                                    parent_diffs.front().file_parent_commit_;
+                           });
           auto& parent_item = DiffTreePathItem()
                                   .setCurrentBranchIndex(
                                       child_index_it == diffs.cend()

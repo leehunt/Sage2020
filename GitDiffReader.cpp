@@ -615,6 +615,7 @@ GitDiffReader::GitDiffReader(const std::filesystem::path& file_path,
   for (auto& diff : diffs_) {
     diff.file_parent_commit_ = file_parent_commit;
     file_parent_commit = diff.commit_;
+    assert(file_parent_commit.IsValid());
   }
 
   if (pwndOutput != nullptr) {

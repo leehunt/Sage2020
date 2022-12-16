@@ -66,7 +66,8 @@ static void CompareFileInstanceToCommit(
     if (ch == '\\')
       ch = '/';
   }
-  std::string file_revision = commit.sha_ + std::string(":") + git_releative_path;
+  std::string file_revision =
+      commit.sha_ + std::string(":") + git_releative_path;
   GitFileReader git_file_reader_commit{file_path.parent_path(), file_revision};
 
   // Check for same number of lines.
@@ -149,6 +150,7 @@ static void LoadAllBranchesRecur(const std::filesystem::path& file_path,
         if (diff_to_head_diffs.size() > 1) {
           parent_diffs_ref.front().file_parent_commit_ =
               diff_to_head_diffs[diff_to_head_diffs.size() - 2].commit_;
+          assert(parent_diffs_ref.front().file_parent_commit_.IsValid());
         }
       }
       LoadAllBranchesRecur(file_path, parent_diffs_ref);
@@ -264,8 +266,8 @@ TEST(GitDiffReaderTest, LoadAndCompareWithFileAllBranches) {
 #else
   auto const file_path =
       anchor_file_path.parent_path().parent_path() / "res/Sage.rc2";
-                         //"Sage2020_unittest/FileVersionInstance_unittest.cpp";
-                         //"FileVersionDiff.h";  // "ChangeHistoryPane.cpp";
+  //"Sage2020_unittest/FileVersionInstance_unittest.cpp";
+  //"FileVersionDiff.h";  // "ChangeHistoryPane.cpp";
   std::string empty_tag;
   GitDiffReader git_diff_reader(file_path, empty_tag);
   if (!git_diff_reader.GetDiffs().empty()) {
