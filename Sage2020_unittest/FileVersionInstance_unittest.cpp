@@ -222,7 +222,7 @@ TEST(FileVersionInstanceTest, SparseIndexSplitTest) {
 
 TEST(FileVersionInstanceTest, SparseIndexRemove) {
   SparseIndexArray sparse_index_array;
-  for (size_t i = 0; i < 10; i++) {
+  for (int i = 0; i < 10; i++) {
     char sha[40];
     _itoa_s(i, sha, 16);
     sparse_index_array.Add(i, 1, sha);
