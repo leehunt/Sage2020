@@ -8,6 +8,9 @@ void FileVersionInstanceEditor::AddDiff(const FileVersionDiff& diff) {
 
   // N.b. This must be set here because AddHunk uses it.
   assert(diff.commit_.IsValid());
+#ifdef _DEBUG
+  const auto old_commit = file_version_instance_.commit_;
+#endif
   file_version_instance_.commit_ = diff.commit_;
 
   for (auto& hunk : diff.hunks_) {
@@ -164,20 +167,23 @@ bool FileVersionInstanceEditor::GoToIndex(
     edited = true;
   }
 
+  file_version_instance_.commit_index_.back().setSubBranchRoot(&diffs);
+
   return edited;
 }
 
 void FileVersionInstanceEditor::AddHunk(const FileVersionDiffHunk& hunk) {
-  // Remove lines.  N.b. Remove must be done first to get correct line
-  // locations. Yes, using |add_location_| seems odd, but the add_location
-  // tracks the new position of any adds/removed done by previous hunks in the
-  // diff.
+  // Remove lines.
+  // N.b. Remove must be done first to get correct line locations.
+  // Yes, using |add_location_| seems odd, but the add_location tracks the new
+  // position of any adds or removes done by previous hunks in the diff.
   if (hunk.remove_line_count_ > 0) {
-    // This is tricky.  The 'add_location' is where to add in the 'to'
-    // lines are found if diffs are added sequentially (which is how we use
-    // AddHunk).  However if there is no add lines to replace the removed lines,
-    // then the 'add_location' is shifted down by one because that line no
-    // longer exists in the 'to' file.
+    // This is tricky. The |add_location_| is where to add in the 'to' lines
+    // found when the diffs are added sequentially from first to last hunk
+    // (that is, subsequent hunk's |add_location_|s are offset to account for
+    // the previously added hunks). However if there are no add lines to replace
+    // the removed lines, then the 'add_location' is shifted down by one because
+    // that line no longer exists in the 'to' file.
     auto remove_location_index =
         hunk.add_line_count_ ? hunk.add_location_ - 1 : hunk.add_location_;
     assert(std::equal(
@@ -333,6 +339,7 @@ DiffTreePath FileVersionInstanceEditor::GetDiffTreePath(
                              return cmp_diff.commit_ ==
                                     parent_diffs.front().file_parent_commit_;
                            });
+          assert(child_index_it != diffs.cend());
           auto& parent_item = DiffTreePathItem()
                                   .setCurrentBranchIndex(
                                       child_index_it == diffs.cend()

@@ -103,6 +103,9 @@ class FileVersionInstance {
 
   const GitHash& GetCommit() const { return commit_; }
   int GetCommitIndex() const { return commit_index_; }
+  const std::vector<FileVersionDiff>& GetFileDiffs() const {
+    return *commit_index_.back().subBranchRoot();
+  }
 
   const std::deque<std::string>& GetLines() const { return file_lines_; }
 

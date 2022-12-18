@@ -27,7 +27,7 @@ class CSage2020Doc : public CDocument {
     return file_version_instance_->GetLines().size();
   }
 
-  const std::vector<FileVersionDiff>& GetFileDiffs() const {
+  const std::vector<FileVersionDiff>& GetRootFileDiffs() const {
     return file_diffs_;
   }
 

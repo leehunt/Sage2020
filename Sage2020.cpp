@@ -17,6 +17,9 @@
 #define new DEBUG_NEW
 #endif
 
+// Enable when working.
+//#if ALLOW_FILE_TO_NOT_EXIST
+
 // CSage2020App
 
 // clang-format off
@@ -54,6 +57,26 @@ CSage2020App::CSage2020App() noexcept {
   // N.b. add construction code here,
   // Place all significant initialization in InitInstance
 }
+
+#if ALLOW_FILE_TO_NOT_EXIST
+class CSage2020DocManager : public CDocManager {
+ public:
+  // helper for standard commdlg dialogs
+  virtual BOOL DoPromptFileName(CString& fileName,
+                                UINT nIDSTitle,
+                                DWORD lFlags,
+                                BOOL bOpenFileDialog,
+                                CDocTemplate* pTemplate) {
+    if (bOpenFileDialog)
+      lFlags &= ~OFN_FILEMUSTEXIST;  // Allow the file not to exist (since Git
+                                     // files can be in history but later
+                                     // deleted and no longer on disk).
+
+    return __super::DoPromptFileName(fileName, nIDSTitle, lFlags,
+                                     bOpenFileDialog, pTemplate);
+  }
+};
+#endif
 
 // The one and only CSage2020App object
 
@@ -115,6 +138,14 @@ BOOL CSage2020App::InitInstance() {
       RUNTIME_CLASS(CSage2020View));
   if (!pDocTemplate)
     return FALSE;
+
+
+#if ALLOW_FILE_TO_NOT_EXIST
+  // Clever hack (as documented by CodeProject). You can subclass CDocManager
+  // here by pre-assigning it to before calling AddDocTemplate().
+  m_pDocManager = new CSage2020DocManager;
+#endif
+
   AddDocTemplate(pDocTemplate);
 
   // Parse command line for standard shell commands, DDE, file open

@@ -112,10 +112,10 @@ void CSage2020Doc::Serialize(CArchive& ar) {
     FileVersionInstanceEditor editor(*file_version_instance_.get(),
                                      m_pDocListenerHead);
 
-    for (const auto& diff : file_diffs_) {
-      editor.AddDiff(diff);
-    }
+    editor.GoToIndex(file_diffs_.size() - 1, file_diffs_);
   }
+
+  __super::Serialize(ar);
 }
 
 void CSage2020Doc::AddDocListener(Sage2020ViewDocListener& listener) {
@@ -152,7 +152,7 @@ void CSage2020Doc::OnUpdatePropertiesPaneGrid(CCmdUI* pCmdUI) {
 
   auto file_version_instance = GetFileVersionInstance();
   if (file_version_instance != NULL) {
-    const auto& diffs = GetFileDiffs();
+    const auto& diffs = file_version_instance->GetFileDiffs();
     int nVerMax = static_cast<int>(diffs.size());
     if (nVerMax != 0) {
       pPropVersion->EnableSpinControl(TRUE, 0, nVerMax - 1);
@@ -216,9 +216,9 @@ void CSage2020Doc::OnUpdateHistoryTree(CCmdUI* pCmdUI) {
     return;
 
   const auto& commit = GetFileVersionInstance()->GetCommit();
-  const auto& file_diffs = GetFileDiffs();
+  const auto& root_file_diffs = GetRootFileDiffs();
   if (CChangeHistoryPane::FEnsureTreeItemsAndSelection(
-          *pTree, pTree->GetRootItem(), file_diffs, commit)) {
+          *pTree, pTree->GetRootItem(), root_file_diffs, commit)) {
     HTREEITEM htreeitemSelected = pTree->GetSelectedItem();
     if (htreeitemSelected != NULL) {
       FileVersionDiff* selected_file_diff = reinterpret_cast<FileVersionDiff*>(
@@ -230,7 +230,7 @@ void CSage2020Doc::OnUpdateHistoryTree(CCmdUI* pCmdUI) {
                                            m_pDocListenerHead);
           CWaitCursor wait;
 
-          if (editor.GoToCommit(selected_file_diff->commit_, file_diffs))
+          if (editor.GoToCommit(selected_file_diff->commit_, root_file_diffs))
             UpdateAllViews(NULL);
         }
       }

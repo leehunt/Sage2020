@@ -342,11 +342,13 @@ void CSage2020View::OnDraw(CDC* pDC) {
   const int yScrollPos = -cptViewport.y;
   const CPoint device_scroll_pos = GetDeviceScrollPosition();
   assert(yScrollPos == device_scroll_pos.y);
-  const auto& diffs = pDoc->GetFileDiffs();
+  const auto& diffs = file_version_instance != nullptr
+                          ? file_version_instance->GetFileDiffs()
+                          : pDoc->GetRootFileDiffs();
   const int cLine =
-      file_version_instance != NULL
+      file_version_instance
           ? static_cast<int>(file_version_instance->GetLines().size())
-          : 0;
+          : -1;
   const int cchFind = m_strSearchLast.GetLength();
 
   int y = yScrollPos / m_sizChar.cy * m_sizChar.cy;
@@ -575,7 +577,7 @@ void CSage2020View::OnUpdatePropertiesPaneGrid(CCmdUI* pCmdUI) {
   CPropertiesWnd::EnsureItems(*pGrid,
                               static_cast<int>(version_line_info_set.size()));
 
-  const auto& diffs = pDoc->GetFileDiffs();
+  const auto& diffs = file_version_instance->GetFileDiffs();
 
   int iVers = 0;
   for (const auto& version_line_info : version_line_info_set) {
@@ -1102,7 +1104,7 @@ BOOL CSage2020View::OnMouseWheel(UINT nFlags, short zDelta, CPoint pt) {
 
       if (file_version_instance != nullptr) {
         const size_t commit_index = file_version_instance->GetCommitIndex();
-        const auto& diffs = pDoc->GetFileDiffs();
+        const auto& diffs = file_version_instance->GetFileDiffs();
         const size_t diffs_total = diffs.size();
         FileVersionInstanceEditor editor(*file_version_instance,
                                          pDoc->GetListenerHead());

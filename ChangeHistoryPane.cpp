@@ -166,11 +166,14 @@ void CChangeHistoryPane::OnTreeNotifyExpanding(NMHDR* pNMHDR,
 
     // Find the common ancestor branch commit of this sub-branch.
     std::string common_parent_rev =
-        file_version_diff_parent.file_version_diffs_->back().commit_.sha_ +
-        std::string("^^");
+        file_version_diff_parent.file_version_diffs_->front().commit_.sha_ +
+        std::string("^");
     GitDiffReader git_diff_reader_parent{file_version_diff->path_,
                                          common_parent_rev, pwndOutput};
+    assert(!git_diff_reader_parent.GetDiffs().empty());
     if (!git_diff_reader_parent.GetDiffs().empty()) {
+      assert(!file_version_diff_parent.file_version_diffs_->front()
+                  .file_parent_commit_.IsValid());
       file_version_diff_parent.file_version_diffs_->front()
           .file_parent_commit_ =
           git_diff_reader_parent.GetDiffs().back().commit_;

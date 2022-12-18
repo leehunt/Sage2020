@@ -5,7 +5,7 @@
 #include "FileVersionDiff.h"
 
 DiffTreePathItem::DiffTreePathItem()
-    : current_branch_index_(0), parent_index_(0) {}
+    : current_branch_index_(0), parent_index_(0), sub_branch_root_(nullptr) {}
 DiffTreePathItem::DiffTreePathItem(const DiffTreePathItem& item)
     : current_branch_index_(item.current_branch_index_),
       parent_index_(item.parent_index_),
