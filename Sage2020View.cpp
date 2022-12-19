@@ -385,7 +385,7 @@ void CSage2020View::OnDraw(CDC* pDC) {
         m_sizChar.cy + y,
     };
     CString cstrTabbed(file_version_instance->GetLines()[i].c_str());
-    int iFind;
+    int iFind = -1;
     if (m_strSearchLast.IsEmpty() ||
         m_ptSearchLast.y != i && !GetHighlightAll() || iSearchOffset < 0 ||
         iSearchOffset >= cstrTabbed.GetLength() ||
@@ -402,6 +402,7 @@ void CSage2020View::OnDraw(CDC* pDC) {
     } else
     // draw any search highlight
     {
+      assert(iFind != -1);
       iFind += iSearchOffset;
       // replace tabs with 4 spaces and update iFind
       int iTab = 0;
@@ -557,22 +558,20 @@ void CSage2020View::OnUpdatePropertiesPaneGrid(CCmdUI* pCmdUI) {
 
   pCmdUI->m_bContinueRouting = TRUE;  // ensure that we route to doc
 
-  if (m_iSelStart <= -1) {
+  const auto file_version_instance = pDoc->GetFileVersionInstance();
+  if (m_iSelStart <= -1 || !file_version_instance) {
     CPropertiesWnd::EnsureItems(*pGrid, 0 /*cItem*/);
     return;
   }
 
   assert(m_iSelEnd != -1);
-  const auto file_version_instance = pDoc->GetFileVersionInstance();
 
   std::set<FileVersionLineInfo> version_line_info_set;
-  if (file_version_instance != NULL) {
-    assert(m_iSelStart <= m_iSelEnd);
-    assert(m_iSelEnd <
-           static_cast<int>(file_version_instance->GetLines().size()));
-    version_line_info_set =
-        file_version_instance->GetVersionsFromLines(m_iSelStart, m_iSelEnd + 1);
-  }
+  assert(m_iSelStart <= m_iSelEnd);
+  assert(m_iSelEnd <
+         static_cast<int>(file_version_instance->GetLines().size()));
+  version_line_info_set =
+      file_version_instance->GetVersionsFromLines(m_iSelStart, m_iSelEnd + 1);
 
   CPropertiesWnd::EnsureItems(*pGrid,
                               static_cast<int>(version_line_info_set.size()));

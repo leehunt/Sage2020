@@ -4,13 +4,13 @@
 
 #include "FileVersionDiff.h"
 
-DiffTreePathItem::DiffTreePathItem()
+DiffTreePathItem::DiffTreePathItem() noexcept
     : current_branch_index_(0), parent_index_(0), sub_branch_root_(nullptr) {}
-DiffTreePathItem::DiffTreePathItem(const DiffTreePathItem& item)
+DiffTreePathItem::DiffTreePathItem(const DiffTreePathItem& item) noexcept
     : current_branch_index_(item.current_branch_index_),
       parent_index_(item.parent_index_),
       sub_branch_root_(item.sub_branch_root_) {}
-DiffTreePathItem::DiffTreePathItem(DiffTreePathItem&& item)
+DiffTreePathItem::DiffTreePathItem(DiffTreePathItem&& item) noexcept
     : current_branch_index_(item.current_branch_index_),
       parent_index_(item.parent_index_),
       sub_branch_root_(item.sub_branch_root_) {

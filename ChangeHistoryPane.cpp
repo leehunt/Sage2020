@@ -159,7 +159,8 @@ void CChangeHistoryPane::OnTreeNotifyExpanding(NMHDR* pNMHDR,
       file_version_diff_parent.commit_.sha_;
   GitDiffReader git_diff_reader{file_version_diff->path_,
                                 secondary_parent_revision_range, pwndOutput};
-  if (git_diff_reader.GetDiffs().size() > 0) {
+  assert(!git_diff_reader.GetDiffs().empty());
+  if (!git_diff_reader.GetDiffs().empty()) {
     file_version_diff_parent.file_version_diffs_ =
         std::make_unique<std::vector<FileVersionDiff>>(
             git_diff_reader.MoveDiffs());

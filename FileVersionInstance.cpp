@@ -12,9 +12,7 @@ FileVersionInstance::FileVersionInstance(std::deque<std::string>& lines,
     LineToFileVersionLineInfo infos;
     infos.emplace_back(FileVersionLineInfo(commit_.sha_));
     AddLineInfo(1, static_cast<int>(lines.size()), infos);
-    for (auto& line : lines) {
-      file_lines_.push_back(std::move(line));
-    }
+    file_lines_ = std::move(lines);
   } else {
     assert(lines.empty());
   }
@@ -26,7 +24,7 @@ void FileVersionInstance::AddLineInfo(
     const LineToFileVersionLineInfo& line_infos) {
   assert(line_num > 0);
   assert(line_count >= 0);  // N.b. When adding a null parent commit, the number
-                            // of lines can be zero.
+  // of lines can be zero.
   if (line_count == 0)
     return;
 
@@ -212,8 +210,8 @@ void SparseIndexArray::Remove(size_t line_index, size_t line_count) {
         if (itPrev->second == it->second) {
           itLim = std::next(it);
           assert(itLim != end());  // There should always be at least a
-                                   // terminator at the end, or terminators
-                                   // will never merge.
+          // terminator at the end, or terminators
+          // will never merge.
           it = erase(it, itLim);
         }
       }

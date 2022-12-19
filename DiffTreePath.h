@@ -5,9 +5,9 @@ struct FileVersionDiff;
 // {Index of current item, parent index}.
 class DiffTreePathItem {
  public:
-  DiffTreePathItem();
-  DiffTreePathItem(const DiffTreePathItem& item);
-  DiffTreePathItem(DiffTreePathItem&& item);
+  DiffTreePathItem() noexcept;
+  DiffTreePathItem(const DiffTreePathItem& item) noexcept;
+  DiffTreePathItem(DiffTreePathItem&& item) noexcept;
 
   DiffTreePathItem& setCurrentBranchIndex(size_t current_branch_index);
   DiffTreePathItem& setParentIndex(size_t parent_index);
