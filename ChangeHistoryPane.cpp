@@ -1,11 +1,14 @@
 #include "pch.h"
 
+#include "ChangeHistoryPane.h"
+
 #include <cassert>
 #include <iomanip>
 #include <sstream>
 #include <vector>
-#include "ChangeHistoryPane.h"
+
 #include "FileVersionDiff.h"
+#include "FileVersionInstance.h"
 #include "GitDiffReader.h"
 #include "MainFrm.h"
 #include "Sage2020.h"
@@ -164,21 +167,35 @@ void CChangeHistoryPane::OnTreeNotifyExpanding(NMHDR* pNMHDR,
         std::make_unique<std::vector<FileVersionDiff>>(
             git_diff_reader.MoveDiffs());
 
-    // Find the common ancestor branch commit of this sub-branch.
-    std::string common_parent_rev =
-        file_version_diff_parent.file_version_diffs_->front().commit_.sha_ +
-        std::string("^");
-    GitDiffReader git_diff_reader_parent{file_version_diff->path_,
-                                         common_parent_rev, pwndOutput};
-    assert(!git_diff_reader_parent.GetDiffs().empty());
-    if (!git_diff_reader_parent.GetDiffs().empty()) {
-      assert(!file_version_diff_parent.file_version_diffs_->front()
-                  .file_parent_commit_.IsValid());
-      file_version_diff_parent.file_version_diffs_->front()
-          .file_parent_commit_ =
-          git_diff_reader_parent.GetDiffs().back().commit_;
-      assert(file_version_diff_parent.file_version_diffs_->front()
-                 .file_parent_commit_.IsValid());
+    // Get *all* diffs for this branch such that then we add "^" in the next
+    // command, something will be found.
+    GitDiffReader git_diff_reader_all_commits{
+        file_version_diff->path_, secondary_parent_revision_range + "^",
+        pwndOutput, GitDiffReader::Opt::NO_FILTER_TO_FILE};
+
+    if (!git_diff_reader_all_commits.GetDiffs().empty()) {
+      // Find the common ancestor branch commit of this sub-branch.
+      std::string common_parent_rev =
+          git_diff_reader_all_commits.GetDiffs().front().commit_.sha_ +
+          std::string("^");
+      // N.b. The file might be renamed, so we need to re-get path_ here.
+      GitDiffReader git_diff_reader_parent{
+          git_diff_reader_all_commits.GetDiffs().front().path_,
+          common_parent_rev, pwndOutput};
+      if (!git_diff_reader_parent.GetDiffs().empty()) {
+        assert(!file_version_diff_parent.file_version_diffs_->front()
+                    .file_parent_commit_.IsValid());
+        file_version_diff_parent.file_version_diffs_->front()
+            .file_parent_commit_ =
+            git_diff_reader_parent.GetDiffs().back().commit_;
+        assert(file_version_diff_parent.file_version_diffs_->front()
+                   .file_parent_commit_.IsValid());
+      } else {
+        // Branch has no upsteam commit (e.g. its creation has been merged
+        // through from another branch). Do nothing, leaving
+        // |file_parent_commit_| empty.
+        assert(false);
+      }
     }
   }
 }
@@ -266,7 +283,7 @@ static void SetTreeItemData(CTreeCtrl& tree,
   VERIFY(tree.SetItemData(htreeitem,
                           reinterpret_cast<DWORD_PTR>(&file_version_diff)));
 
-  switch (file_version_diff.diff_tree_.action) {
+  switch (file_version_diff.diff_tree_.action[0]) {
     case 'A':  // add
     {
       VERIFY(tree.SetItemImage(htreeitem, VERSION_IMAGELIST_ADD,
@@ -275,12 +292,11 @@ static void SetTreeItemData(CTreeCtrl& tree,
       HTREEITEM htreeitemChild = NULL;
       while ((htreeitemChild = tree.GetChildItem(htreeitem)) != NULL)
         tree.DeleteItem(htreeitemChild);
-#if 0
-		if (file_version_diff.parents_.size() > 1) {
-			if (!tree.ItemHasChildren(htreeitem))
-				tree.InsertItem(_T("Dummy"), htreeitem);
-		}
-#endif  // 1
+
+      if (file_version_diff.parents_.size() > 1) {
+        if (!tree.ItemHasChildren(htreeitem))
+          tree.InsertItem(_T("Dummy"), htreeitem);
+      }
       break;
     }
 #if 0
@@ -340,6 +356,11 @@ static void SetTreeItemData(CTreeCtrl& tree,
 			VERSION_IMAGELIST_INTEGRATE));
 		break;
 #endif
+    case 'R':  // Rename.
+      VERIFY(tree.SetItemImage(
+          htreeitem, VERSION_IMAGELIST_INTEGRATE,  // REVIEW: Better image?
+          VERSION_IMAGELIST_INTEGRATE));
+      break;
 
     default: {
       assert(false);

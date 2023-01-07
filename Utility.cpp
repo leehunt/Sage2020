@@ -4,6 +4,7 @@
 #include <io.h>     // pipe(), _close()
 #include <algorithm>
 #include <cassert>
+#include <map>
 #include "Utility.h"
 
 constexpr char kGitGetRootCommand[] = "git rev-parse --show-toplevel";
@@ -48,6 +49,7 @@ ProcessPipe::ProcessPipe(const TCHAR command_line[],
   // reinterpret_cast<HANDLE>(_get_osfhandle(my_pipes[PIPE_READ]));
   si.hStdOutput =
       reinterpret_cast<HANDLE>(_get_osfhandle(my_pipes[PIPE_WRITE]));
+  // ::SetHandleInformation(si.hStdOutput, HANDLE_FLAG_INHERIT, 0);
   // si.hStdError =
   // reinterpret_cast<HANDLE>(_get_osfhandle(my_pipes[PIPE_WRITE]));
 
@@ -73,8 +75,9 @@ ProcessPipe::ProcessPipe(const TCHAR command_line[],
     _close(my_pipes[PIPE_WRITE]);
     return;
   }
-  _close(
-      my_pipes[PIPE_WRITE]);  // This has been inherited by the child process.
+  _close(my_pipes[PIPE_WRITE]);  // This has been inherited by the child process
+                                 // but is still shared with our process; close
+                                 // it here to remove a deadlock.
 
   file_ = _fdopen(my_pipes[PIPE_READ], "r");
   if (!file_)
@@ -88,6 +91,9 @@ ProcessPipe::~ProcessPipe() {
     fclose(file_);
     file_ = NULL;
   }
+
+  Join();
+
   if (pi_.hThread) {
     VERIFY(::CloseHandle(pi_.hThread));
     pi_.hThread = NULL;
@@ -98,12 +104,16 @@ ProcessPipe::~ProcessPipe() {
   }
 }
 
-void ProcessPipe::Join() {
+void ProcessPipe::Join(DWORD msWait) {
   if (pi_.hProcess)
-    ::WaitForSingleObject(pi_.hProcess, 120 * 1000 /*ms*/);
+    ::WaitForSingleObject(pi_.hProcess, msWait);
 }
 
 std::filesystem::path GetGitRoot(const std::filesystem::path& file_path) {
+  static std::map< std::filesystem::path, std::filesystem::path> root_map_;
+  const auto it = root_map_.find(file_path);
+  if (it != root_map_.cend())
+    return it->second;
   ProcessPipe process_pipe(to_wstring(kGitGetRootCommand).c_str(),
                            file_path.parent_path().c_str());
 
@@ -115,5 +125,6 @@ std::filesystem::path GetGitRoot(const std::filesystem::path& file_path) {
   auto len = strlen(stream_line);
   if (len > 0 && stream_line[len - 1] == '\n')
     stream_line[len - 1] = '\0';
-  return std::filesystem::path(stream_line);
+  root_map_[file_path] = std::filesystem::path(stream_line);
+  return root_map_[file_path];
 }

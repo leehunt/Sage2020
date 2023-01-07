@@ -81,7 +81,7 @@ void CSage2020Doc::Serialize(CArchive& ar) {
     std::filesystem::path file_path = (PCWSTR)native_path;
 
     GitDiffReader git_diff_reader{file_path, std::string(), pwndOutput};
-    if (git_diff_reader.GetDiffs().size() == 0) {
+    if (git_diff_reader.GetDiffs().empty()) {
       if (pwndStatus != nullptr) {
         CString strStatus;
         if (strStatus.LoadString(IDS_ERROR_LOADING_FILE)) {
@@ -95,7 +95,9 @@ void CSage2020Doc::Serialize(CArchive& ar) {
     // (the last recorded in the git log) forward.
     file_diffs_ = git_diff_reader.MoveDiffs();
 
-    if (file_diffs_.front().diff_tree_.action != 'A') {
+    // REVIEW: Is this now necessary since adds will sometimes come from
+    // the branch diff?
+    if (file_diffs_.front().diff_tree_.action[0] != 'A') {
       // if the first commit is not an add, then get the file at that point.
       std::filesystem::path parent_path = file_path;
 
@@ -109,10 +111,10 @@ void CSage2020Doc::Serialize(CArchive& ar) {
       file_version_instance_ = std::make_unique<FileVersionInstance>();
     }
 
-    FileVersionInstanceEditor editor(*file_version_instance_.get(),
+    FileVersionInstanceEditor editor(file_diffs_, *file_version_instance_.get(),
                                      m_pDocListenerHead);
 
-    editor.GoToIndex(file_diffs_.size() - 1, file_diffs_);
+    editor.GoToIndex(static_cast<int>(file_diffs_.size() - 1));
   }
 
   __super::Serialize(ar);
@@ -137,23 +139,24 @@ void CSage2020Doc::OnUpdatePropertiesPaneGrid(CCmdUI* pCmdUI) {
 
   CMFCPropertyGridCtrl* pGrid = static_cast<CMFCPropertyGridCtrl*>(pWndT);
   ASSERT_VALID(pGrid);
-  if (pGrid == NULL)
+  if (pGrid == nullptr)
     return;
 
   CMFCPropertyGridProperty* pPropVersionHeader = pGrid->GetProperty(0);
   ASSERT_VALID(pPropVersionHeader);
-  if (pPropVersionHeader == NULL)
+  if (pPropVersionHeader == nullptr)
     return;
 
   CMFCPropertyGridProperty* pPropVersion = pPropVersionHeader->GetSubItem(0);
   ASSERT_VALID(pPropVersion);
-  if (pPropVersion == NULL)
+  if (pPropVersion == nullptr)
     return;
 
   auto file_version_instance = GetFileVersionInstance();
-  if (file_version_instance != NULL) {
-    const auto& diffs = file_version_instance->GetFileDiffs();
-    int nVerMax = static_cast<int>(diffs.size());
+  if (file_version_instance != nullptr &&
+      file_version_instance->GetBranchDiffs() != nullptr) {
+    const auto diffs = file_version_instance->GetBranchDiffs();
+    int nVerMax = static_cast<int>(diffs->size());
     if (nVerMax != 0) {
       pPropVersion->EnableSpinControl(TRUE, 0, nVerMax - 1);
       pPropVersion->Enable(TRUE);
@@ -166,9 +169,9 @@ void CSage2020Doc::OnUpdatePropertiesPaneGrid(CCmdUI* pCmdUI) {
         file_version_instance->GetCommitIndex()) {
       if (pPropVersion->IsModified()) {
         CWaitCursor wait;
-        FileVersionInstanceEditor editor(*file_version_instance,
-                                         m_pDocListenerHead);
-        if (editor.GoToIndex(pPropVersion->GetValue().iVal, diffs)) {
+        FileVersionInstanceEditor editor(
+            GetRootFileDiffs(), *file_version_instance, m_pDocListenerHead);
+        if (editor.GoToIndex(pPropVersion->GetValue().iVal)) {
           pPropVersion->SetOriginalValue(COleVariant(
               (long)file_version_instance->GetCommitIndex(), VT_I4));
           pPropVersion->ResetOriginalValue();  // clears modified flag
@@ -185,7 +188,7 @@ void CSage2020Doc::OnUpdatePropertiesPaneGrid(CCmdUI* pCmdUI) {
       CPropertiesWnd::UpdateGridBlock(
           file_version_instance->GetCommitIndex(),
           file_version_instance->GetCommitIndex() != -1
-              ? &diffs[file_version_instance->GetCommitIndex()]
+              ? &(*diffs)[file_version_instance->GetCommitIndex()]
               : nullptr,
           pPropVersionHeader, nVerMax, false /*fUpdateVersionConttrol*/);
     }
@@ -226,11 +229,12 @@ void CSage2020Doc::OnUpdateHistoryTree(CCmdUI* pCmdUI) {
       assert(selected_file_diff != NULL);
       if (selected_file_diff) {
         if (commit != selected_file_diff->commit_) {
-          FileVersionInstanceEditor editor(*file_version_instance_.get(),
+          FileVersionInstanceEditor editor(GetRootFileDiffs(),
+                                           *file_version_instance_.get(),
                                            m_pDocListenerHead);
           CWaitCursor wait;
 
-          if (editor.GoToCommit(selected_file_diff->commit_, root_file_diffs))
+          if (editor.GoToCommit(selected_file_diff->commit_))
             UpdateAllViews(NULL);
         }
       }

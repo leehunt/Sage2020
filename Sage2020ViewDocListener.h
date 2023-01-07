@@ -1,6 +1,8 @@
 #pragma once
 #include <cassert>
 
+#include "FileVersionDiff.h"
+
 // A lightweight mix-in listener interface.
 class DiffTreePath;
 class Sage2020ViewDocListener {
@@ -14,6 +16,9 @@ class Sage2020ViewDocListener {
 
   virtual void DocEditNotification(int iLine, int cLine) = 0;
   virtual void DocVersionChangedNotification(const DiffTreePath& tree_path) = 0;
+  virtual void DocBranchChangedNotification(
+      const std::vector<FileVersionDiff>& old_branch,
+      const std::vector<FileVersionDiff>& new_branch) = 0;
 
   Sage2020ViewDocListener* LinkListener(Sage2020ViewDocListener* listener_head);
   Sage2020ViewDocListener* UnlinkListener(
@@ -21,6 +26,9 @@ class Sage2020ViewDocListener {
 
   void NotifyAllListenersOfEdit(int iLine, int cLine);
   void NotifyAllListenersOfVersionChange(const DiffTreePath& tree_path);
+  void NotifyAllListenersOfBranchChange(
+      const std::vector<FileVersionDiff>& old_branch,
+      const std::vector<FileVersionDiff>& new_branch);
 
  protected:
   Sage2020ViewDocListener* next_listener_;

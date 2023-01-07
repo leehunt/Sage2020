@@ -342,8 +342,9 @@ void CSage2020View::OnDraw(CDC* pDC) {
   const int yScrollPos = -cptViewport.y;
   const CPoint device_scroll_pos = GetDeviceScrollPosition();
   assert(yScrollPos == device_scroll_pos.y);
-  const auto& diffs = file_version_instance != nullptr
-                          ? file_version_instance->GetFileDiffs()
+  const auto& diffs = file_version_instance != nullptr &&
+                              file_version_instance->GetBranchDiffs() != nullptr
+                          ? *file_version_instance->GetBranchDiffs()
                           : pDoc->GetRootFileDiffs();
   const int cLine =
       file_version_instance
@@ -577,7 +578,9 @@ void CSage2020View::OnUpdatePropertiesPaneGrid(CCmdUI* pCmdUI) {
   CPropertiesWnd::EnsureItems(*pGrid,
                               static_cast<int>(version_line_info_set.size()));
 
-  const auto& diffs = file_version_instance->GetFileDiffs();
+  const auto& diffs = file_version_instance->GetBranchDiffs()
+                          ? *file_version_instance->GetBranchDiffs()
+                          : pDoc->GetRootFileDiffs();
 
   int iVers = 0;
   for (const auto& version_line_info : version_line_info_set) {
@@ -707,6 +710,10 @@ void CSage2020View::DocVersionChangedNotification(
   GetClientRect(&rcClient);
   UpdateScrollSizes(rcClient.bottom);
 }
+
+void CSage2020View::DocBranchChangedNotification(
+    const std::vector<FileVersionDiff>& old_branch,
+    const std::vector<FileVersionDiff>& new_branch) {}
 
 // CSimpleAgeViewerView message handlers
 
@@ -1104,9 +1111,12 @@ BOOL CSage2020View::OnMouseWheel(UINT nFlags, short zDelta, CPoint pt) {
 
       if (file_version_instance != nullptr) {
         const size_t commit_index = file_version_instance->GetCommitIndex();
-        const auto& diffs = file_version_instance->GetFileDiffs();
+        const auto& diffs = file_version_instance->GetBranchDiffs()
+                                ? *file_version_instance->GetBranchDiffs()
+                                : pDoc->GetRootFileDiffs();
         const size_t diffs_total = diffs.size();
-        FileVersionInstanceEditor editor(*file_version_instance,
+        FileVersionInstanceEditor editor(pDoc->GetRootFileDiffs(),
+                                         *file_version_instance,
                                          pDoc->GetListenerHead());
         if (zDelta > 0) {
           // Add Diff

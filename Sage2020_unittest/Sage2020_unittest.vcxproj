@@ -45,6 +45,7 @@
     <ClInclude Include="pch.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="DiffTreePath_unittest.cpp" />
     <ClCompile Include="FileVersionInstance_unittest.cpp" />
     <ClCompile Include="GitDiffReader_unittest.cpp" />
     <ClCompile Include="Mocks.cpp" />

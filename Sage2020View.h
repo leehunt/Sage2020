@@ -7,6 +7,7 @@
 #include "Utility.h"
 
 class CSage2020Doc;
+class FileVersionInstance;
 class CSage2020View : public CScrollView, public Sage2020ViewDocListener {
  protected:  // create from serialization only
   CSage2020View() noexcept;
@@ -53,6 +54,9 @@ class CSage2020View : public CScrollView, public Sage2020ViewDocListener {
   virtual void DocEditNotification(int iLine, int cLine);   // REVIEW: virtual?
   virtual void DocVersionChangedNotification(
       const DiffTreePath& commit_path);  // REVIEW: virtual?
+  virtual void DocBranchChangedNotification(
+      const std::vector<FileVersionDiff>& old_branch,
+      const std::vector<FileVersionDiff>& new_branch);  // REVIEW: virtual?
 
   virtual BOOL OnPreparePrinting(CPrintInfo* pInfo);
   virtual void OnBeginPrinting(CDC* pDC, CPrintInfo* pInfo);

@@ -1,5 +1,4 @@
 #pragma once
-
 #include <windows.h>
 #include <filesystem>
 #include <memory>
@@ -19,7 +18,7 @@ class ProcessPipe {
   FILE* GetStandardOutput() const { return file_; }
 
   // Waits until the spawned process finishes.
-  void Join();
+  void Join(DWORD msWait = INFINITE);
 
  private:
   PROCESS_INFORMATION pi_;

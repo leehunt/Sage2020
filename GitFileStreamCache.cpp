@@ -9,10 +9,12 @@
 
 extern CSage2020App theApp;
 
-constexpr char kFileCacheVersionLine[] = "Cache file version: 7\n";
+constexpr char kFileCacheVersionLine[] = "Cache file version: 8\n";
 
+// TODO!: Add in current opts line to the branch cache dir entries.
 GitFileStreamCache::GitFileStreamCache(const std::filesystem::path& file_path)
-    : file_path_(std::filesystem::canonical(file_path)) {}
+//    : file_path_(std::filesystem::canonical(file_path)){}
+    : file_path_(file_path) {}
 
 AUTO_CLOSE_FILE_POINTER GitFileStreamCache::GetStream(const std::string& hash) {
   const auto cache_file_path = GetItemCachePath(hash);

@@ -20,6 +20,54 @@ FileVersionInstance::FileVersionInstance(std::deque<std::string>& lines,
   }
 }
 
+const GitHash& FileVersionInstance::GetCommit() const {
+#if _DEBUG
+  // Special case: a completely empty path can still have a valid commit_.
+  if (!commit_path_.empty()) {
+    auto path_copy = commit_path_;
+    do {
+      const auto& current_item = path_copy.back();
+      assert(current_item.branch());
+      if (current_item.currentBranchIndex() != -1)
+        break;
+      path_copy.pop_back();
+    } while (!path_copy.empty());
+    if (!path_copy.empty()) {
+      const auto& current_item = path_copy.back();
+      const auto& diffs = *current_item.branch();
+      const auto& index_diff = diffs[current_item.currentBranchIndex()];
+      assert(commit_ == index_diff.commit_);
+    } else {
+      assert(!commit_.IsValid());
+    }
+  }
+#endif  // _DEBUG
+  return commit_;
+}
+
+int FileVersionInstance::GetCommitIndex() const {
+  return commit_path_;
+}
+const std::vector<FileVersionDiff>* FileVersionInstance::GetBranchDiffs()
+    const {
+  if (commit_path_.empty())
+    return nullptr;
+  return commit_path_.DiffsSubbranch();
+}
+
+const std::deque<std::string>& FileVersionInstance::GetLines() const {
+  return file_lines_;
+}
+
+const FileVersionLineInfo& FileVersionInstance::GetLineInfo(
+    int line_index) const {
+#if USE_SPARSE_INDEX_ARRAY
+  return file_lines_info_.Get(line_index);
+#else
+  return file_lines_info_[line_index];
+#endif
+}
+
 void FileVersionInstance::AddLineInfo(
     int line_num,
     int line_count,
@@ -59,6 +107,32 @@ void FileVersionInstance::RemoveLineInfo(int line_num, int line_count) {
   auto itBegin = file_lines_info_.begin() + (line_num - 1);
   file_lines_info_.erase(itBegin, itBegin + line_count);
 #endif
+}
+
+const LineToFileVersionLineInfo& FileVersionInstance::GetLinesInfo() const {
+  return file_lines_info_;
+}
+
+// Note: can be expensive; use only for testing.
+FileVersionInstance& FileVersionInstance::operator=(
+    const FileVersionInstance& source) {
+  file_lines_ = source.file_lines_;
+  file_lines_info_ = source.file_lines_info_;
+  commit_ = source.commit_;
+
+  return *this;
+}
+
+// Note: can be expensive; use only for testing.
+bool FileVersionInstance::operator==(const FileVersionInstance& source) const {
+  if (commit_ != source.commit_)
+    return false;
+  if (file_lines_info_ != source.file_lines_info_)
+    return false;
+  if (file_lines_ != source.file_lines_)
+    return false;
+
+  return true;
 }
 
 std::set<FileVersionLineInfo> FileVersionInstance::GetVersionsFromLines(

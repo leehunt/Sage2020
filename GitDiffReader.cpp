@@ -15,12 +15,12 @@
 constexpr TCHAR kGitMostRecentCommitForFileCommand[] =
     _T("git --no-pager log %S -n 1 -- %s");
 constexpr TCHAR kGitDiffCommand[] =
-    _T("git --no-pager log %S -p -U0 --raw --no-color --first-parent ")
-    _T("--pretty=raw -- %s");  // FUTURE: Consider adding '--reverse' instead of
-                               // calling 'std::reverse()' after processing the
-                               // diffs (not currently doing so since
-                               // std::reverse() is fast and it may take longer
-                               // for git to reverse the diffs).
+    _T("git --no-pager log %S -p -U0 --raw --no-color --children ")
+    _T("--pretty=raw %s");  // FUTURE: Consider adding '--reverse' instead of
+                            // calling 'std::reverse()' after processing the
+                            // diffs (not currently doing so since
+                            // std::reverse() is fast and it may take longer
+                            // for git to reverse the diffs).
 constexpr TCHAR kGitLogNameTagCommandFromStdIn[] =
     _T("git --no-pager name-rev --annotate-stdin");
 
@@ -72,17 +72,21 @@ static std::string GetTextToEndOfLine(TOK* ptok) {
 bool GitDiffReader::FReadGitHash(TOK* ptok, GitHash& hash) {
   if (!FGetTok(ptok))
     return false;
+  if (ptok->tk == TK::tkNil)
+    return false;
   strcpy_s(hash.sha_, GetTextToWhitespace(ptok).c_str());
 
-  if (!FGetTok(ptok))
-    return false;
-  hash.tag_ = GetTextToWhitespace(ptok);
+  // Read optional tag.
+  // REVIEW: Consider doing this more cleanly, looking
+  // for a tag with balenced parentheses, i.e. "(<tag>)".
+  if (FGetTok(ptok) && ptok->tk == TK::tkLPAREN) {
+    hash.tag_ = GetTextToWhitespace(ptok);
+  }
 
   return true;
 }
 
 bool GitDiffReader::FReadCommit(TOK* ptok) {
-  // Format: "commit <sha1> (<tag>)".
   if (ptok->tk != TK::tkWORD)
     return false;
   assert(!strcmp(ptok->szVal, "commit"));
@@ -93,7 +97,19 @@ bool GitDiffReader::FReadCommit(TOK* ptok) {
 
   current_diff_->path_ = path_;
 
-  return FReadGitHash(ptok, current_diff_->commit_);
+  // Format: "commit <sha1> (<tag>)".
+  if (!FReadGitHash(ptok, current_diff_->commit_))
+    return false;
+
+  // Read any children.
+  // Format: "[commit <sha1> (<tag>)]*".
+  GitHash child_hash;
+  while (FReadGitHash(ptok, child_hash)) {
+    FileVersionDiffChild child = {child_hash};
+    current_diff_->children_.push_back(child);
+  }
+
+  return true;
 }
 
 bool GitDiffReader::FReadTree(TOK* ptok) {
@@ -113,6 +129,8 @@ bool GitDiffReader::FReadParent(TOK* ptok) {
     return false;
   assert(!strcmp(ptok->szVal, "parent"));
 
+  // REVIEW: If there are no parents, should |parents_| just stay as an empty
+  // vector?
   current_diff_->parents_.push_back({});
   return FReadGitHash(ptok, current_diff_->parents_.back().commit_);
 }
@@ -244,22 +262,45 @@ bool GitDiffReader::FReadGitDiffTreeColon(TOK* ptok) {
     return false;
 
   // e.g. "100644 100644 285ecec5de92e c90011667b640 M chrome/app/chrome_exe.rc"
+  // N.n. For rename, we just pick up the new file name.
+  //      :100644 100644 22e7ba82b 5660a1dc4 R072	src/branch.c
+  //      src/libgit2/branch.c
   auto diff_tree_line = GetTextToEndOfLine(ptok);
+  char old_path[FILENAME_MAX];
   int num_args = sscanf_s(
-      diff_tree_line.c_str(), "%o %o %s %s %c %s",
+      diff_tree_line.c_str(), "%o %o %s %s %s %s %s",
       &current_diff_->diff_tree_.old_mode,                             // %o
       &current_diff_->diff_tree_.new_mode,                             // %o
       current_diff_->diff_tree_.old_hash_string,                       // %s
       (unsigned)std::size(current_diff_->diff_tree_.old_hash_string),  // %s len
       current_diff_->diff_tree_.new_hash_string,                       // %s
       (unsigned)std::size(current_diff_->diff_tree_.new_hash_string),  // %s len
-      &current_diff_->diff_tree_.action,                               // %c
-      (unsigned)sizeof(current_diff_->diff_tree_.action),              // %c len
+      current_diff_->diff_tree_.action,                                // %s
+      (unsigned)sizeof(current_diff_->diff_tree_.action),              // %s len
       current_diff_->diff_tree_.file_path,                             // %s
-      (unsigned)std::size(current_diff_->diff_tree_.file_path)         // %s len
+      (unsigned)std::size(current_diff_->diff_tree_.file_path),        // %s len
+      old_path,                                                        // %s
+      (unsigned)std::size(old_path)                                    // %s len
   );
-  if (num_args != 6)
+  if (num_args < 6)
     return false;
+
+  // Handle rename.
+  if (current_diff_->diff_tree_.action[0] == 'R') {
+    assert(num_args == 7);
+    if (num_args == 7) {
+      std::string new_path_string = path_.generic_string();
+      auto path_base_pos = new_path_string.rfind(old_path);
+      // This can not match if we're reading unfiltered (i.e. not per-file) diff
+      // entires.
+      if (path_base_pos != new_path_string.npos) {
+        new_path_string.resize(path_base_pos);
+        new_path_string.append(current_diff_->diff_tree_.file_path);
+        path_ = new_path_string;
+        current_diff_->path_ = new_path_string;
+      }
+    }
+  }
 
   return true;
 }
@@ -491,7 +532,8 @@ LDone:
 
 GitDiffReader::GitDiffReader(const std::filesystem::path& file_path,
                              const std::string& tag,
-                             COutputWnd* pwndOutput)
+                             COutputWnd* pwndOutput,
+                             const Opts& opts)
     : current_diff_(nullptr), path_(file_path) {
   TCHAR command[1024];
 
@@ -572,18 +614,28 @@ GitDiffReader::GitDiffReader(const std::filesystem::path& file_path,
           _T("   Cache hit for revision '%1!S!', reading diff history from: ")
           _T("'%2!s!'"),
           file_cache_revision.c_str(),
-          file_stream_cache_->GetItemCachePath(file_cache_revision)
-              .c_str());
+          file_stream_cache_->GetItemCachePath(file_cache_revision).c_str());
       pwndOutput->AppendDebugTabMessage(message);
     }
     ProcessDiffLines(cache_stream.get());
   } else {
+    std::wstring opt_str;
+
+    if (!opts.HasOpts(Opt::NO_FIRST_PARENT))
+      opt_str += L"--first-parent ";
+    // This must go last.
+    if (!opts.HasOpts(Opt::NO_FILTER_TO_FILE)) {
+      if (!opts.HasOpts(Opt::NO_FOLLOW))
+        opt_str += L"--follow ";
+      opt_str += std::wstring(L"-- ") + file_path.filename().wstring().c_str();
+    }
     wsprintf(command, kGitDiffCommand, tag_no_parentheses.c_str(),
-             file_path.filename().c_str());
+             opt_str.c_str());
     if (pwndOutput != nullptr) {
       CString message;
       message.FormatMessage(
-          _T("   Cache miss for revision '%1!S!', reading full diff history: ")
+          _T("   Cache miss for revision '%1!S!', reading full diff ")
+          _T("history: ")
           _T("'%2!s!'"),
           file_cache_revision.c_str(), command);
       pwndOutput->AppendDebugTabMessage(message);
@@ -596,12 +648,17 @@ GitDiffReader::GitDiffReader(const std::filesystem::path& file_path,
                             kGitLogNameTagCommandFromStdIn);
       pwndOutput->AppendDebugTabMessage(message);
     }
+#if 1
     ProcessPipe process_pipe_git_tag(kGitLogNameTagCommandFromStdIn,
                                      file_path.parent_path().c_str(),
                                      process_pipe_git_log.GetStandardOutput());
 
     auto file_stream = file_stream_cache_->SaveStream(
         process_pipe_git_tag.GetStandardOutput(), file_cache_revision);
+#else
+    auto file_stream = file_stream_cache_->SaveStream(
+        process_pipe_git_log.GetStandardOutput(), file_cache_revision);
+#endif
     if (file_stream) {
       ProcessDiffLines(file_stream.get());
     }
@@ -633,9 +690,11 @@ void GitDiffReader::ProcessDiffLines(FILE* stream) {
   current_diff_ = nullptr;
 
   char stream_line[1024];
+  int i = 0;
   while (fgets(stream_line, (int)std::size(stream_line), stream)) {
     if (!ProcessLogLine(stream_line))
       break;
+    i++;
   }
 }
 
