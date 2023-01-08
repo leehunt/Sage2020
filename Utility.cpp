@@ -69,8 +69,10 @@ ProcessPipe::ProcessPipe(const TCHAR command_line[],
           &si,               // Pointer to STARTUPINFO structure
           &pi_)              // Pointer to PROCESS_INFORMATION structure
   ) {
+#if _DEBUG
     DWORD err = ::GetLastError();
-    assert(false);
+    assert(err == 0);
+#endif
     _close(my_pipes[PIPE_READ]);
     _close(my_pipes[PIPE_WRITE]);
     return;

@@ -20,7 +20,7 @@ struct FileVersionDiff;
 class FileVersionInstance {
  public:
   FileVersionInstance();
-  FileVersionInstance(std::deque<std::string>& lines,  // N.b. *Moves* |lines|.
+  FileVersionInstance(std::deque<std::string>&& lines,  // N.b. *Moves* |lines|.
                       const GitHash& commit);
   virtual ~FileVersionInstance() {}
 

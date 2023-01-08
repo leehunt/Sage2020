@@ -13,7 +13,7 @@
 #include "MainFrm.h"
 #include "Sage2020.h"
 #include "Utility.h"
-#include "resource.h"
+#include "Resource.h"
 
 // clang-format off
 BEGIN_MESSAGE_MAP(CChangeHistoryPane, CDockablePane)
@@ -21,7 +21,7 @@ BEGIN_MESSAGE_MAP(CChangeHistoryPane, CDockablePane)
 	ON_WM_CREATE()
 	ON_WM_SIZE()
 	ON_WM_SETFOCUS()
-	ON_NOTIFY(TVN_ITEMEXPANDING, IDR_HISTORY_TREE, OnTreeNotifyExpanding)
+	ON_NOTIFY(TVN_ITEMEXPANDING, IDR_HISTORY_TREE, &CChangeHistoryPane::OnTreeNotifyExpanding)
 	// ON_NOTIFY(TVN_DELETEITEM, IDR_HISTORY_TREE, OnTreeDeleteItem)
 END_MESSAGE_MAP()
 // clang-format on
@@ -143,25 +143,23 @@ void CChangeHistoryPane::OnTreeNotifyExpanding(NMHDR* pNMHDR,
     assert(false);
     return;
   }
-  CWnd* pwndStatus = NULL;
   COutputWnd* pwndOutput = NULL;
   CFrameWnd* pParentFrame = GetParentFrame();
   assert(pParentFrame != NULL);
   if (pParentFrame != NULL &&
       pParentFrame->IsKindOf(RUNTIME_CLASS(CMainFrame))) {
     CMainFrame* pMainFrame = static_cast<CMainFrame*>(pParentFrame);
-    pwndStatus = pMainFrame != NULL ? &pMainFrame->GetStatusWnd() : NULL;
     pwndOutput = pMainFrame != NULL ? &pMainFrame->GetOutputWnd() : NULL;
   }
 
   // TODO: This needs to be upgraded to handle > 2 parents.
   auto& file_version_diff_parent = file_version_diff->parents_[1];
 
-  std::string secondary_parent_revision_range =
+  std::string parent_revision_range =
       file_version_diff->parents_[0].commit_.sha_ + std::string("..") +
       file_version_diff_parent.commit_.sha_;
   GitDiffReader git_diff_reader{file_version_diff->path_,
-                                secondary_parent_revision_range, pwndOutput};
+                                parent_revision_range, pwndOutput};
   assert(!git_diff_reader.GetDiffs().empty());
   if (!git_diff_reader.GetDiffs().empty()) {
     file_version_diff_parent.file_version_diffs_ =
@@ -171,7 +169,7 @@ void CChangeHistoryPane::OnTreeNotifyExpanding(NMHDR* pNMHDR,
     // Get *all* diffs for this branch such that then we add "^" in the next
     // command, something will be found.
     GitDiffReader git_diff_reader_all_commits{
-        file_version_diff->path_, secondary_parent_revision_range + "^",
+        file_version_diff->path_, parent_revision_range + "^",
         pwndOutput, GitDiffReader::Opt::NO_FILTER_TO_FILE};
 
     if (!git_diff_reader_all_commits.GetDiffs().empty()) {
@@ -221,6 +219,7 @@ void CChangeHistoryPane::OnTreeDeleteItem(NMHDR* pNMHDR, LRESULT* plResult) {
 }
 #endif  // 0
 
+#if 0
 static void SetToolTip(CTreeCtrl& tree,
                        const FileVersionDiff& file_version_diff,
                        HTREEITEM htreeitem) {
@@ -246,6 +245,7 @@ static void SetToolTip(CTreeCtrl& tree,
     }
   }
 }
+#endif // 0
 
 static std::string CreateTreeItemLabel(size_t commit_index,
                                        const FileVersionDiff& file_diff) {

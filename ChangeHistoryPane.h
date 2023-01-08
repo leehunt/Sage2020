@@ -14,6 +14,10 @@ class CChangeHistoryPane : public CDockablePane {
   afx_msg void OnActivate(UINT nState, CWnd* pWndOther, BOOL bMinimized);
   afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
   afx_msg void OnSize(UINT nType, int cx, int cy);
+  afx_msg void OnSetFocus(CWnd* pOldWnd);
+  afx_msg void OnTreeNotifyExpanding(NMHDR* pNMHDR, LRESULT* plResult);
+  // void OnTreeDeleteItem(NMHDR* pNMHDR, LRESULT* plResult);
+  afx_msg void SetPropListFont();
 
  protected:
   void AdjustLayout();
@@ -27,11 +31,6 @@ class CChangeHistoryPane : public CDockablePane {
   CToolTipCtrl* m_pToolTipControl;
 
  public:
-  afx_msg void SetPropListFont();
-  void OnSetFocus(CWnd* pOldWnd);
-  void OnTreeNotifyExpanding(NMHDR* pNMHDR, LRESULT* plResult);
-  //void OnTreeDeleteItem(NMHDR* pNMHDR, LRESULT* plResult);
-
   static bool FEnsureTreeItemsAndSelection(
       CTreeCtrl& tree,
       HTREEITEM htreeitemRoot,

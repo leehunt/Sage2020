@@ -22,8 +22,8 @@ struct FileVersionDiffHunk {
   mutable std::unique_ptr<LineToFileVersionLineInfo> line_info_to_restore_;
 
 #ifdef _DEBUG
-  bool FileVersionDiffHunk::operator==(const FileVersionDiffHunk& other) const;
-  bool FileVersionDiffHunk::operator!=(const FileVersionDiffHunk& other) const;
+  bool operator==(const FileVersionDiffHunk& other) const;
+  bool operator!=(const FileVersionDiffHunk& other) const;
 #endif
 
 #if _DEBUG_MEM_TRACE

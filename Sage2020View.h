@@ -71,13 +71,13 @@ class CSage2020View : public CScrollView, public Sage2020ViewDocListener {
 #endif
 
  protected:
+  int m_iSelStart;
+  int m_iSelEnd;
+
   CSize m_sizChar;
   CSize m_sizPage;
   CSize m_sizAll;
   int m_sizCharFontGenerationIndex;
-
-  int m_iSelStart;
-  int m_iSelEnd;
 
   bool m_fLeftMouseDown;
   int m_iMouseDown;

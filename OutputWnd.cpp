@@ -177,15 +177,17 @@ COutputList::COutputList() noexcept {}
 
 COutputList::~COutputList() {}
 
+// clang-format off
 BEGIN_MESSAGE_MAP(COutputList, CListBox)
-ON_WM_CONTEXTMENU()
-ON_UPDATE_COMMAND_UI(ID_EDIT_COPY, &COutputList::OnEditCopy)
-ON_COMMAND(ID_EDIT_COPY, OnEditCopy)
-ON_UPDATE_COMMAND_UI(ID_EDIT_CLEAR, &COutputList::OnEditClear)
-ON_COMMAND(ID_EDIT_CLEAR, OnEditClear)
-ON_COMMAND(ID_VIEW_OUTPUTWND, OnViewOutput)
-ON_WM_WINDOWPOSCHANGING()
+  ON_WM_CONTEXTMENU()
+  ON_UPDATE_COMMAND_UI(ID_EDIT_COPY, &COutputList::OnEditCopy)
+  ON_COMMAND(ID_EDIT_COPY, &COutputList::OnEditCopy)
+  ON_UPDATE_COMMAND_UI(ID_EDIT_CLEAR, &COutputList::OnEditClear)
+  ON_COMMAND(ID_EDIT_CLEAR, &COutputList::OnEditClear)
+  ON_COMMAND(ID_VIEW_OUTPUTWND, &COutputList::OnViewOutput)
+  ON_WM_WINDOWPOSCHANGING()
 END_MESSAGE_MAP()
+// clang-format on
 
 /////////////////////////////////////////////////////////////////////////////
 // COutputList message handlers
@@ -236,7 +238,7 @@ void COutputList::OnEditCopy() {
       goto LCleanup;
     }
     // Get the currently selected data
-    C_ASSERT(sizeof(TCHAR) == 2);
+    static_assert(sizeof(TCHAR) == 2);
 
     CString line;
     GetText(current_selection, line /*ref*/);

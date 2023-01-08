@@ -5,7 +5,7 @@
 
 FileVersionInstance::FileVersionInstance() {}
 
-FileVersionInstance::FileVersionInstance(std::deque<std::string>& lines,
+FileVersionInstance::FileVersionInstance(std::deque<std::string>&& lines,
                                          const GitHash& commit)
     : commit_(commit) {
   if (commit_.IsValid()) {

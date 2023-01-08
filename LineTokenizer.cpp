@@ -106,12 +106,12 @@ static unsigned int const _vrgsttblWsIndirect[WSttblNumRows][WSttblNumCols] =
 	/* SCANNING 0   1   2   3   4   5   6   7   8   9   10  11  12  13  14  15   */
 	/* FOR:     sp  a-z 0-9 .   ,   nl  del spl tab sym fsp dbc dsp dsy ch1 khl  */
 
-	/* 0     */ 1,  2,  3,  PDI,CMI,NLI,DLI,SPI,TII,SYI,FSI,FEI,4,  FYI,0,  5,
-	/* 1:ws  */ 1,  WIX,WIX,WIX,WIX,WIX,WIX,WIX,WIX,WIX,WIX,WIX,4,  WIX,WIX,WIX,
-	/* 2:id  */ IDX,2,  IDX,IDX,IDX,IDX,IDX,IDX,IDX,IDX,IDX,IDX,IDX,IDX,IDX,IDX,
-	/* 3:nn  */ INX,INX,3,  INX,INX,INX,INX,INX,INX,INX,INX,INX,INX,INX,INX,INX,
-	/* 4:ds  */ 4,  FSX,FSX,FSX,FSX,FSX,FSX,FSX,FSX,FSX,FSX,FSX,4,  FSX,FSX,FSX,
-	/* 5:hid */ FEX,FEX,FEX,FEX,FEX,FEX,FEX,FEX,FEX,FEX,FEX,FEX,FEX,FEX,FEX,5,
+	/* 0     */ { 1,  2,  3,  PDI,CMI,NLI,DLI,SPI,TII,SYI,FSI,FEI,4,  FYI,0,  5,   },
+	/* 1:ws  */ { 1,  WIX,WIX,WIX,WIX,WIX,WIX,WIX,WIX,WIX,WIX,WIX,4,  WIX,WIX,WIX, },
+	/* 2:id  */ { IDX,2,  IDX,IDX,IDX,IDX,IDX,IDX,IDX,IDX,IDX,IDX,IDX,IDX,IDX,IDX, },
+	/* 3:nn  */ { INX,INX,3,  INX,INX,INX,INX,INX,INX,INX,INX,INX,INX,INX,INX,INX, },
+	/* 4:ds  */ { 4,  FSX,FSX,FSX,FSX,FSX,FSX,FSX,FSX,FSX,FSX,FSX,4,  FSX,FSX,FSX, },
+	/* 5:hid */ { FEX,FEX,FEX,FEX,FEX,FEX,FEX,FEX,FEX,FEX,FEX,FEX,FEX,FEX,FEX,5,   },
 };
 
 // State Transition Table, Tabs are separate tokens, return whitespace as tks
@@ -120,12 +120,12 @@ static unsigned int const _vrgsttblWsDirect[WSttblNumRows][WSttblNumCols] =
 	/* SCANNING 0   1   2   3   4   5   6   7   8   9   10  11  12  13  14  15   */
 	/* FOR:     sp  a-z 0-9 .   ,   nl  del spl tab sym fsp dbc dsp dsy ch1 khl  */
 
-	/* 0     */ 1,  2,  3,  PDI,CMI,NLI,DLI,SPI,DLI,SYI,FSI,FEI,4,  FYI,0,  5,
-	/* 1:ws  */ 1,  WSX,WSX,WSX,WSX,WSX,WSX,WSX,WSX,WSX,WSX,WSX,4,  WIX,WIX,WIX,
-	/* 2:id  */ IDX,2,  IDX,IDX,IDX,IDX,IDX,IDX,IDX,IDX,IDX,IDX,IDX,IDX,IDX,IDX,
-	/* 3:nn  */ INX,INX,3,  INX,INX,INX,INX,INX,INX,INX,INX,INX,INX,INX,INX,INX,
-	/* 4:ds  */ 4,  WSX,WSX,WSX,WSX,WSX,WSX,WSX,WSX,WSX,WSX,WSX,4,  WSX,WSX,FSX,
-	/* 5:hid */ FEX,FEX,FEX,FEX,FEX,FEX,FEX,FEX,FEX,FEX,FEX,FEX,FEX,FEX,FEX,5,
+	/* 0     */ { 1,  2,  3,  PDI,CMI,NLI,DLI,SPI,DLI,SYI,FSI,FEI,4,  FYI,0,  5,   },
+	/* 1:ws  */ { 1,  WSX,WSX,WSX,WSX,WSX,WSX,WSX,WSX,WSX,WSX,WSX,4,  WIX,WIX,WIX, },
+	/* 2:id  */ { IDX,2,  IDX,IDX,IDX,IDX,IDX,IDX,IDX,IDX,IDX,IDX,IDX,IDX,IDX,IDX, },
+	/* 3:nn  */ { INX,INX,3,  INX,INX,INX,INX,INX,INX,INX,INX,INX,INX,INX,INX,INX, },
+	/* 4:ds  */ { 4,  WSX,WSX,WSX,WSX,WSX,WSX,WSX,WSX,WSX,WSX,WSX,4,  WSX,WSX,FSX, },
+	/* 5:hid */ { FEX,FEX,FEX,FEX,FEX,FEX,FEX,FEX,FEX,FEX,FEX,FEX,FEX,FEX,FEX,5,   },
 };
 // clang-format on
 
@@ -262,7 +262,7 @@ LNextTok:
       ptok->tk = TK::tkCOMMA;
       break;
 
-    case 0:  // REVIEW: is this the only symbol?
+    case tkCH::uNill:  // REVIEW: is this the only symbol?
     case tkCH::uNIL:
       ptok->tk = TK::tkNil;
       break;

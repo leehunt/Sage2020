@@ -22,7 +22,7 @@ GitFileReader::GitFileReader(const std::filesystem::path& directory,
 
   if (pwndOutput != nullptr) {
     CString message;
-    message.FormatMessage(_T("   Git command: '%1!s!'"), command);
+    message.FormatMessage(_T("   Git command: '%1!s!'"), command.c_str());
     pwndOutput->AppendDebugTabMessage(message);
   }
   ProcessPipe process_pipe(to_wstring(command).c_str(), directory.c_str());
@@ -30,7 +30,7 @@ GitFileReader::GitFileReader(const std::filesystem::path& directory,
   ProcessFileLines(process_pipe.GetStandardOutput());
   if (pwndOutput != nullptr) {
     CString message;
-    message.FormatMessage(_T("   Done."), command);
+    message.FormatMessage(_T("   Done."));
     pwndOutput->AppendDebugTabMessage(message);
   }
 }
@@ -43,8 +43,8 @@ void GitFileReader::ProcessFileLines(FILE* stream) {
 
   // Read first line to check for any BOM.
   if (fgets(stream_line, (int)std::size(stream_line), stream)) {
-    if (stream_line[0] == 0xFF &&
-        stream_line[1] == 0xFE)  // UTF-16 little-endian
+    if ((unsigned char)stream_line[0] == 0xFF &&
+        (unsigned char)stream_line[1] == 0xFE)  // UTF-16 little-endian
       is_utf16 = true;
   }
 

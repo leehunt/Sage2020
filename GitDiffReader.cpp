@@ -690,11 +690,9 @@ void GitDiffReader::ProcessDiffLines(FILE* stream) {
   current_diff_ = nullptr;
 
   char stream_line[1024];
-  int i = 0;
   while (fgets(stream_line, (int)std::size(stream_line), stream)) {
     if (!ProcessLogLine(stream_line))
       break;
-    i++;
   }
 }
 

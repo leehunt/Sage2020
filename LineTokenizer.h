@@ -40,7 +40,7 @@ enum class TK {
   tkATSIGN,       // @
   tkLBRACK = 30,  // [
   tkRBRACK,       // ]
-  tkBSLASH,       // \ 
+  tkBSLASH,       // "\\" 
   tkCARET,        // ^
   tkUSCORE,       // _
   tkBQUOTE,       // `

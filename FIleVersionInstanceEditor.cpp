@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "FileVersionInstanceEditor.h"
+#include "FIleVersionInstanceEditor.h"
 
 #include "FileVersionDiff.h"
 #include "Sage2020ViewDocListener.h"
@@ -19,18 +19,22 @@ FileVersionInstanceEditor::FileVersionInstanceEditor(
 }
 
 void FileVersionInstanceEditor::AddDiff(const FileVersionDiff& diff) {
+  // N.b. This must be incremented here because AddHunk uses it.
   int new_int_index = ++file_version_instance_.commit_path_;
-
+  assert(new_int_index >= 0);
   printf("AddDiff:    %s at path: %s\n", diff.commit_.sha_,
          file_version_instance_.commit_path_.PathText().c_str());
-  // N.b. This must be set here because AddHunk uses it.
   assert(diff.commit_.IsValid());
-
-  assert(file_version_instance_.commit_ == diff.file_parent_commit_);
+  // Check that we're applying the diff to the expected base commit.
+  assert(file_version_instance_.commit_ == diff.file_parent_commit_ ||
+         !diff.file_parent_commit_.IsValid() &&
+             diff.diff_tree_.action[0] == 'A');
 
 #ifdef _DEBUG
   const char* sha = diff.commit_.sha_;
+  assert(strlen(sha));
   const GitHash old_commit = file_version_instance_.commit_;
+  assert(old_commit.IsValid() || new_int_index == 0);
 #endif
   file_version_instance_.commit_ = diff.commit_;
 
@@ -47,10 +51,10 @@ void FileVersionInstanceEditor::AddDiff(const FileVersionDiff& diff) {
 void FileVersionInstanceEditor::RemoveDiff(const FileVersionDiff& diff) {
 #ifdef _DEBUG
   const char* sha = diff.commit_.sha_;
-#endif;
-
-  printf("RemoveDiff: %s at path: %s\n", diff.commit_.sha_,
+  assert(strlen(sha));
+  printf("RemoveDiff: %s at path: %s\n", sha,
          file_version_instance_.commit_path_.PathText().c_str());
+#endif
 
   for (auto it = diff.hunks_.crbegin(); it != diff.hunks_.crend(); it++) {
     RemoveHunk(*it);
@@ -59,6 +63,8 @@ void FileVersionInstanceEditor::RemoveDiff(const FileVersionDiff& diff) {
   // Special: If we're deleting the last diff, the decrement operator will pop
   // off the tip of the |commit_path_|.
   int new_int_index = --file_version_instance_.commit_path_;
+  assert(new_int_index >= -1);
+  // Check that we're removing the diff to the expected base commit.
   assert(diff.file_parent_commit_.IsValid() ||
          // file_version_instance_.commit_path_.empty() ||
          file_version_instance_.commit_path_ == -1);
@@ -75,6 +81,7 @@ void FileVersionInstanceEditor::RemoveDiff(const FileVersionDiff& diff) {
            file_version_instance_.commit_path_);
   }
 #else
+#if 0
   for (size_t line_index = 0;
        line_index < file_version_instance_.file_lines_info_.size();
        line_index++) {
@@ -84,6 +91,7 @@ void FileVersionInstanceEditor::RemoveDiff(const FileVersionDiff& diff) {
     // assert(static_cast<int>(info.commit_index()) <=
     //       file_version_instance_.commit_path_);
   }
+#endif  // 0
 #endif
 #endif  // _DEBUG
 
@@ -99,8 +107,9 @@ bool FileVersionInstanceEditor::EnterBranch(
   const auto old_path = file_version_instance_.commit_path_;
   const auto& parent_branch_base_commit =
       new_branch.front().file_parent_commit_;
-  assert(parent_branch_base_commit.IsValid());
 
+  // Go to the current branch's base commit.
+  assert(parent_branch_base_commit.IsValid());
   bool edited = GoToCommit(parent_branch_base_commit);
 
   // Add new '-1' index entry for subbranch.
@@ -117,6 +126,7 @@ bool FileVersionInstanceEditor::EnterBranch(
     listener_head_->NotifyAllListenersOfBranchChange(
         old_branch ? *old_branch : empty_diff, new_branch);
   }
+
   return edited;
 }
 
@@ -128,6 +138,7 @@ bool FileVersionInstanceEditor::ExitBranch() {
 #if _DEBUG
   const auto& parent_branch_base_commit =
       old_branch->front().file_parent_commit_;
+  assert(parent_branch_base_commit.IsValid());
 #endif
 
   // N.b. This will pop |commit_path_| by one.
@@ -410,19 +421,22 @@ DiffTreePath FileVersionInstanceEditor::GetDiffTreeBranchPathRecur(
   int item_index = 0;
   for (const auto& diff : subroot) {
     if (diff.commit_ == commit) {
-      auto& item = DiffTreePathItem()
-                       .setCurrentBranchIndex(item_index)
-                       .setBranch(&subroot);
+      auto item = DiffTreePathItem()
+                      .setCurrentBranchIndex(item_index)
+                      .setBranch(&subroot);
 
       auto& parent_commit = subroot.front().file_parent_commit_;
       if (parent_commit.IsValid()) {
         // Add ancestors.
-        auto& path = GetDiffTreeBranchPath(parent_commit);
+        auto path = GetDiffTreeBranchPath(parent_commit);
         path.push_back(std::move(item));
         return path;
       } else {
+        // REVIEW this...
         // If there is no |file_parent_commit_| then we're at the root.
         assert(subroot == GetRoot());
+        // If there is no |file_parent_commit_| then we're adding the file.
+        //assert(subroot.front().diff_tree_.action[0] == 'A');
         DiffTreePath path{};
         path.push_back(std::move(item));
         return path;
@@ -493,7 +507,7 @@ DiffTreePath FileVersionInstanceEditor::GetDiffTreeMergePathRecur(
 
     i++;
   }
-  auto& diffs_root = GetRoot();
+
   return DiffTreePath{};
 }
 

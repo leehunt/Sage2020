@@ -125,7 +125,7 @@ static void LoadAllBranchesRecur(const std::filesystem::path& file_path,
   for (auto& diff : diffs) {
     for (size_t parent_index = 1; parent_index < diff.parents_.size();
          parent_index++) {
-      std::string secondary_parent_revision_range =
+      std::string parent_revision_range =
 #if 1  // REVIEW!!!!!
           (diff.parents_[0].commit_.IsValid() ? diff.parents_[0].commit_.sha_
                                               : "HEAD") +
@@ -134,8 +134,7 @@ static void LoadAllBranchesRecur(const std::filesystem::path& file_path,
                                               : "HEAD") +
 #endif
           std::string("..") + diff.parents_[parent_index].commit_.sha_;
-      GitDiffReader git_branch_diff_reader{file_path,
-                                           secondary_parent_revision_range};
+      GitDiffReader git_branch_diff_reader{file_path, parent_revision_range};
       diff.parents_[parent_index].file_version_diffs_ =
           std::make_unique<std::vector<FileVersionDiff>>(
               std::move(git_branch_diff_reader.MoveDiffs()));
@@ -157,7 +156,9 @@ static void LoadAllBranchesRecur(const std::filesystem::path& file_path,
 
         const auto& diff_to_head_diffs =
             git_branch_to_head_diff_reader.GetDiffs();
-        assert(!diff_to_head_diffs.empty());
+        // This can legitimately be empty() if this is the adding diff.
+        assert(!diff_to_head_diffs.empty() ||
+               parent_diffs.front().diff_tree_.action[0] == 'A');
         if (!diff_to_head_diffs.empty()) {
           parent_diffs.front().file_parent_commit_ =
               diff_to_head_diffs.back().commit_;
@@ -204,19 +205,24 @@ static void TraverseAndVerifyAllBranchesRecur(
       const auto path_save = editor.GetFileVersionInstance().commit_path_;
 #endif
 
-      editor.EnterBranch(parent_diffs);
-      assert(!parent_diffs
-                  .empty());  // Ensure that we will add at least one diff such
-                              // that we clear the "-1" subbranch index.
+      assert(!parent_diffs.empty());
 
-      TraverseAndVerifyAllBranchesRecur(editor, file_path, parent_diffs);
+      // Enter into any parent commit subbranch.
+      if (parent_diffs.front().file_parent_commit_.IsValid()) {
+        editor.EnterBranch(parent_diffs);
+        assert(!parent_diffs
+                    .empty());  // Ensure that we will add at least one diff
+                                // such that we clear the "-1" subbranch index.
 
-      editor.GoToCommit(current_commit);
-      assert(editor.GetFileVersionInstance().commit_path_.DiffsSubbranch() ==
-             &diffs);
-      assert(editor.GetFileVersionInstance().commit_path_ == saved_diff_path);
+        TraverseAndVerifyAllBranchesRecur(editor, file_path, parent_diffs);
 
-      assert(editor.GetFileVersionInstance().GetCommit() == current_commit);
+        editor.GoToCommit(current_commit);
+        assert(editor.GetFileVersionInstance().commit_path_.DiffsSubbranch() ==
+               &diffs);
+        assert(editor.GetFileVersionInstance().commit_path_ == saved_diff_path);
+
+        assert(editor.GetFileVersionInstance().GetCommit() == current_commit);
+      }
     }
 
     i++;
@@ -281,7 +287,7 @@ TEST(GitDiffReaderTest, LoadAndCompareWithFileAllBranches) {
   _set_error_mode(_OUT_TO_MSGBOX);
   const std::filesystem::path anchor_file_path =
       L"C:\\Users\\leehu_000\\Source\\Repos\\libgit2\\libgit2";  //__FILE__;
-#if 0
+#if 1
   for (auto i = std::filesystem::recursive_directory_iterator{anchor_file_path};
        i != std::filesystem::recursive_directory_iterator(); i++) {
     auto const& directory_entry = *i;
@@ -313,142 +319,3 @@ TEST(GitDiffReaderTest, LoadAndCompareWithFileAllBranches) {
   }
 #endif
 }
-
-#if 0
-static void TraverseAndVerifyAllBranchesRecurForward(
-    FileVersionInstanceEditor& editor,
-    const std::filesystem::path& file_path,
-    const std::vector<FileVersionDiff>& diffs) {
-  const FileVersionInstance original_instance = editor.GetFileVersionInstance();
-
-  // Reconstitute the orignal FileVersionInstance from diffs, going from
-  // first diff forward.
-  for (const auto& diff : diffs) {
-    editor.AddDiff(diff);
-    EXPECT_EQ(editor.GetFileVersionInstance().GetCommit(), diff.commit_);
-
-    for (size_t parent_index = 1;
-         parent_index < diff.parents_.size();
-         parent_index++) {
-      const auto& parent_diffs =
-          *diff.parents_[parent_index].file_version_diffs_;
-
-      DiffTreePathItem item;
-      item.setCurrentBranchIndex(parent_diffs.size() - 1)
-          .setSubBranchRoot(&parent_diffs);
-
-      const_cast<FileVersionInstance&>(editor.GetFileVersionInstance())
-          .commit_path_.push_back(item);
-
-      for (auto it = parent_diffs.crbegin();
-           it != parent_diffs.crend();
-           it++) {
-        const auto& diff = *it;
-        editor.RemoveDiff(diff);
-      }
-
-      TraverseAndVerifyAllBranchesRecurForward(editor, file_path,
-                                               parent_diffs);
-
-#if 0
-      const_cast<FileVersionInstance&>(editor.GetFileVersionInstance())
-          .commit_path_.pop_back();
-#else
-      auto& file_version_instance =
-          const_cast<FileVersionInstance&>(editor.GetFileVersionInstance());
-      file_version_instance.commit_path_.pop_back();
-      if (!file_version_instance.commit_path_.empty())
-        file_version_instance.commit_path_.back().setParentIndex(0);
-#endif
-    }
-  }
-
-  const auto& last_commit = diffs.empty() ? GitHash{} : diffs.back().commit_;
-  EXPECT_EQ(editor.GetFileVersionInstance().GetCommit(), last_commit);
-  CompareFileInstanceToCommit(editor.GetFileVersionInstance(), file_path,
-                              last_commit);
-
-  // Now backwards in time, starting from the last recorded change in the git
-  // log down to first recorded diff. Note that this may end up with nothing if
-  // the last commit is the initial commit.
-  for (auto it = diffs.crbegin(); it != diffs.crend(); it++) {
-    const auto& diff = *it;
-    editor.RemoveDiff(diff);
-    EXPECT_EQ(editor.GetFileVersionInstance().GetCommit(),
-              diff.file_parent_commit_);
-  }
-
-  EXPECT_TRUE(GitDiffReaderTest::IsTheSame(editor.GetFileVersionInstance(),
-                                           original_instance));
-}
-
-static void LoadFileAndCompareAllBranchesForward(
-    const std::filesystem::path& file_path,
-    std::vector<FileVersionDiff>& diffs) {
-  EXPECT_GT(diffs.size(), 0U);
-
-  LoadAllBranchesRecur(file_path, diffs);
-
-  // Load current starting parent, if any.
-  const GitHash parent_commit = diffs.empty() || diffs.front().parents_.empty()
-                                    ? GitHash{}
-                                    : diffs.front().file_parent_commit_;
-  std::deque<std::string> lines;
-  if (parent_commit.IsValid()) {
-    const std::string parent_revision =
-        parent_commit.sha_ + std::string(":") + file_path.filename().string();
-    GitFileReader git_file_reader_head{file_path.parent_path(),
-                                       parent_revision};
-    lines = std::move(git_file_reader_head.GetLines());
-  }
-  FileVersionInstance file_version_instance(std::move(lines), parent_commit);
-  Sage2020ViewDocListener* listener_head = nullptr;
-  FileVersionInstanceEditor editor(file_version_instance, listener_head);
-
-  TraverseAndVerifyAllBranchesRecurForward(editor, file_path, diffs);
-
-  EXPECT_EQ(file_version_instance.GetLines().size(), 0);
-#if USE_SPARSE_INDEX_ARRAY
-  EXPECT_TRUE(GitDiffReaderTest::GetLinesInfo(file_version_instance).IsEmpty());
-#else
-  EXPECT_EQ(GitDiffReaderTest::GetLinesInfo(file_version_instance).size(), 0);
-#endif
-}
-
-TEST(GitDiffReaderTest, LoadAndCompareWithFileAllBranchesForward) {
-  const std::filesystem::path anchor_file_path = __FILE__;
-#if 1
-  for (auto i =
-           std::filesystem::recursive_directory_iterator{
-               anchor_file_path.parent_path().parent_path()};
-       i != std::filesystem::recursive_directory_iterator(); i++) {
-    auto const& directory_entry = *i;
-    if (directory_entry.is_directory()) {
-      if (*directory_entry.path().filename().string().c_str() == '.')
-        i.disable_recursion_pending();  // Skip past all '.' starting dirs like
-                                        // '.git'.
-      continue;
-    }
-    std::string empty_tag;
-    GitDiffReader git_diff_reader(directory_entry, empty_tag);
-    if (!git_diff_reader.GetDiffs().empty()) {
-      printf("Processing %s...\n", directory_entry.path().string().c_str());
-      LoadFileAndCompareAllBranchesForward(
-          directory_entry, std::move(git_diff_reader.MoveDiffs()));
-    }
-  }
-#else
-  auto const file_path =
-      anchor_file_path.parent_path().parent_path() / "res/Sage.rc2";
-  //"Sage2020_unittest/FileVersionInstance_unittest.cpp";
-  //"FileVersionDiff.h";  // "ChangeHistoryPane.cpp";
-  std::string empty_tag;
-  GitDiffReader git_diff_reader(file_path, empty_tag);
-  if (!git_diff_reader.GetDiffs().empty()) {
-    printf("Processing %s...\n", file_path.string().c_str());
-    LoadFileAndCompareAllBranches(file_path,
-                                  std::move(git_diff_reader.MoveDiffs()));
-  }
-#endif
-}
-#endif  // 0
