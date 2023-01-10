@@ -106,9 +106,11 @@ void CSage2020Doc::Serialize(CArchive& ar) {
       GitFileReader git_file_reader{file_path.parent_path(), initial_file_id,
                                     pwndOutput};
       file_version_instance_ = std::make_unique<FileVersionInstance>(
+          GetRootFileDiffs(),
           std::move(git_file_reader.GetLines()), file_diffs_.front().commit_);
     } else {
-      file_version_instance_ = std::make_unique<FileVersionInstance>();
+      file_version_instance_ =
+          std::make_unique<FileVersionInstance>(GetRootFileDiffs());
     }
 
     FileVersionInstanceEditor editor(file_diffs_, *file_version_instance_.get(),
@@ -308,7 +310,7 @@ BOOL CSage2020Doc::OnOpenDocument(LPCTSTR lpszPathName) {
   // N.b. This must be done before |CDocument::OnOpenDocument| to reset any
   // current selection.
   if (m_pDocListenerHead) {
-    m_pDocListenerHead->NotifyAllListenersOfVersionChange({});
+    m_pDocListenerHead->NotifyAllListenersOfVersionChange({GetRootFileDiffs()});
   }
 
   if (!CDocument::OnOpenDocument(lpszPathName))

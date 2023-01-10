@@ -19,8 +19,9 @@ class FileVersionInstanceTest;
 struct FileVersionDiff;
 class FileVersionInstance {
  public:
-  FileVersionInstance();
-  FileVersionInstance(std::deque<std::string>&& lines,  // N.b. *Moves* |lines|.
+  FileVersionInstance(const std::vector<FileVersionDiff>& root);
+  FileVersionInstance(const std::vector<FileVersionDiff>& root,
+                      std::deque<std::string>&& lines,  // N.b. *Moves* |lines|.
                       const GitHash& commit);
   virtual ~FileVersionInstance() {}
 

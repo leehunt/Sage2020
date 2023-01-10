@@ -16,7 +16,9 @@ TEST(FileVersionInstanceTest, Load) {
   std::deque<std::string> some_lines_copy = some_lines;
   GitHash parent_commit;
   strcpy_s(parent_commit.sha_, "01234567890abcdef01234567890abcdef012345");
-  FileVersionInstance file_version_instance(std::move(some_lines), parent_commit);
+  const std::vector<FileVersionDiff> root_diffs;
+  FileVersionInstance file_version_instance(root_diffs, std::move(some_lines),
+                                            parent_commit);
   int i = 0;
   for (const auto& line : some_lines) {
     EXPECT_EQ(line.size(), 0);

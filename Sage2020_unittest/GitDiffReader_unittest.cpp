@@ -6,6 +6,8 @@
 #include "../GitFileReader.h"
 #include "../Utility.h"
 
+// #define USE_PRE_DIFF // Apply diff before parents.
+
 // Gtest 'friend' forwarders.
 class GitDiffReaderTest : public testing::Test {
  public:
@@ -21,17 +23,16 @@ class GitDiffReaderTest : public testing::Test {
 
 static void CompareFileInstanceToHead(
     const std::filesystem::path& file_path,
-    const std::vector<FileVersionDiff>& diffs,
+    const FileVersionDiff& diff,
     const FileVersionInstance& file_version_instance_from_diffs) {
-  std::string blob_hash =
-      diffs.size() > 0 ? diffs.back().diff_tree_.new_hash_string : "";
+  std::string blob_hash = diff.diff_tree_.new_hash_string;
   // REVIEW: We could also use a revision of
   // |<commit>:<releative-git-file-path>|, which may be more clean/orthogonal as
   // we don't use blob hashes elsewhere.
   GitFileReader git_file_reader_latest{file_path.parent_path(), blob_hash};
   auto file_version_instance_loaded = std::make_unique<FileVersionInstance>(
-      std::move(git_file_reader_latest.GetLines()),
-      diffs.size() > 0 ? diffs.back().commit_ : GitHash());
+      file_version_instance_from_diffs.commit_path_.GetRoot(),
+      std::move(git_file_reader_latest.GetLines()), diff.commit_);
   EXPECT_EQ(file_version_instance_loaded->GetLines().size(),
             file_version_instance_from_diffs.GetLines().size());
   for (size_t i = 0; i < file_version_instance_from_diffs.GetLines().size();
@@ -93,7 +94,7 @@ TEST(GitDiffReaderTest, LoadAndCompareWithFile) {
   EXPECT_GT(diffs.size(), 0U);
   // Sythethesize FileVersionInstance from diffs, going from first diff (the
   // last recorded in the git log) forward.
-  FileVersionInstance file_version_instance{};
+  FileVersionInstance file_version_instance{diffs};
   Sage2020ViewDocListener* listener_head = nullptr;
   FileVersionInstanceEditor editor(diffs, file_version_instance, listener_head);
   EXPECT_EQ(&editor.GetFileVersionInstance(), &file_version_instance);
@@ -102,7 +103,7 @@ TEST(GitDiffReaderTest, LoadAndCompareWithFile) {
     EXPECT_EQ(file_version_instance.GetCommit(), diff.commit_);
   }
 
-  CompareFileInstanceToHead(file_path, diffs, file_version_instance);
+  CompareFileInstanceToHead(file_path, diffs.back(), file_version_instance);
 
   // Now go backwards in time (but forward in the diffs vector) down to nothing,
   // or at least the first known version.
@@ -125,15 +126,15 @@ static void LoadAllBranchesRecur(const std::filesystem::path& file_path,
   for (auto& diff : diffs) {
     for (size_t parent_index = 1; parent_index < diff.parents_.size();
          parent_index++) {
+      // If there is no |file_parent_commit| to get the revision range for vs.
+      // the current parent commit, then just look at the commit history of the
+      // parent commit itself. This addresses the the "add file from subbranch"
+      // case.
       std::string parent_revision_range =
-#if 1  // REVIEW!!!!!
-          (diff.parents_[0].commit_.IsValid() ? diff.parents_[0].commit_.sha_
-                                              : "HEAD") +
-#else
-          (diff.file_parent_commit_.IsValid() ? diff.file_parent_commit_.sha_
-                                              : "HEAD") +
-#endif
-          std::string("..") + diff.parents_[parent_index].commit_.sha_;
+          diff.file_parent_commit_.IsValid()
+              ? diff.file_parent_commit_.sha_ + std::string("...") +
+                    diff.parents_[parent_index].commit_.sha_
+              : diff.parents_[parent_index].commit_.sha_;
       GitDiffReader git_branch_diff_reader{file_path, parent_revision_range};
       diff.parents_[parent_index].file_version_diffs_ =
           std::make_unique<std::vector<FileVersionDiff>>(
@@ -147,10 +148,13 @@ static void LoadAllBranchesRecur(const std::filesystem::path& file_path,
         // the next diff entry will be the parent for this file (or empty if it
         // doesn't exist). That is:
         // | ... | parent (branch point) |
+        // If the file is being added then the base is not in the first parent,
+        // but instead in a subbranch.
+        const auto& base_diff = parent_diffs.front();
+        const auto parent_base_ref = base_diff.commit_.sha_ + std::string("^");
         constexpr COutputWnd* pwndOutput = nullptr;
         GitDiffReader git_branch_to_head_diff_reader{
-            file_path, parent_diffs.front().commit_.sha_ + std::string("^"),
-            pwndOutput,
+            file_path, parent_base_ref, pwndOutput,
             GitDiffReader::Opts(GitDiffReader::Opt::NO_FIRST_PARENT) |
                 GitDiffReader::Opt::NO_FOLLOW};
 
@@ -184,13 +188,16 @@ static void TraverseAndVerifyAllBranchesRecur(
   for (const auto& diff : diffs) {
     assert(editor.GetFileVersionInstance().commit_path_.DiffsSubbranch() ==
            &diffs);
+#if USE_PRE_DIFF
     editor.AddDiff(diff);
-#if _DEBUG
-    auto saved_diff_path = editor.GetFileVersionInstance().commit_path_;
-#endif
 
     EXPECT_EQ(file_version_instance.GetCommit(), diff.commit_);
     CompareFileInstanceToCommit(file_version_instance, file_path, diff.commit_);
+#endif
+
+#if _DEBUG
+    auto saved_diff_path = editor.GetFileVersionInstance().commit_path_;
+#endif
 
     for (size_t parent_index = 1; parent_index < diff.parents_.size();
          parent_index++) {
@@ -224,6 +231,13 @@ static void TraverseAndVerifyAllBranchesRecur(
         assert(editor.GetFileVersionInstance().GetCommit() == current_commit);
       }
     }
+
+#if !USE_PRE_DIFF
+    editor.AddDiff(diff);
+
+    EXPECT_EQ(file_version_instance.GetCommit(), diff.commit_);
+    CompareFileInstanceToCommit(file_version_instance, file_path, diff.commit_);
+#endif
 
     i++;
   }
@@ -267,7 +281,8 @@ static void LoadFileAndCompareAllBranches(
                                        parent_revision};
     lines = std::move(git_file_reader_head.GetLines());
   }
-  FileVersionInstance file_version_instance(std::move(lines), parent_commit);
+  FileVersionInstance file_version_instance(diffs_root, std::move(lines),
+                                            parent_commit);
   constexpr Sage2020ViewDocListener* listener_head = nullptr;
   FileVersionInstanceEditor editor(diffs_root, file_version_instance,
                                    listener_head);
@@ -287,7 +302,7 @@ TEST(GitDiffReaderTest, LoadAndCompareWithFileAllBranches) {
   _set_error_mode(_OUT_TO_MSGBOX);
   const std::filesystem::path anchor_file_path =
       L"C:\\Users\\leehu_000\\Source\\Repos\\libgit2\\libgit2";  //__FILE__;
-#if 1
+#if 0
   for (auto i = std::filesystem::recursive_directory_iterator{anchor_file_path};
        i != std::filesystem::recursive_directory_iterator(); i++) {
     auto const& directory_entry = *i;
@@ -307,7 +322,7 @@ TEST(GitDiffReaderTest, LoadAndCompareWithFileAllBranches) {
   }
 #else
   const std::filesystem::path file_path =
-      L"C:\\Users\\leehu_000\\Source\\Repos\\libgit2\\libgit2\\.gitignore";
+      L"C:\\Users\\leehu_000\\Source\\Repos\\libgit2\\libgit2\\.mailmap";
   //"Sage2020_unittest/FileVersionInstance_unittest.cpp";
   //"FileVersionDiff.h";  // "ChangeHistoryPane.cpp";
   std::string empty_tag;

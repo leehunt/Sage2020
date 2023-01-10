@@ -51,13 +51,11 @@ class DiffTreePathItem {
 
 class DiffTreePath : public std::vector<DiffTreePathItem> {
  public:
-  DiffTreePath() {}
-#if 1
-  DiffTreePath(const DiffTreePath& other) {
+  DiffTreePath(const std::vector<FileVersionDiff>& root) : root_(root) {}
+  DiffTreePath(const DiffTreePath& other) : root_(other.root_) {
     auto& inner_class = static_cast<std::vector<DiffTreePathItem>&>(*this);
     inner_class = static_cast<const std::vector<DiffTreePathItem>&>(other);
   }
-#endif
   // Clever/sleezy index adpators that operate on the innermost
   // |DiffTreePathItem|'s currentBranchIndex().
   int operator++();
@@ -66,7 +64,7 @@ class DiffTreePath : public std::vector<DiffTreePathItem> {
 
   DiffTreePath& operator=(const DiffTreePath& other);
 
-  const std::vector<FileVersionDiff>* GetRoot() const;
+  const std::vector<FileVersionDiff>& GetRoot() const;
   const std::vector<FileVersionDiff>* DiffsSubbranch() const;
 
   const FileVersionDiff* Diff() const;
@@ -77,5 +75,5 @@ class DiffTreePath : public std::vector<DiffTreePathItem> {
   std::string PathText() const;
 
  private:
-  ;
+  const std::vector<FileVersionDiff>& root_;
 };

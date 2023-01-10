@@ -159,6 +159,10 @@ bool FileVersionInstanceEditor::ExitBranch() {
   return edited;
 }
 
+bool FileVersionInstanceEditor::GoToDiff(const FileVersionDiff& diff) {
+  return GoToCommit(diff.commit_);
+}
+
 bool FileVersionInstanceEditor::GoToCommit(const GitHash& commit) {
   bool edited = false;
 
@@ -173,21 +177,21 @@ bool FileVersionInstanceEditor::GoToCommit(const GitHash& commit) {
     VERIFY(FALSE);
     return false;
   }
-
   auto new_commit_path = GetDiffTreeBranchPath(commit);
   if (!new_commit_path.size()) {
     // Commit not found (!).
     VERIFY(FALSE);
     return false;
   }
-
   // Not on current branch.
   // 1. Find common parent.
   size_t common_path_index_max = 0;
   while (common_path_index_max < current_commit_path.size() &&
          common_path_index_max < new_commit_path.size()) {
-    if (current_commit_path[common_path_index_max].branch() !=
-        new_commit_path[common_path_index_max].branch()) {
+    if ((current_commit_path[common_path_index_max].branch() !=
+         new_commit_path[common_path_index_max].branch()) ||
+        (current_commit_path[common_path_index_max].parentIndex() !=
+         new_commit_path[common_path_index_max].parentIndex())) {
       break;
     }
     common_path_index_max++;
@@ -206,7 +210,7 @@ bool FileVersionInstanceEditor::GoToCommit(const GitHash& commit) {
   while (current_commit_path.size() < new_commit_path.size()) {
     assert(common_path_index_max < new_commit_path.size());
 
-    auto branch = new_commit_path[common_path_index_max].branch();
+    const auto branch = new_commit_path[common_path_index_max].branch();
     assert(branch);
 
     edited = EnterBranch(*branch) || edited;
@@ -412,9 +416,10 @@ void FileVersionInstanceEditor::RemoveHunk(const FileVersionDiffHunk& hunk) {
 DiffTreePath FileVersionInstanceEditor::GetDiffTreeBranchPath(
     const GitHash& commit) const {
   const auto& diffs_root = GetRoot();
-  return GetDiffTreeBranchPathRecur(commit, diffs_root);
+  auto path = GetDiffTreeBranchPathRecur(commit, diffs_root);
+  assert(path.empty() || path.front().branch() == &diffs_root);
+  return path;
 }
-
 DiffTreePath FileVersionInstanceEditor::GetDiffTreeBranchPathRecur(
     const GitHash& commit,
     const std::vector<FileVersionDiff>& subroot) const {
@@ -436,8 +441,8 @@ DiffTreePath FileVersionInstanceEditor::GetDiffTreeBranchPathRecur(
         // If there is no |file_parent_commit_| then we're at the root.
         assert(subroot == GetRoot());
         // If there is no |file_parent_commit_| then we're adding the file.
-        //assert(subroot.front().diff_tree_.action[0] == 'A');
-        DiffTreePath path{};
+        // assert(subroot.front().diff_tree_.action[0] == 'A');
+        DiffTreePath path{GetRoot()};
         path.push_back(std::move(item));
         return path;
       }
@@ -459,7 +464,7 @@ DiffTreePath FileVersionInstanceEditor::GetDiffTreeBranchPathRecur(
     item_index++;
   }
 
-  return DiffTreePath{};
+  return DiffTreePath{GetRoot()};
 }
 
 // Gets the path from Root to |commit| via the integration commits.
@@ -473,12 +478,14 @@ DiffTreePath FileVersionInstanceEditor::GetDiffTreeMergePath(
 DiffTreePath FileVersionInstanceEditor::GetDiffTreeMergePathRecur(
     const GitHash& commit,
     const std::vector<FileVersionDiff>& subroot) const {
-  int i = 0;
+  int i = -1;  // Merge indexes merge before the current commit at the parent,
+               // so start with -1 (which is the index of a Diffs collection
+               // before the 0th index).
   for (const auto& diff : subroot) {
     if (diff.commit_ == commit) {
       auto& item =
           DiffTreePathItem().setCurrentBranchIndex(i).setBranch(&subroot);
-      DiffTreePath path{};
+      DiffTreePath path{GetRoot()};
       path.push_back(std::move(item));
 
       return path;
@@ -508,12 +515,11 @@ DiffTreePath FileVersionInstanceEditor::GetDiffTreeMergePathRecur(
     i++;
   }
 
-  return DiffTreePath{};
+  return DiffTreePath{GetRoot()};
 }
 
 const std::vector<FileVersionDiff>& FileVersionInstanceEditor::GetRoot() const {
-  assert(file_version_instance_.commit_path_.GetRoot());
-  return *file_version_instance_.commit_path_.GetRoot();
+  return file_version_instance_.commit_path_.GetRoot();
 }
 
 int FileVersionInstanceEditor::FindCommitIndexOnCurrentBranch(
@@ -530,4 +536,50 @@ int FileVersionInstanceEditor::FindCommitIndexOnCurrentBranch(
   return child_index_it != diffs->cend()
              ? static_cast<int>(child_index_it - diffs->cbegin())
              : -1;
+}
+
+const FileVersionDiff* FileVersionInstanceEditor::FindDiff(
+    const GitHash& commit,
+    const std::vector<FileVersionDiff>& subroot) const {
+  for (const auto& diff : subroot) {
+    if (diff.commit_ == commit)
+      return &diff;
+
+    for (size_t parent_index = 1; parent_index < diff.parents_.size();
+         parent_index++) {
+      auto& parent_diffs = diff.parents_[parent_index].file_version_diffs_;
+      assert(parent_diffs);
+      if (parent_diffs) {
+        const auto* diff = FindDiff(commit, *parent_diffs);
+        if (diff)
+          return diff;
+        // Continue searching in other subbranches.
+      }
+    }
+  }
+
+  return nullptr;
+}
+
+const std::vector<FileVersionDiff>* FileVersionInstanceEditor::FindDiffs(
+    const GitHash& commit,
+    const std::vector<FileVersionDiff>& subroot) const {
+  for (const auto& diff : subroot) {
+    if (diff.commit_ == commit)
+      return &subroot;
+
+    for (size_t parent_index = 1; parent_index < diff.parents_.size();
+         parent_index++) {
+      auto& parent_diffs = diff.parents_[parent_index].file_version_diffs_;
+      assert(parent_diffs);
+      if (parent_diffs) {
+        const auto* diffs = FindDiffs(commit, *parent_diffs);
+        if (diffs)
+          return diffs;
+        // Continue searching in other subbranches.
+      }
+    }
+  }
+
+  return nullptr;
 }

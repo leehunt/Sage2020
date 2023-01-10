@@ -115,8 +115,7 @@ DiffTreePath::operator int() const {
 }
 
 int DiffTreePath::operator++() {
-  int ret = 0;
-  ret = back().currentBranchIndex();
+  int ret = back().currentBranchIndex();
   ret++;
   assert(ret >= 0);  // This can be -1 if there is no parent branch (e.g.
   // the branch created the file).
@@ -125,12 +124,12 @@ int DiffTreePath::operator++() {
 }
 
 int DiffTreePath::operator--() {
-  int ret = 0;
+  int ret = -1;
   if (!empty()) {
     ret = back().currentBranchIndex();
     if (!ret) {
       // Tricky: Pop off innermost branch after decrementing the 0th index.
-      pop_back();
+       pop_back();
     } else {
       ret--;
       back().setCurrentBranchIndex(ret);
@@ -148,7 +147,7 @@ const FileVersionDiff* DiffTreePath::Diff() const {
   if (current_item_index == -1)
     return nullptr;
 
-  const FileVersionDiff* diff = &(*GetRoot())[current_item_index];
+  const FileVersionDiff* diff = &(GetRoot())[current_item_index];
   for (auto it = cbegin() + 1; it != cend(); it++) {
     const auto& new_item = *it;
     if (new_item.currentBranchIndex() == -1)
@@ -170,15 +169,13 @@ bool DiffTreePath::HasSameParent(const DiffTreePath& other) const {
   return DiffsSubbranch() == other.DiffsSubbranch();
 }
 
-const std::vector<FileVersionDiff>* DiffTreePath::GetRoot() const {
-  if (empty())
-    return nullptr;
-  return front().branch();
+const std::vector<FileVersionDiff>& DiffTreePath::GetRoot() const {
+  return root_;
 }
 
 DiffTreePath DiffTreePath::GetAncestors(size_t num_ancestors) const {
   assert(num_ancestors <= size());
-  DiffTreePath new_path{};
+  DiffTreePath new_path{GetRoot()};
   for (size_t i = 0; i < num_ancestors; i++)
     new_path.push_back((*this)[i]);
   return new_path;

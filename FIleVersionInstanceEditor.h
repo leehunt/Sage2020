@@ -30,6 +30,7 @@ class FileVersionInstanceEditor {
 
   // Returns true if edit changes FileVersionInstance contents.
   bool GoToCommit(const GitHash& commit);
+  bool GoToDiff(const FileVersionDiff& diff);
 
   // Uses current |file_version_instance_| branch.
   // Returns true if edit changes FileVersionInstance contents.
@@ -56,6 +57,13 @@ class FileVersionInstanceEditor {
   // Gets the path from Root to |commit| via branching (base) commits.
   // This is typically used for walking the graph from one commit to another.
   DiffTreePath GetDiffTreeBranchPath(const GitHash& commit) const;
+
+  const FileVersionDiff* FindDiff(
+      const GitHash& commit,
+      const std::vector<FileVersionDiff>& subroot) const;
+  const std::vector<FileVersionDiff>* FindDiffs(
+      const GitHash& commit,
+      const std::vector<FileVersionDiff>& subroot) const;
 
  private:
   DiffTreePath GetDiffTreeMergePathRecur(

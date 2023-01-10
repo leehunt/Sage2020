@@ -3,11 +3,15 @@
 #include <cassert>
 #include "FileVersionInstance.h"
 
-FileVersionInstance::FileVersionInstance() {}
+FileVersionInstance::FileVersionInstance(
+    const std::vector<FileVersionDiff>& root)
+    : commit_path_(root) {}
 
-FileVersionInstance::FileVersionInstance(std::deque<std::string>&& lines,
-                                         const GitHash& commit)
-    : commit_(commit) {
+FileVersionInstance::FileVersionInstance(
+    const std::vector<FileVersionDiff>& root,
+    std::deque<std::string>&& lines,
+    const GitHash& commit)
+    : commit_path_(root), commit_(commit) {
   if (commit_.IsValid()) {
     LineToFileVersionLineInfo infos;
     infos.emplace_back(FileVersionLineInfo(commit_.sha_));
