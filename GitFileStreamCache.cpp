@@ -2,8 +2,11 @@
 
 #include "GitFileStreamCache.h"
 
+#include <Windows.h>
+
+#include <corecrt_wstdio.h>
+#include <intsafe.h>
 #include <shlobj.h>
-#include <stdio.h>
 #include <cassert>
 
 #include "Sage2020.h"

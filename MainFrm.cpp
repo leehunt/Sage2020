@@ -1,20 +1,28 @@
-
 // MainFrm.cpp : implementation of the CMainFrame class
 //
 #include "pch.h"
 
+#include "MainFrm.h"
+
 #include <ShlObj_core.h>  // BIF_RETURNONLYFSDIRS
 
-#include <afxdlgs.h>  // Must go before following afx includes!
+// Must go before following afx includes!
+#include <afxdockingmanager.h>
+#include <afxglobals.h>
+#include <afxpopupmenu.h>
+#include <afxres.h>
+#include <afxstr.h>
+#include <afxtempl.h>
 #include <afxtoolbarscustomizedialog.h>
 #include <afxvisualmanager.h>
 #include <afxvisualmanagerwindows.h>
-
-#include "MainFrm.h"
+#include <atltypes.h>
+#include <commctrl.h>
+#include <libloaderapi.h>
+#include <tchar.h>
 
 #include "Resource.h"
 #include "Sage2020.h"
-#include "framework.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW

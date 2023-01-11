@@ -1,7 +1,9 @@
 #include "pch.h"
 
-#include <cassert>
 #include "LineTokenizer.h"
+
+#include <stddef.h>
+#include <cassert>
 
 #define CCH_MAX_MACRO 1024
 
@@ -136,7 +138,7 @@ static enum tkCH _TkchLexText(
   unsigned int iuState = 0;
 
   /* DFA: Scan for the limits of the token (rough scan) */
-  while (TRUE) {
+  while (true) {
     unsigned char ch = *pch;
     /* Read and translate a character into a column in psttblStateTable */
     int isttCol = _vchtblAnsi[ch];
@@ -155,9 +157,9 @@ static enum tkCH _TkchLexText(
   return ItkFromState(iuState);
 }
 
-static BOOL FGetCharTok(CHTOK* ptok) {
+static bool FGetCharTok(CHTOK* ptok) {
   if (ptok->tkch == tkCH::uNIL || ptok->tkchPrev == tkCH::uNill)
-    return FALSE;  // out of string
+    return false;  // out of string
 
   ptok->tkchPrev = ptok->tkch;
 
@@ -171,12 +173,12 @@ static BOOL FGetCharTok(CHTOK* ptok) {
   ptok->chSav = *ptok->pchEnd;
   *ptok->pchEnd = L'\0';
 
-  return TRUE;
+  return true;
 }
 
-static BOOL FGetCharTokDirect(CHTOK* ptok) {
+static bool FGetCharTokDirect(CHTOK* ptok) {
   if (ptok->tkchPrev == tkCH::uNill)
-    return FALSE;  // out of string
+    return false;  // out of string
 
   ptok->tkchPrev = ptok->tkch;
 
@@ -190,10 +192,10 @@ static BOOL FGetCharTokDirect(CHTOK* ptok) {
   ptok->chSav = *ptok->pchEnd;
   *ptok->pchEnd = L'\0';
 
-  return TRUE;
+  return true;
 }
 
-static BOOL FExpandTokenChar(__in TOK* ptokBegin /*in/out*/,
+static bool FExpandTokenChar(__in TOK* ptokBegin /*in/out*/,
                              __in const TOK* ptokEnd) {
   char* szValT;
   assert(ptokBegin);
@@ -203,18 +205,18 @@ static BOOL FExpandTokenChar(__in TOK* ptokBegin /*in/out*/,
   *ptokBegin = *ptokEnd;
   ptokBegin->szVal = szValT;
 
-  return TRUE;
+  return true;
 }
 
-static BOOL FRestoreBuf(const TOK* ptokOld, const TOK* ptokNew) {
+static bool FRestoreBuf(const TOK* ptokOld, const TOK* ptokNew) {
   *ptokNew->pchEnd = ptokNew->chSav;
   *ptokOld->pchEnd = L'\0';
 
-  return TRUE;
+  return true;
 }
 
-static BOOL FGetTokCore(TOK* ptok, BOOL fDirect) {
-  BOOL fRet;
+static bool FGetTokCore(TOK* ptok, bool fDirect) {
+  bool fRet;
 LNextTok:
   if (fDirect)
     fRet = FGetCharTokDirect((CHTOK*)ptok);
@@ -515,7 +517,7 @@ LNextTok:
       break;
 
     default:
-      assert(FALSE);
+      assert(false);
       break;
   }
 
@@ -523,12 +525,12 @@ LDone:
   return fRet;
 }
 
-BOOL FGetTokDirect(TOK* ptok) {
-  return FGetTokCore(ptok, TRUE /*fDirect*/);
+bool FGetTokDirect(TOK* ptok) {
+  return FGetTokCore(ptok, true /*fDirect*/);
 }
 
-BOOL FGetTok(TOK* ptok) {
-  return FGetTokCore(ptok, FALSE /*fDirect*/);
+bool FGetTok(TOK* ptok) {
+  return FGetTokCore(ptok, false /*fDirect*/);
 }
 
 void AttachTokToLine(TOK* ptok, __in_z char* szLine) {

@@ -1,8 +1,9 @@
 #pragma once
 
-#include <filesystem>
-
 #include <Windows.h>
+
+#include <intsafe.h>
+#include <filesystem>
 
 // Helper function that safely converts from ANSI to Unicode.
 std::wstring to_wstring(const std::string& s);

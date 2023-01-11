@@ -54,7 +54,8 @@ void Sage2020ViewDocListener::NotifyAllListenersOfEdit(int iLine, int cLine) {
   }
 }
 
-void Sage2020ViewDocListener::NotifyAllListenersOfVersionChange(const DiffTreePath& commit_path) {
+void Sage2020ViewDocListener::NotifyAllListenersOfVersionChange(
+    const DiffTreePath& commit_path) {
   assert(this->previous_listener_ == nullptr);
 
   Sage2020ViewDocListener* listener = this;
@@ -67,7 +68,6 @@ void Sage2020ViewDocListener::NotifyAllListenersOfVersionChange(const DiffTreePa
 void Sage2020ViewDocListener::NotifyAllListenersOfBranchChange(
     const std::vector<FileVersionDiff>& old_branch,
     const std::vector<FileVersionDiff>& new_branch) {
-
   assert(this->previous_listener_ == nullptr);
 
   Sage2020ViewDocListener* listener = this;

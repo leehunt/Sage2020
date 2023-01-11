@@ -1,7 +1,5 @@
-
 // Sage2020.cpp : Defines the class behaviors for the application.
 //
-
 #include "pch.h"
 
 #include "Sage2020.h"

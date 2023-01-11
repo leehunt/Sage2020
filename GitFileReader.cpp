@@ -1,7 +1,17 @@
 #include "pch.h"
 
-#include <memory>
 #include "GitFileReader.h"
+
+#include <WinNls.h>
+#include <Windows.h>
+
+#include <afxstr.h>
+#include <afxwin.h>
+#include <corecrt_wstdio.h>
+#include <corecrt_wstring.h>
+#include <stringapiset.h>
+#include <tchar.h>
+
 #include "OutputWnd.h"
 #include "Utility.h"
 

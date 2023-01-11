@@ -2,25 +2,41 @@
 //
 #include "pch.h"
 
+#include "Sage2020View.h"
+
 #include <cwctype>
 
-#include <afxcontextmenumanager.h>
 // SHARED_HANDLERS can be defined in an ATL project implementing preview,
 // thumbnail and search filter handlers and allows sharing of document code with
 // that project.
+#include <afxcontextmenumanager.h>
 #ifndef SHARED_HANDLERS
 #include <afxpreviewviewex.h>
 #endif
+#include <afxpropertygridctrl.h>
+#include <afxres.h>
+#include <afxver_.h>
+#include <assert.h>
+#include <corecrt_memcpy_s.h>
+#include <corecrt_wctype.h>
+#include <errhandlingapi.h>
+#include <tchar.h>
+#include <vcruntime.h>
+#include <winerror.h>
+#include <execution>
+#include <set>
 
 #include "FIleVersionInstanceEditor.h"
+#include "FileVersionDiff.h"
+#include "FileVersionInstance.h"
+#include "FileVersionLineInfo.h"
+#include "GitHash.h"
 #include "PropertiesWnd.h"
 #include "Resource.h"
-#include "framework.h"
 #ifndef SHARED_HANDLERS
 #include "Sage2020.h"
 #endif
 #include "Sage2020Doc.h"
-#include "Sage2020View.h"
 #include "Utility.h"
 
 #ifdef _DEBUG

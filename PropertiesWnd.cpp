@@ -1,12 +1,23 @@
-
 #include "pch.h"
 
-#include "framework.h"
-
-#include <cassert>
-#include "FileVersionDiff.h"
-#include "MainFrm.h"
 #include "PropertiesWnd.h"
+
+#include <afxdisp.h>
+#include <afxglobals.h>
+#include <afxpane.h>
+#include <afxres.h>
+#include <afxstr.h>
+#include <atltypes.h>
+#include <comutil.h>
+#include <corecrt_wstdlib.h>
+#include <tchar.h>
+#include <vcruntime.h>
+#include <wtypes.h>
+#include <cassert>
+#include <string>
+
+#include "FileVersionDiff.h"
+#include "GitHash.h"
 #include "Resource.h"
 #include "Sage2020.h"
 #include "Sage2020View.h"

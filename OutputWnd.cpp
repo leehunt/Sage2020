@@ -1,16 +1,23 @@
 
 #include "pch.h"
 
+#include "OutputWnd.h"
+
 #include <cassert>
 
-#include <afxole.h>
-
+#include <afx.h>
 #include <afxMDIFrameWndEx.h>
+#include <afxglobals.h>
+#include <afxpopupmenu.h>
+#include <afxres.h>
+#include <afxstr.h>
+#include <corecrt_wstring.h>
+#include <errhandlingapi.h>
+#include <libloaderapi.h>
+#include <stddef.h>
+#include <tchar.h>
 
-#include "MainFrm.h"
-#include "OutputWnd.h"
 #include "Resource.h"
-#include "framework.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW

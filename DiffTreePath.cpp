@@ -1,8 +1,10 @@
 #include "pch.h"
 
-#include <assert.h>
-
 #include "DiffTreePath.h"
+
+#include <assert.h>
+#include <ccomplex>
+
 #include "FileVersionDiff.h"
 
 DiffTreePathItem::DiffTreePathItem()
@@ -129,7 +131,7 @@ int DiffTreePath::operator--() {
     ret = back().currentBranchIndex();
     if (!ret) {
       // Tricky: Pop off innermost branch after decrementing the 0th index.
-       pop_back();
+      pop_back();
     } else {
       ret--;
       back().setCurrentBranchIndex(ret);

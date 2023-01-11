@@ -1,13 +1,16 @@
 #include "pch.h"
 
-#include <direct.h>
-#include <stdio.h>
-#include <cassert>
-#include <functional>
-#include <map>
-#include <string>
 #include "GitDiffReader.h"
+
+#include <Windows.h>
+
+#include <afxstr.h>
+#include <afxwin.h>
+#include <tchar.h>
+#include <cassert>
+
 #include "GitFileStreamCache.h"
+#include "GitHash.h"
 #include "LineTokenizer.h"
 #include "OutputWnd.h"
 #include "Utility.h"

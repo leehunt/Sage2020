@@ -1,5 +1,7 @@
 #pragma once
 
+#include <specstrings.h>
+
 // Lexer tokens: Plain Text and Delimiters
 enum class TK {
   tk_RESCAN_ = -2,  // Dummy: force rescan
@@ -108,7 +110,7 @@ struct CHTOK {
   enum tkCH tkchPrev;
 };
 
-BOOL FGetTokDirect(TOK* ptok);
-BOOL FGetTok(TOK* ptok);
+bool FGetTokDirect(TOK* ptok);
+bool FGetTok(TOK* ptok);
 void AttachTokToLine(TOK* ptok, __in_z char* szLine);
 void UnattachTok(TOK* ptok);

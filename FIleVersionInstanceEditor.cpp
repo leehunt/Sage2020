@@ -2,8 +2,15 @@
 
 #include "FIleVersionInstanceEditor.h"
 
+#include <afx.h>
+#include <assert.h>
+#include <intsafe.h>
+#include <execution>
+
 #include "FileVersionDiff.h"
 #include "FileVersionInstance.h"
+#include "FileVersionLineInfo.h"
+#include "GitHash.h"
 #include "Sage2020ViewDocListener.h"
 
 FileVersionInstanceEditor::FileVersionInstanceEditor(
@@ -24,7 +31,7 @@ void FileVersionInstanceEditor::AddDiff(const FileVersionDiff& diff) {
 #if _DEBUG
   int new_int_index =
 #endif
-    ++file_version_instance_.commit_path_;
+      ++file_version_instance_.commit_path_;
   assert(new_int_index >= 0);
   printf("AddDiff:    %s at path: %s\n", diff.commit_.sha_,
          file_version_instance_.commit_path_.PathText().c_str());
@@ -69,7 +76,7 @@ void FileVersionInstanceEditor::RemoveDiff(const FileVersionDiff& diff) {
 #if _DEBUG
   int new_int_index =
 #endif
-    --file_version_instance_.commit_path_;
+      --file_version_instance_.commit_path_;
   assert(new_int_index >= -1);
   // Check that we're removing the diff to the expected base commit.
   assert(diff.file_parent_commit_.IsValid() ||
@@ -274,9 +281,8 @@ bool FileVersionInstanceEditor::GoToIndex(int commit_index) {
     // N.b. Make a 'diff' copy reference since commit_path_ is modfied by
     // AddDiff().
 #if _DEBUG
-    int old_index =
+    int old_index = file_version_instance_.commit_path_;
 #endif
-      file_version_instance_.commit_path_;
     const auto& diff = diffs[(size_t)file_version_instance_.commit_path_ + 1];
     AddDiff(diff);
     assert(file_version_instance_.commit_path_ == old_index + 1);

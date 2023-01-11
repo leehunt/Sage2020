@@ -2,7 +2,7 @@
 
 #include "FileVersionDiff.h"
 
-#include "FileVersionInstance.h"
+#include <deque>
 
 #ifdef _DEBUG
 bool FileVersionDiffHunk::operator==(const FileVersionDiffHunk& other) const {

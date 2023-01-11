@@ -2,14 +2,14 @@
 //
 #pragma once
 
-#include <afxwinappex.h>
-
 #ifndef __AFXWIN_H__
 #error "include 'pch.h' before including this file for PCH"
 #endif
 
 #include <Windows.h>
+
 #include <afxcmn.h>
+#include <afxwinappex.h>
 
 // main symbols
 

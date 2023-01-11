@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cassert>
 #include <map>
+
 #include "Utility.h"
 
 constexpr char kGitGetRootCommand[] = "git rev-parse --show-toplevel";
@@ -112,7 +113,7 @@ void ProcessPipe::Join(DWORD msWait) {
 }
 
 std::filesystem::path GetGitRoot(const std::filesystem::path& file_path) {
-  static std::map< std::filesystem::path, std::filesystem::path> root_map_;
+  static std::map<std::filesystem::path, std::filesystem::path> root_map_;
   const auto it = root_map_.find(file_path);
   if (it != root_map_.cend())
     return it->second;

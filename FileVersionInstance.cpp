@@ -1,9 +1,12 @@
 #include "pch.h"
 
+#include "FileVersionInstance.h"
+
+#include <Windows.h>
+
 #include <cassert>
 
 #include "FileVersionDiff.h"
-#include "FileVersionInstance.h"
 
 FileVersionInstance::FileVersionInstance(
     const std::vector<FileVersionDiff>& root)

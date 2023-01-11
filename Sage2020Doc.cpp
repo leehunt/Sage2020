@@ -1,7 +1,5 @@
-
 // Sage2020Doc.cpp : implementation of the CSage2020Doc class
 //
-
 #include "pch.h"
 
 #include "Sage2020Doc.h"
