@@ -1,4 +1,5 @@
 #pragma once
+
 #include <string>
 
 #define _DEBUG_MEM_TRACE 0

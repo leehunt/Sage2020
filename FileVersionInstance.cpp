@@ -1,6 +1,8 @@
 #include "pch.h"
 
 #include <cassert>
+
+#include "FileVersionDiff.h"
 #include "FileVersionInstance.h"
 
 FileVersionInstance::FileVersionInstance(

@@ -2,6 +2,11 @@
 #include "pch.h"
 
 #include <cassert>
+
+#include <afxole.h>
+
+#include <afxMDIFrameWndEx.h>
+
 #include "MainFrm.h"
 #include "OutputWnd.h"
 #include "Resource.h"
@@ -66,21 +71,32 @@ int COutputWnd::OnCreate(LPCREATESTRUCT lpCreateStruct) {
   UpdateFonts();
 
   CString strTabName;
+#if _DEBUG
   BOOL bNameValid;
+#endif
 
   // Attach list windows to tab:
 #if BUILD_TAB
-  bNameValid = strTabName.LoadString(IDS_BUILD_TAB);
+#if _DEBUG
+  bNameValid =
+#endif
+      strTabName.LoadString(IDS_BUILD_TAB);
   ASSERT(bNameValid);
   m_wndTabs.AddTab(&m_wndOutputBuild, strTabName, (UINT)0);
 #endif
 #if DEBUG_TAB
-  bNameValid = strTabName.LoadString(IDS_DEBUG_TAB);
+#if _DEBUG
+  bNameValid =
+#endif
+      strTabName.LoadString(IDS_DEBUG_TAB);
   ASSERT(bNameValid);
   m_wndTabs.AddTab(&m_wndOutputDebug, strTabName, (UINT)1);
 #endif
 #if FIND_TAB
-  bNameValid = strTabName.LoadString(IDS_FIND_TAB);
+#if _DEBUG
+  bNameValid =
+#endif
+      strTabName.LoadString(IDS_FIND_TAB);
   ASSERT(bNameValid);
   m_wndTabs.AddTab(&m_wndOutputFind, strTabName, (UINT)2);
 #endif

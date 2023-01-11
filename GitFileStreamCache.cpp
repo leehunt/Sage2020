@@ -1,9 +1,11 @@
 #include "pch.h"
 
+#include "GitFileStreamCache.h"
+
 #include <shlobj.h>
 #include <stdio.h>
 #include <cassert>
-#include "GitFileStreamCache.h"
+
 #include "Sage2020.h"
 #include "Utility.h"
 
@@ -13,7 +15,7 @@ constexpr char kFileCacheVersionLine[] = "Cache file version: 8\n";
 
 // TODO!: Add in current opts line to the branch cache dir entries.
 GitFileStreamCache::GitFileStreamCache(const std::filesystem::path& file_path)
-//    : file_path_(std::filesystem::canonical(file_path)){}
+    //    : file_path_(std::filesystem::canonical(file_path)){}
     : file_path_(file_path) {}
 
 AUTO_CLOSE_FILE_POINTER GitFileStreamCache::GetStream(const std::string& hash) {
@@ -100,8 +102,12 @@ std::filesystem::path GitFileStreamCache::GetItemCachePath(
   auto git_relative_path = file_path_.lexically_relative(git_root);
 
   TCHAR local_app_data[MAX_PATH];
-  HRESULT result = ::SHGetFolderPath(NULL, CSIDL_LOCAL_APPDATA, NULL,
-                                     SHGFP_TYPE_CURRENT, local_app_data);
+#if _DEBUG
+  HRESULT result =
+#endif
+      ::SHGetFolderPath(NULL, CSIDL_LOCAL_APPDATA, NULL, SHGFP_TYPE_CURRENT,
+                        local_app_data);
+  assert(SUCCEEDED(result));
 
   std::filesystem::path item_cache_path(local_app_data);
 

@@ -1,5 +1,14 @@
-
 #pragma once
+
+#include <Windows.h>
+
+#include <afx.h>
+#include <afxdockablepane.h>
+#include <afxpropertygridctrl.h>
+#include <afxtoolbar.h>
+#include <afxwin.h>
+#include <intsafe.h>
+#include <stddef.h>
 
 struct FileVersionDiff;
 

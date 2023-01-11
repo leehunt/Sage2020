@@ -1,12 +1,13 @@
 #pragma once
 
+#define USE_SPARSE_INDEX_ARRAY 0
+
 #include <assert.h>
 #include <map>
+#if !USE_SPARSE_INDEX_ARRAY
+#include <deque>
+#endif
 
-#include "GitHash.h"
-
-class SparseIndexArray;
-class FileVersionInstanceTest;
 class FileVersionLineInfo {
  public:
   FileVersionLineInfo(const char commit_sha[41]) {

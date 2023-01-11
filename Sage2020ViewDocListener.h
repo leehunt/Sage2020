@@ -1,10 +1,13 @@
 #pragma once
-#include <cassert>
 
-#include "FileVersionDiff.h"
+#include <cassert>
+#include <vector>
+
+class DiffTreePath;
+struct FileVersionDiff;
 
 // A lightweight mix-in listener interface.
-class DiffTreePath;
+
 class Sage2020ViewDocListener {
  public:
   Sage2020ViewDocListener()

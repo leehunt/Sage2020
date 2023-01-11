@@ -1,13 +1,12 @@
 #pragma once
-#include <vector>
 
-#include "FileVersionDiff.h"
+#include <bitset>
+#include <vector>
 
 // #define DIFF_TREE_PARENT_BRANCH_PATH 1
 
-// struct FileVersionDiff;
 //  {Index of current item, parent index}.
-class DiffTreePath;
+struct FileVersionDiff;
 class DiffTreePathItem {
  public:
   DiffTreePathItem();

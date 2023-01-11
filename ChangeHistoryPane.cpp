@@ -7,13 +7,15 @@
 #include <sstream>
 #include <vector>
 
+#include <afxtooltipmanager.h>
+
 #include "FileVersionDiff.h"
 #include "FileVersionInstance.h"
 #include "GitDiffReader.h"
 #include "MainFrm.h"
+#include "Resource.h"
 #include "Sage2020.h"
 #include "Utility.h"
-#include "Resource.h"
 
 // clang-format off
 BEGIN_MESSAGE_MAP(CChangeHistoryPane, CDockablePane)
@@ -158,8 +160,8 @@ void CChangeHistoryPane::OnTreeNotifyExpanding(NMHDR* pNMHDR,
   std::string parent_revision_range =
       file_version_diff->parents_[0].commit_.sha_ + std::string("..") +
       file_version_diff_parent.commit_.sha_;
-  GitDiffReader git_diff_reader{file_version_diff->path_,
-                                parent_revision_range, pwndOutput};
+  GitDiffReader git_diff_reader{file_version_diff->path_, parent_revision_range,
+                                pwndOutput};
   assert(!git_diff_reader.GetDiffs().empty());
   if (!git_diff_reader.GetDiffs().empty()) {
     file_version_diff_parent.file_version_diffs_ =
@@ -169,8 +171,8 @@ void CChangeHistoryPane::OnTreeNotifyExpanding(NMHDR* pNMHDR,
     // Get *all* diffs for this branch such that then we add "^" in the next
     // command, something will be found.
     GitDiffReader git_diff_reader_all_commits{
-        file_version_diff->path_, parent_revision_range + "^",
-        pwndOutput, GitDiffReader::Opt::NO_FILTER_TO_FILE};
+        file_version_diff->path_, parent_revision_range + "^", pwndOutput,
+        GitDiffReader::Opt::NO_FILTER_TO_FILE};
 
     if (!git_diff_reader_all_commits.GetDiffs().empty()) {
       // Find the common ancestor branch commit of this sub-branch.
@@ -245,7 +247,7 @@ static void SetToolTip(CTreeCtrl& tree,
     }
   }
 }
-#endif // 0
+#endif  // 0
 
 static std::string CreateTreeItemLabel(size_t commit_index,
                                        const FileVersionDiff& file_diff) {

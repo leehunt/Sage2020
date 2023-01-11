@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "..\DiffTreePath.h"
+#include "..\FileVersionDiff.h"
 #include "..\FileVersionInstance.h"
 
 // Gtest 'friend' forwarders.
@@ -20,7 +22,7 @@ TEST(FileVersionInstanceTest, Load) {
   FileVersionInstance file_version_instance(root_diffs, std::move(some_lines),
                                             parent_commit);
   int i = 0;
-  for (const auto& line : some_lines) {
+  for (const auto& line : some_lines_copy) {
     EXPECT_EQ(line.size(), 0);
     EXPECT_STREQ(line.c_str(), "");
     EXPECT_STREQ(file_version_instance.GetLineInfo(i).commit_sha(),
@@ -28,6 +30,7 @@ TEST(FileVersionInstanceTest, Load) {
     i++;
   }
   EXPECT_TRUE(parent_commit.IsValid());
+  EXPECT_EQ(file_version_instance.GetLines().size(), some_lines_copy.size());
   EXPECT_EQ(file_version_instance.GetCommit(), parent_commit);
 
   i = 0;
@@ -133,7 +136,7 @@ TEST(FileVersionInstanceTest, SparseIndexArrayDown) {
     EXPECT_EQ(line_info, FileVersionLineInfo{sha});
     end_pos++;
     EXPECT_EQ(sparse_index_array.Get(end_pos), FileVersionLineInfo{});
-    num_ranges += i > 0 ? 2 : 1; 
+    num_ranges += i > 0 ? 2 : 1;
     EXPECT_EQ(sparse_index_array.Size(), num_ranges);
   }
 

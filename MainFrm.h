@@ -1,14 +1,26 @@
+#pragma once
 
 // MainFrm.h : interface of the CMainFrame class
 //
 
-#pragma once
+#include <Windows.h>
+
 #define FILE_VIEW_UI 0
 #define CLASS_VIEW_UI 0
 #define OUTPUT_PANE 1
 #define OUTLOOK_BAR 0
 #define SHELL_TREE_CONTROL 0
 #define CALENDAR_BAR 0
+
+#include <afx.h>
+#include <afxext.h>
+#include <afxframewndex.h>
+#include <afxmenubar.h>
+#include <afxstatusbar.h>
+#include <afxtoolbar.h>
+#include <afxtoolbarimages.h>
+#include <afxwin.h>
+#include <intsafe.h>
 
 #if FILE_VIEW_UI
 #include "FileView.h"
@@ -24,8 +36,10 @@
 #include "CalendarBar.h"
 #endif
 #include "ChangeHistoryPane.h"
-#include "Resource.h"
 
+struct AFX_CMDHANDLERINFO;
+
+#if OUTLOOK_BAR
 class COutlookBar : public CMFCOutlookBar {
   virtual BOOL AllowShowOnPaneMenu() const { return TRUE; }
   virtual void GetPaneName(CString& strName) const {
@@ -35,6 +49,7 @@ class COutlookBar : public CMFCOutlookBar {
       strName.Empty();
   }
 };
+#endif
 
 class CMainFrame : public CFrameWndEx {
  protected:  // create from serialization only

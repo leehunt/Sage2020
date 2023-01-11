@@ -1,7 +1,7 @@
 #pragma once
+
 #include <deque>
 #include <filesystem>
-#include <string>
 
 class COutputWnd;
 

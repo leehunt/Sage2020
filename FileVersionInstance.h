@@ -1,8 +1,7 @@
 #pragma once
-#include <cassert>
+
 #include <deque>
 #include <filesystem>
-#include <map>
 #include <set>
 #include <vector>
 
@@ -10,13 +9,11 @@
 #include "FileVersionLineInfo.h"
 #include "GitHash.h"
 
-#define USE_SPARSE_INDEX_ARRAY 0
-
 class FileVersionInstanceEditor;
 class GitDiffReaderTest;
 class FileVersionInstanceTest;
-
 struct FileVersionDiff;
+
 class FileVersionInstance {
  public:
   FileVersionInstance(const std::vector<FileVersionDiff>& root);

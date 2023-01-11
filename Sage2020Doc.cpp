@@ -4,6 +4,16 @@
 
 #include "pch.h"
 
+#include "Sage2020Doc.h"
+
+#include <propkey.h>
+#include <codecvt>
+
+#include "GitDiffReader.h"
+#include "GitFileReader.h"
+#include "MainFrm.h"
+#include "PropertiesWnd.h"  // REVIEW: this is icky
+#include "Resource.h"
 #include "framework.h"
 // SHARED_HANDLERS can be defined in an ATL project implementing preview,
 // thumbnail and search filter handlers and allows sharing of document code with
@@ -11,14 +21,6 @@
 #ifndef SHARED_HANDLERS
 #include "Sage2020.h"
 #endif
-
-#include <propkey.h>
-#include <codecvt>
-#include "GitDiffReader.h"
-#include "GitFileReader.h"
-#include "MainFrm.h"
-#include "PropertiesWnd.h"  // REVIEW: this is icky
-#include "Sage2020Doc.h"
 #include "Sage2020ViewDocListener.h"
 
 #ifdef _DEBUG
@@ -32,16 +34,19 @@
 IMPLEMENT_DYNCREATE(CSage2020Doc, CDocument)
 
 // clang-format off
+_Pragma("GCC diagnostic push")
+_Pragma("GCC diagnostic ignored \"-Wunused-local-typedef\"")
 BEGIN_MESSAGE_MAP(CSage2020Doc, CDocument)
 	ON_UPDATE_COMMAND_UI(IDR_PROPERTIES_GRID,
 		&CSage2020Doc::OnUpdatePropertiesPaneGrid)
 	ON_UPDATE_COMMAND_UI(IDR_HISTORY_TREE, &CSage2020Doc::OnUpdateHistoryTree)
 END_MESSAGE_MAP()
-// clang-format on
+_Pragma("GCC diagnostic pop")
 
 // CSage2020Doc construction/destruction
 
 CSage2020Doc::CSage2020Doc() noexcept
+    // clang-format on
     : m_pDocListenerHead(nullptr), m_fNewDoc(false) {}
 
 CSage2020Doc::~CSage2020Doc() {}
@@ -106,8 +111,8 @@ void CSage2020Doc::Serialize(CArchive& ar) {
       GitFileReader git_file_reader{file_path.parent_path(), initial_file_id,
                                     pwndOutput};
       file_version_instance_ = std::make_unique<FileVersionInstance>(
-          GetRootFileDiffs(),
-          std::move(git_file_reader.GetLines()), file_diffs_.front().commit_);
+          GetRootFileDiffs(), std::move(git_file_reader.GetLines()),
+          file_diffs_.front().commit_);
     } else {
       file_version_instance_ =
           std::make_unique<FileVersionInstance>(GetRootFileDiffs());

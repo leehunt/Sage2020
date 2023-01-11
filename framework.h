@@ -4,8 +4,6 @@
 #define VC_EXTRALEAN  // Exclude rarely-used stuff from Windows headers
 #endif
 
-#include "targetver.h"
-
 #define _ATL_CSTRING_EXPLICIT_CONSTRUCTORS  // some CString constructors will be
                                             // explicit
 
@@ -13,19 +11,19 @@
 // messages
 #define _AFX_ALL_WARNINGS
 
-#include <afxext.h>  // MFC extensions
-#include <afxwin.h>  // MFC core and standard components
+// MFC extensions
+// MFC core and standard components
 
-#include <afxdisp.h>  // MFC Automation classes
+// MFC Automation classes
 
 #ifndef _AFX_NO_OLE_SUPPORT
-#include <afxdtctl.h>  // MFC support for Internet Explorer 4 Common Controls
+// MFC support for Internet Explorer 4 Common Controls
 #endif
 #ifndef _AFX_NO_AFXCMN_SUPPORT
 #include <afxcmn.h>  // MFC support for Windows Common Controls
 #endif               // _AFX_NO_AFXCMN_SUPPORT
 
-#include <afxcontrolbars.h>  // MFC support for ribbons and control bars
+// MFC support for ribbons and control bars
 
 #ifdef _UNICODE
 #if defined _M_IX86

@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "..\DiffTreePath.h"
+#include "..\FileVersionDiff.h"
 
 // Gtest 'friend' forwarders.
 class DiffTreePathTest : public testing::Test {

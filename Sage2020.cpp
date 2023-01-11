@@ -4,25 +4,32 @@
 
 #include "pch.h"
 
-#include "MainFrm.h"
 #include "Sage2020.h"
-#include "afxdialogex.h"
-#include "afxwinappex.h"
-#include "framework.h"
 
+#include <afxcontextmenumanager.h>
+#include <afxdialogex.h>
+#include <afxtooltipctrl.h>
+#include <afxtooltipmanager.h>
+#include <afxwinappex.h>
+
+#include "MainFrm.h"
+#include "Resource.h"
 #include "Sage2020Doc.h"
 #include "Sage2020View.h"
+#include "framework.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
 
 // Enable when working.
-//#if ALLOW_FILE_TO_NOT_EXIST
+// #if ALLOW_FILE_TO_NOT_EXIST
 
 // CSage2020App
 
 // clang-format off
+_Pragma("GCC diagnostic push")
+_Pragma("GCC diagnostic ignored \"-Wunused-local-typedef\"")
 BEGIN_MESSAGE_MAP(CSage2020App, CWinAppEx)
 	ON_COMMAND(ID_APP_ABOUT, &CSage2020App::OnAppAbout)
 	// Standard file based document commands
@@ -31,11 +38,11 @@ BEGIN_MESSAGE_MAP(CSage2020App, CWinAppEx)
 	// Standard print setup command
 	ON_COMMAND(ID_FILE_PRINT_SETUP, &CWinAppEx::OnFilePrintSetup)
 END_MESSAGE_MAP()
-// clang-format on
+_Pragma("GCC diagnostic pop")
 
 // CSage2020App construction
-
 CSage2020App::CSage2020App() noexcept {
+  // clang-format on
   m_bHiColorIcons = TRUE;
 
   // support Restart Manager
@@ -139,7 +146,6 @@ BOOL CSage2020App::InitInstance() {
   if (!pDocTemplate)
     return FALSE;
 
-
 #if ALLOW_FILE_TO_NOT_EXIST
   // Clever hack (as documented by CodeProject). You can subclass CDocManager
   // here by pre-assigning it to before calling AddDocTemplate().
@@ -191,14 +197,19 @@ class CAboutDlg : public CDialogEx {
   DECLARE_MESSAGE_MAP()
 };
 
+// clang-format off
+_Pragma("GCC diagnostic push")
+_Pragma("GCC diagnostic ignored \"-Wunused-local-typedef\"")
+BEGIN_MESSAGE_MAP(CAboutDlg, CDialogEx)
+END_MESSAGE_MAP()
+_Pragma("GCC diagnostic pop")
+
 CAboutDlg::CAboutDlg() noexcept : CDialogEx(IDD_ABOUTBOX) {}
+// clang-format on
 
 void CAboutDlg::DoDataExchange(CDataExchange* pDX) {
   CDialogEx::DoDataExchange(pDX);
 }
-
-BEGIN_MESSAGE_MAP(CAboutDlg, CDialogEx)
-END_MESSAGE_MAP()
 
 // App command to run the dialog
 void CSage2020App::OnAppAbout() {

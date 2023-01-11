@@ -1,13 +1,26 @@
-
 // Sage2020View.h : interface of the CSage2020View class
 //
-
 #pragma once
+
+#include <Windows.h>
+
+#include <afx.h>
+#include <afxstr.h>
+#include <afxwin.h>
+#include <atlbase.h>
+#include <atltypes.h>
+#include <intsafe.h>
+#include <vector>
+
+#include "DiffTreePath.h"
 #include "Sage2020ViewDocListener.h"
 #include "Utility.h"
 
-class CSage2020Doc;
+struct CPrintInfo;
+struct FileVersionDiff;
 class FileVersionInstance;
+class CSage2020Doc;
+
 class CSage2020View : public CScrollView, public Sage2020ViewDocListener {
  protected:  // create from serialization only
   CSage2020View() noexcept;
@@ -51,7 +64,7 @@ class CSage2020View : public CScrollView, public Sage2020ViewDocListener {
 
   // REVIEW: MFC has 'CView::OnUpdate' that should be used to update /
   // invalidate the View (but NOT draw) in response to Doc updates.
-  virtual void DocEditNotification(int iLine, int cLine);   // REVIEW: virtual?
+  virtual void DocEditNotification(int iLine, int cLine);  // REVIEW: virtual?
   virtual void DocVersionChangedNotification(
       const DiffTreePath& commit_path);  // REVIEW: virtual?
   virtual void DocBranchChangedNotification(

@@ -3,10 +3,18 @@
 //
 #include "pch.h"
 
-#include "Sage2020.h"
-#include "framework.h"
+#include <ShlObj_core.h>  // BIF_RETURNONLYFSDIRS
+
+#include <afxdlgs.h>  // Must go before following afx includes!
+#include <afxtoolbarscustomizedialog.h>
+#include <afxvisualmanager.h>
+#include <afxvisualmanagerwindows.h>
 
 #include "MainFrm.h"
+
+#include "Resource.h"
+#include "Sage2020.h"
+#include "framework.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -46,7 +54,9 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct) {
   if (CFrameWndEx::OnCreate(lpCreateStruct) == -1)
     return -1;
 
+#if _DEBUG
   BOOL bNameValid;
+#endif
 
   if (!m_wndMenuBar.Create(this)) {
     TRACE0("Failed to create menubar\n");
@@ -70,12 +80,18 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct) {
   }
 
   CString strToolBarName;
-  bNameValid = strToolBarName.LoadString(IDS_TOOLBAR_STANDARD);
+#if _DEBUG
+  bNameValid =
+#endif
+      strToolBarName.LoadString(IDS_TOOLBAR_STANDARD);
   ASSERT(bNameValid);
   m_wndToolBar.SetWindowText(strToolBarName);
 
   CString strCustomize;
-  bNameValid = strCustomize.LoadString(IDS_TOOLBAR_CUSTOMIZE);
+#if _DEBUG
+  bNameValid =
+#endif
+      strCustomize.LoadString(IDS_TOOLBAR_CUSTOMIZE);
   ASSERT(bNameValid);
   m_wndToolBar.EnableCustomizeButton(TRUE, ID_VIEW_CUSTOMIZE, strCustomize);
 
@@ -210,12 +226,17 @@ BOOL CMainFrame::PreCreateWindow(CREATESTRUCT& cs) {
 }
 
 BOOL CMainFrame::CreateDockingWindows() {
+#if _DEBUG
   BOOL bNameValid;
+#endif
 
 #if CLASS_VIEW_UI
   // Create class view
   CString strClassView;
-  bNameValid = strClassView.LoadString(IDS_CLASS_VIEW);
+#if _DEBUG
+  bNameValid =
+#endif
+      strClassView.LoadString(IDS_CLASS_VIEW);
   ASSERT(bNameValid);
   if (!m_wndClassView.Create(
           strClassView, this, CRect(0, 0, 200, 200), TRUE, ID_VIEW_CLASSVIEW,
@@ -224,12 +245,15 @@ BOOL CMainFrame::CreateDockingWindows() {
     TRACE0("Failed to create Class View window\n");
     return FALSE;  // failed to create
   }
-#endif
+#endif  // CLASS_VIEW_UI
 
 #if FILE_VIEW_UI
   // Create file view
   CString strFileView;
-  bNameValid = strFileView.LoadString(IDS_FILE_VIEW);
+#if _DEBUG
+  bNameValid =
+#endif
+      strFileView.LoadString(IDS_FILE_VIEW);
   ASSERT(bNameValid);
   if (!m_wndFileView.Create(
           strFileView, this, CRect(0, 0, 200, 200), TRUE, ID_VIEW_FILEVIEW,
@@ -238,12 +262,15 @@ BOOL CMainFrame::CreateDockingWindows() {
     TRACE0("Failed to create File View window\n");
     return FALSE;  // failed to create
   }
-#endif
+#endif  // FILE_VIEW_UI
 
 #if OUTPUT_PANE
   // Create output window
   CString strOutputWnd;
-  bNameValid = strOutputWnd.LoadString(IDS_OUTPUT_WND);
+#if _DEBUG
+  bNameValid =
+#endif
+      strOutputWnd.LoadString(IDS_OUTPUT_WND);
   ASSERT(bNameValid);
   if (!m_wndOutput.Create(
           strOutputWnd, this, CRect(0, 0, 100, 100), TRUE, ID_VIEW_OUTPUTWND,
@@ -252,11 +279,14 @@ BOOL CMainFrame::CreateDockingWindows() {
     TRACE0("Failed to create Output window\n");
     return FALSE;  // failed to create
   }
-#endif
+#endif  // OUTPUT_PANE
 
   // Create properties window
   CString strPropertiesWnd;
-  bNameValid = strPropertiesWnd.LoadString(IDS_PROPERTIES_WND);
+#if _DEBUG
+  bNameValid =
+#endif
+      strPropertiesWnd.LoadString(IDS_PROPERTIES_WND);
   ASSERT(bNameValid);
   if (!m_wndProperties.Create(strPropertiesWnd, this, CRect(0, 0, 200, 200),
                               TRUE, ID_VIEW_PROPERTIESWND,
@@ -269,7 +299,10 @@ BOOL CMainFrame::CreateDockingWindows() {
 
   // Create the Change History window.
   CString strChangeHistoryWnd;
-  bNameValid = strChangeHistoryWnd.LoadString(IDS_CHANGE_HISTORY_WND);
+#if _DEBUG
+  bNameValid =
+#endif
+      strChangeHistoryWnd.LoadString(IDS_CHANGE_HISTORY_WND);
   ASSERT(bNameValid);
   if (!m_wndChangeHistoryPane.Create(
           strChangeHistoryWnd, this, CRect(0, 0, 200, 200), TRUE,
@@ -425,9 +458,11 @@ LRESULT CMainFrame::OnToolbarCreateNew(WPARAM wp, LPARAM lp) {
   CMFCToolBar* pUserToolbar = (CMFCToolBar*)lres;
   ASSERT_VALID(pUserToolbar);
 
-  BOOL bNameValid;
   CString strCustomize;
-  bNameValid = strCustomize.LoadString(IDS_TOOLBAR_CUSTOMIZE);
+#if _DEBUG
+  BOOL bNameValid =
+#endif
+      strCustomize.LoadString(IDS_TOOLBAR_CUSTOMIZE);
   ASSERT(bNameValid);
 
   pUserToolbar->EnableCustomizeButton(TRUE, ID_VIEW_CUSTOMIZE, strCustomize);
@@ -446,9 +481,11 @@ BOOL CMainFrame::LoadFrame(UINT nIDResource,
   }
 
   // enable customization button for all user toolbars
-  BOOL bNameValid;
   CString strCustomize;
-  bNameValid = strCustomize.LoadString(IDS_TOOLBAR_CUSTOMIZE);
+#if _DEBUG
+  BOOL bNameValid =
+#endif
+      strCustomize.LoadString(IDS_TOOLBAR_CUSTOMIZE);
   ASSERT(bNameValid);
 
   for (int i = 0; i < iMaxUserToolbars; i++) {

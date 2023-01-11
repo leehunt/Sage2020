@@ -1,13 +1,17 @@
-
 // Sage2020.h : main header file for the Sage2020 application
 //
 #pragma once
+
+#include <afxwinappex.h>
 
 #ifndef __AFXWIN_H__
 #error "include 'pch.h' before including this file for PCH"
 #endif
 
-#include "Resource.h"  // main symbols
+#include <Windows.h>
+#include <afxcmn.h>
+
+// main symbols
 
 // CSage2020App:
 // See Sage2020.cpp for the implementation of this class

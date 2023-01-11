@@ -1,14 +1,12 @@
 #pragma once
-#include <deque>
+
 #include <filesystem>
-#include <memory>
-#include <string>
-#include <vector>
 
 #include "FileVersionLineInfo.h"
 #include "GitHash.h"
 
-class FileVersionLineInfo;
+struct FileVersionDiff;
+
 struct FileVersionDiffHunk {
   int add_location_ = 0;
   int add_line_count_ = 0;
@@ -51,7 +49,7 @@ struct FileVersionDiffTree {
   bool operator!=(const FileVersionDiffTree& other) const;
 #endif  // _DEBUG
 };
-struct FileVersionDiff;
+
 struct FileVersionDiffParent {
   GitHash commit_;  // The *newest* commit (tail of the branch that was merged
                     // back in to parent).

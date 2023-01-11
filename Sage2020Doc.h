@@ -1,10 +1,10 @@
-
 // Sage2020Doc.h : interface of the CSage2020Doc class
 //
-
 #pragma once
+
 #include <memory>
 #include <vector>
+
 #include "FileVersionDiff.h"
 #include "FileVersionInstance.h"
 

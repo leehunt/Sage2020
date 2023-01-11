@@ -1,6 +1,6 @@
 #pragma once
+
 #include <filesystem>
-#include <fstream>
 
 typedef std::unique_ptr<FILE, decltype(&fclose)> AUTO_CLOSE_FILE_POINTER;
 // std::ifstream

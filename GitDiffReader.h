@@ -1,11 +1,13 @@
 #pragma once
+
 #include <filesystem>
+
 #include "FileVersionDiff.h"
-#include "GitFileReader.h"
 
 class GitFileStreamCache;
 class COutputWnd;
 struct TOK;
+struct GitHash;
 
 class GitDiffReader {
  public:

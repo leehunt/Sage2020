@@ -1,9 +1,16 @@
-
 #pragma once
+
+#include <Windows.h>
 
 #define BUILD_TAB 0
 #define DEBUG_TAB 1
 #define FIND_TAB 0
+
+#include <afxdockablepane.h>
+#include <afxtabctrl.h>
+#include <afxwin.h>
+#include <atltypes.h>
+#include <intsafe.h>
 
 /////////////////////////////////////////////////////////////////////////////
 // COutputList window

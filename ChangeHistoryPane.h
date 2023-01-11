@@ -1,7 +1,14 @@
 #pragma once
+
+#include <Windows.h>
+
 #include <afxdockablepane.h>
+#include <afxwin.h>
+#include <commctrl.h>
+#include <intsafe.h>
 #include <string>
 #include <vector>
+#include "framework.h"
 
 struct FileVersionDiff;
 struct GitHash;

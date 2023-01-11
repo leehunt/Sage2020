@@ -1,11 +1,15 @@
 #pragma once
+
+#include <vector>
+
 #include "DiffTreePath.h"
-#include "FileVersionInstance.h"
 
 class GitDiffReaderTest;
 struct FileVersionDiff;
 struct FileVersionDiffHunk;
 class Sage2020ViewDocListener;
+class FileVersionInstance;
+struct GitHash;
 
 class FileVersionInstanceEditor {
  public:

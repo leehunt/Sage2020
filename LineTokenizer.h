@@ -1,5 +1,4 @@
 #pragma once
-class CLineTokenizer {};
 
 // Lexer tokens: Plain Text and Delimiters
 enum class TK {
@@ -40,7 +39,7 @@ enum class TK {
   tkATSIGN,       // @
   tkLBRACK = 30,  // [
   tkRBRACK,       // ]
-  tkBSLASH,       // "\\" 
+  tkBSLASH,       // "\\"
   tkCARET,        // ^
   tkUSCORE,       // _
   tkBQUOTE,       // `
