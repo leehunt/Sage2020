@@ -5,6 +5,7 @@ Main first line 2
 Main first line 3
 Main first line 4
 Main first line 5
+Add git_test_branch_b 5
 --- Common lines 1 ---
 --- Common lines 2 ---
 --- Common lines 3 ---
@@ -16,6 +17,7 @@ Main middle lines 2
 Main middle lines 3
 Main middle lines 4
 Main middle lines 5
+Add git_test_branch_b 5
 --- Common lines 1 ---
 --- Common lines 2 ---
 --- Common lines 3 ---
@@ -27,5 +29,6 @@ Main last line 2
 Main last line 3
 Main last line 4
 Main last line 5
+Add git_test_branch_b 5
 This is version 5
 
