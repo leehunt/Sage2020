@@ -132,7 +132,9 @@ static void LoadAllBranchesRecur(const std::filesystem::path& file_path,
       // case.
       std::string parent_revision_range =
           diff.file_parent_commit_.IsValid()
-              ? diff.file_parent_commit_.sha_ + std::string("...") +
+              ? diff.file_parent_commit_.sha_ +
+                    std::string(
+                        "...") +  // REVIEW!!!! Is "..." vs ".." correct?
                     diff.parents_[parent_index].commit_.sha_
               : diff.parents_[parent_index].commit_.sha_;
       GitDiffReader git_branch_diff_reader{file_path, parent_revision_range};
@@ -333,4 +335,111 @@ TEST(GitDiffReaderTest, LoadAndCompareWithFileAllBranches) {
                                   std::move(git_diff_reader.MoveDiffs()));
   }
 #endif
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void LoadAllBranchesWithBlameRecur(
+    const std::filesystem::path& file_path,
+    std::vector<FileVersionDiff>& diffs) {
+  for (auto& diff : diffs) {
+    for (size_t parent_index = 1; parent_index < diff.parents_.size();
+         parent_index++) {
+      // If there is no |file_parent_commit| to get the revision range for vs.
+      // the current parent commit, then just look at the commit history of the
+      // parent commit itself. This addresses the the "add file from subbranch"
+      // case.
+      std::string parent_revision_range =
+          diff.file_parent_commit_.IsValid()
+              ? diff.file_parent_commit_.sha_ + std::string("..") +
+                    diff.parents_[parent_index].commit_.sha_
+              : diff.parents_[parent_index].commit_.sha_;
+      GitDiffReader git_branch_diff_reader{file_path, parent_revision_range};
+
+      diff.parents_[parent_index].file_version_diffs_ =
+          std::make_unique<std::vector<FileVersionDiff>>(
+              std::move(git_branch_diff_reader.MoveDiffs()));
+      auto& parent_diffs = *diff.parents_[parent_index].file_version_diffs_;
+      assert(!parent_diffs.empty());
+      if (!parent_diffs.empty()) {
+        assert(!parent_diffs.front().file_parent_commit_.IsValid());
+        // Tricky: get the set of diffs from the *first* diff [oldest] in the
+        // branch (right after it was branched) to the first ever commit. Then
+        // the next diff entry will be the parent for this file (or empty if it
+        // doesn't exist). That is:
+        // | ... | parent (branch point) |
+        // If the file is being added then the base is not in the first parent,
+        // but instead in a subbranch.
+        const auto& base_diff = parent_diffs.front();
+        const auto parent_base_ref = base_diff.commit_.sha_ + std::string("^");
+        constexpr COutputWnd* pwndOutput = nullptr;
+        GitDiffReader git_branch_to_head_diff_reader{
+            file_path, parent_base_ref, pwndOutput,
+            GitDiffReader::Opts(GitDiffReader::Opt::NO_FIRST_PARENT) |
+                GitDiffReader::Opt::NO_FOLLOW};
+
+        const auto& diff_to_head_diffs =
+            git_branch_to_head_diff_reader.GetDiffs();
+        // This can legitimately be empty() if this is the adding diff.
+        assert(!diff_to_head_diffs.empty() ||
+               parent_diffs.front().diff_tree_.action[0] == 'A');
+        if (!diff_to_head_diffs.empty()) {
+          parent_diffs.front().file_parent_commit_ =
+              diff_to_head_diffs.back().commit_;
+        }
+      }
+      LoadAllBranchesWithBlameRecur(file_path, parent_diffs);
+    }
+  }
+}
+
+static std::string GetShortHash(const GitHash& hash) {
+  std::string s = hash.sha_;
+  return s.substr(0, 8);  // Limit to eight characters (short hash).
+}
+
+static void PrintAllBranchesWithBlameRecur(
+    const std::vector<FileVersionDiff>& diffs,
+    const int depth) {
+  int index = 0;
+  for (const auto& diff : diffs) {
+    for (int i = 0; i < depth; i++)
+      printf("  ");
+    printf("%d %s %s %s\n", index, GetShortHash(diff.commit_).c_str(),
+           diff.commit_.tag_.c_str(), diff.diff_tree_.action);
+
+    for (size_t parent_index = 1; parent_index < diff.parents_.size();
+         parent_index++) {
+      PrintAllBranchesWithBlameRecur(
+          *diff.parents_[parent_index].file_version_diffs_, depth + 1);
+    }
+
+    index++;
+  }
+}
+
+static void LoadFileAndPrintAllBranchesWithBlame(
+    const std::filesystem::path& file_path,
+    std::vector<FileVersionDiff>& diffs_root) {
+  EXPECT_GT(diffs_root.size(), 0U);
+
+  LoadAllBranchesWithBlameRecur(file_path, diffs_root);
+
+  constexpr int depth = 0;
+  PrintAllBranchesWithBlameRecur(diffs_root, depth);
+}
+
+TEST(GitDiffReaderTest, LoadFileAndPrintAllBranchesWithBlame) {
+  _set_error_mode(_OUT_TO_MSGBOX);
+  const std::filesystem::path file_path =
+      //L"C:\\Users\\leehu_000\\Source\\Repos\\libgit2\\libgit2\\.mailmap";
+      L"C:\\Users\\leehu_000\\Source\\Repos\\Sage2020\\Sage2020_unittest\\test_git_files\\base.txt";
+      std::string empty_tag;
+  GitDiffReader git_diff_reader(file_path, empty_tag);
+  if (!git_diff_reader.GetDiffs().empty()) {
+    printf("Processing %s...\n", file_path.string().c_str());
+    LoadFileAndPrintAllBranchesWithBlame(
+        file_path, std::move(git_diff_reader.MoveDiffs()));
+  }
 }
