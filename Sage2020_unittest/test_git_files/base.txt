@@ -1,9 +1,10 @@
-This is version 4
+This is version 5
 Main first line 0
 Main first line 1
 Main first line 2
 Main first line 3
 Main first line 4
+Main first line 5
 --- Common lines 1 ---
 --- Common lines 2 ---
 --- Common lines 3 ---
@@ -14,6 +15,7 @@ Main middle lines 1
 Main middle lines 2
 Main middle lines 3
 Main middle lines 4
+Main middle lines 5
 --- Common lines 1 ---
 --- Common lines 2 ---
 --- Common lines 3 ---
@@ -24,5 +26,6 @@ Main last line 1
 Main last line 2
 Main last line 3
 Main last line 4
-This is version 4
+Main last line 5
+This is version 5
 
