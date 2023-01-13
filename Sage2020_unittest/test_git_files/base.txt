@@ -1,22 +1,22 @@
 This is version 2
-Branch A first line 1
-Branch A first line 2
-Branch A first line 3
+Main first line 1
+Main first line 2
+Main first line 3
 --- Common lines 1 ---
 --- Common lines 2 ---
 --- Common lines 3 ---
 --- Common lines 4 ---
 --- Common lines 5 ---
-Branch A middle lines 1
-Branch A middle lines 2
-Branch A middle lines 3
+Main middle lines 1
+Main middle lines 2
+Main middle lines 3
 --- Common lines 1 ---
 --- Common lines 2 ---
 --- Common lines 3 ---
 --- Common lines 4 ---
 --- Common lines 5 ---
-Branch A last line 1
-Branch A last line 2
-Branch A last line 3
+Main last line 1
+Main last line 2
+Main last line 3
 This is version 2
 
