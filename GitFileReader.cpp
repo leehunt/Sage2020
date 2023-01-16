@@ -77,6 +77,6 @@ void GitFileReader::ProcessFileLines(FILE* stream) {
   // REVIEW: Consider looking at the '\ No newline at end of file' message from
   // the 'git log' diff command to remove the '\n' instead (but it may be tricky
   // to figure out what diff to modify).
-  if (!lines_.empty() && lines_.back().back() != '\n')
+  if (!lines_.empty() && !lines_.back().empty() && lines_.back().back() != '\n')
     lines_.back() += '\n';
 }

@@ -4,6 +4,7 @@
 
 #include <intsafe.h>
 #include <filesystem>
+#include <string>
 
 // Helper function that safely converts from ANSI to Unicode.
 std::wstring to_wstring(const std::string& s);
@@ -45,3 +46,8 @@ class SmartWindowsHandle
 };
 
 std::filesystem::path GetGitRoot(const std::filesystem::path& file_path);
+
+std::wstring my_to_wstring(const std::string& stringToConvert);
+
+std::string GetShortHashInRepo(std::string long_hash,
+                               const std::filesystem::path& file_path);

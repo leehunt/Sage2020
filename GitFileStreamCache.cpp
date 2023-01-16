@@ -14,15 +14,15 @@
 
 extern CSage2020App theApp;
 
-constexpr char kFileCacheVersionLine[] = "Cache file version: 8\n";
+constexpr char kFileCacheVersionLine[] = "Cache file version: 9\n";
 
 // TODO!: Add in current opts line to the branch cache dir entries.
 GitFileStreamCache::GitFileStreamCache(const std::filesystem::path& file_path)
     //    : file_path_(std::filesystem::canonical(file_path)){}
     : file_path_(file_path) {}
 
-AUTO_CLOSE_FILE_POINTER GitFileStreamCache::GetStream(const std::string& hash) {
-  const auto cache_file_path = GetItemCachePath(hash);
+AUTO_CLOSE_FILE_POINTER GitFileStreamCache::GetStream(const std::wstring& git_command) {
+  const auto cache_file_path = GetItemCachePath(git_command);
   const auto& native_file_path = cache_file_path.native();
   AUTO_CLOSE_FILE_POINTER file_cache_stream(
       _wfopen(native_file_path.c_str(), L"r"), &fclose);
@@ -52,8 +52,8 @@ AUTO_CLOSE_FILE_POINTER GitFileStreamCache::GetStream(const std::string& hash) {
 
 AUTO_CLOSE_FILE_POINTER GitFileStreamCache::SaveStream(
     FILE* stream,
-    const std::string& hash) {
-  const auto cache_file_path = GetItemCachePath(hash);
+    const std::wstring& git_command) {
+  const auto cache_file_path = GetItemCachePath(git_command);
   std::filesystem::create_directories(cache_file_path.parent_path());
   // Create output file, failing if it already exists.
   AUTO_CLOSE_FILE_POINTER file_cache_stream(
@@ -95,9 +95,9 @@ AUTO_CLOSE_FILE_POINTER GitFileStreamCache::SaveStream(
 }
 
 std::filesystem::path GitFileStreamCache::GetItemCachePath(
-    const std::string& hash) {
+    const std::wstring& git_command) {
   // Look for file in
-  // "CSIDL_LOCAL_APPDATA/Sage2020/type_name/hash/object(s)_relative_path.
+  // "CSIDL_LOCAL_APPDATA/Sage2020/type_name/git_command/object(s)_relative_path.
 
   // Get relative file path of |file_path_| relative to the git root.
   assert(file_path_.is_absolute());
@@ -114,8 +114,8 @@ std::filesystem::path GitFileStreamCache::GetItemCachePath(
 
   std::filesystem::path item_cache_path(local_app_data);
 
-  item_cache_path /=
-      theApp.m_pszProfileName / std::filesystem::path(hash) / git_relative_path;
+  item_cache_path /= theApp.m_pszProfileName /
+                     std::filesystem::path(git_command) / git_relative_path;
 
   return item_cache_path;
 }

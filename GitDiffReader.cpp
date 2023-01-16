@@ -15,15 +15,11 @@
 #include "OutputWnd.h"
 #include "Utility.h"
 
+#define ADD_TAGS 1
+
 constexpr TCHAR kGitMostRecentCommitForFileCommand[] =
     _T("git --no-pager log %S -n 1 -- %s");
-constexpr TCHAR kGitDiffCommand[] =
-    _T("git --no-pager log %S -p -U0 --raw --no-color --children ")
-    _T("--pretty=raw %s");  // FUTURE: Consider adding '--reverse' instead of
-                            // calling 'std::reverse()' after processing the
-                            // diffs (not currently doing so since
-                            // std::reverse() is fast and it may take longer
-                            // for git to reverse the diffs).
+// N.b. See GitDiffReader::GetGitCommand() for what was |kGitDiffCommand|.
 constexpr TCHAR kGitLogNameTagCommandFromStdIn[] =
     _T("git --no-pager name-rev --annotate-stdin");
 
@@ -328,10 +324,6 @@ bool GitDiffReader::FReadGitDiffTreeColon(TOK* ptok) {
 //
 // That means "removed 1 lines starting at line 66" + "added zero lines at 65"
 // <and trailing context line>
-//
-// N.b. There are (number of parents + 1) @ characters in the chunk header for
-// combined diff format. E.g.:
-//@@@ <from-file-range> <from-file-range> <to-file-range> @@@
 
 bool GitDiffReader::FReadHunkHeader(TOK* ptok) {
   if (ptok->tk != TK::tkATSIGN)
@@ -526,11 +518,55 @@ bool GitDiffReader::ProcessLogLine(char* line) {
       is_done = !FReadRemoveLine(&tok);
       break;
     }
+#if NEEDTHIS
+    case TK::tkBSLASH: {
+      // "\ No newline at end of file"
+      // According to https://github.com/git/git/blob/master/diff.c this is the
+      // only use of a leading backspace.
+      is_done = !FReadControlLine(&tok);
+      break;
+    }
+#endif
   }
 
 LDone:
   UnattachTok(&tok);
   return !is_done;
+}
+
+// static
+std::wstring GitDiffReader::GetGitCommand(
+    const std::filesystem::path& file_path,
+    const std::string& revision,
+    const Opts& opts) {
+  std::wstring opt_str;
+  if (!opts.HasOpts(Opt::NO_FIRST_PARENT))
+    // <-- TODO: Check the effects of `--diff-merges=combined` (it removes
+    // extra diff on root of add merges -- I think it then means that a
+    // commits parent's must be diff merged first to correctly express the
+    // state of the merged branch). We also might benefit from adding
+    // `--combined-all-paths` too. Also we might need to use
+    // `--diff-merges=dense-combined` which supposedly only show *merge
+    // conflicts* in the resulting merge commit.
+    //
+    // N.b. We're using short args to save on cache file path length. Here are
+    // the longer equivalents.
+    //      '-c'  --> '--diff-merges=combined'
+    //      '-p'  --> '--patch'
+    //      '-U0' --> '--unified=0'
+    opt_str += L"--first-parent -c ";
+  // This must go last.
+  if (!opts.HasOpts(Opt::NO_FILTER_TO_FILE)) {
+    if (opts.HasOpts(Opt::FOLLOW))
+      opt_str += L"--follow ";
+    opt_str += std::wstring(L"-- ") + file_path.filename().wstring().c_str();
+  }
+
+  std::wstring command =
+      std::wstring(L"git --no-pager log ") + to_wstring(revision) +
+      L" -p -U0 --raw --format=raw --no-color --children " + opt_str;
+
+  return command;
 }
 
 GitDiffReader::GitDiffReader(const std::filesystem::path& file_path,
@@ -608,7 +644,8 @@ GitDiffReader::GitDiffReader(const std::filesystem::path& file_path,
 
   file_stream_cache_ = std::make_unique<GitFileStreamCache>(file_path);
 
-  auto cache_stream = file_stream_cache_->GetStream(file_cache_revision);
+  const auto wcommand = GetGitCommand(file_path, tag_no_parentheses, opts);
+  auto cache_stream = file_stream_cache_->GetStream(wcommand);
 
   if (cache_stream) {
     if (pwndOutput != nullptr) {
@@ -617,23 +654,14 @@ GitDiffReader::GitDiffReader(const std::filesystem::path& file_path,
           _T("   Cache hit for revision '%1!S!', reading diff history from: ")
           _T("'%2!s!'"),
           file_cache_revision.c_str(),
-          file_stream_cache_->GetItemCachePath(file_cache_revision).c_str());
+          file_stream_cache_->GetItemCachePath(wcommand).c_str());
       pwndOutput->AppendDebugTabMessage(message);
     }
     ProcessDiffLines(cache_stream.get());
   } else {
-    std::wstring opt_str;
+    const auto wcommand = GetGitCommand(file_path, tag_no_parentheses, opts);
+    wcscpy_s(command, wcommand.c_str());
 
-    if (!opts.HasOpts(Opt::NO_FIRST_PARENT))
-      opt_str += L"--first-parent ";
-    // This must go last.
-    if (!opts.HasOpts(Opt::NO_FILTER_TO_FILE)) {
-      if (!opts.HasOpts(Opt::NO_FOLLOW))
-        opt_str += L"--follow ";
-      opt_str += std::wstring(L"-- ") + file_path.filename().wstring().c_str();
-    }
-    wsprintf(command, kGitDiffCommand, tag_no_parentheses.c_str(),
-             opt_str.c_str());
     if (pwndOutput != nullptr) {
       CString message;
       message.FormatMessage(
@@ -651,16 +679,16 @@ GitDiffReader::GitDiffReader(const std::filesystem::path& file_path,
                             kGitLogNameTagCommandFromStdIn);
       pwndOutput->AppendDebugTabMessage(message);
     }
-#if 1
+#if ADD_TAGS
     ProcessPipe process_pipe_git_tag(kGitLogNameTagCommandFromStdIn,
                                      file_path.parent_path().c_str(),
                                      process_pipe_git_log.GetStandardOutput());
 
     auto file_stream = file_stream_cache_->SaveStream(
-        process_pipe_git_tag.GetStandardOutput(), file_cache_revision);
+        process_pipe_git_tag.GetStandardOutput(), wcommand);
 #else
     auto file_stream = file_stream_cache_->SaveStream(
-        process_pipe_git_log.GetStandardOutput(), file_cache_revision);
+        process_pipe_git_log.GetStandardOutput(), wcommand);
 #endif
     if (file_stream) {
       ProcessDiffLines(file_stream.get());

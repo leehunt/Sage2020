@@ -15,7 +15,7 @@ class GitDiffReader {
     NONE = 0,
     NO_FILTER_TO_FILE = 1 << 0,
     NO_FIRST_PARENT = 1 << 1,
-    NO_FOLLOW = 1 << 2,
+    FOLLOW = 1 << 2,
   };
   class Opts {
    public:
@@ -77,6 +77,10 @@ class GitDiffReader {
   bool FReadIndex(TOK* ptok);
   bool FReadComment(TOK* ptok);
   bool FReadGitDiffTreeColon(TOK* ptok);
+
+  static std::wstring GetGitCommand(const std::filesystem::path& file_path,
+                                    const std::string& revision,
+                                    const Opts& opts);
 
   FileVersionDiff* current_diff_;
   std::vector<FileVersionDiff> diffs_;

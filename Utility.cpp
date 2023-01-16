@@ -4,25 +4,15 @@
 #include <io.h>     // pipe(), _close()
 #include <algorithm>
 #include <cassert>
+#include <codecvt>
+#include <locale>
 #include <map>
 
 #include "Utility.h"
 
 constexpr char kGitGetRootCommand[] = "git rev-parse --show-toplevel";
 
-std::wstring to_wstring(const std::string& s) {
-  // Check for all ANSI (speedy).
-  if (std::find_if(s.cbegin(), s.cend(),
-                   [](unsigned char byte) { return byte > 127; }) == s.end()) {
-    return std::wstring(s.cbegin(), s.cend());
-  }
-  size_t desired_size = static_cast<size_t>(::MultiByteToWideChar(
-      CP_UTF8, 0, s.c_str(), static_cast<int>(s.size()), nullptr, 0));
-  std::wstring wstr(desired_size, '\0');
-  ::MultiByteToWideChar(CP_UTF8, 0, s.c_str(), static_cast<int>(s.size()),
-                        wstr.data(), static_cast<int>(wstr.size()));
-  return wstr;
-}
+constexpr char kGitGetShortHashCommand[] = "git rev-parse --short ";
 
 enum PIPES {
   PIPE_READ,
@@ -130,4 +120,37 @@ std::filesystem::path GetGitRoot(const std::filesystem::path& file_path) {
     stream_line[len - 1] = '\0';
   root_map_[file_path] = std::filesystem::path(stream_line);
   return root_map_[file_path];
+}
+
+std::wstring to_wstring(const std::string& s) {
+  // Check for all ANSI (speedy).
+  if (std::find_if(s.cbegin(), s.cend(),
+                   [](unsigned char byte) { return byte > 127; }) == s.cend()) {
+    return std::wstring(s.cbegin(), s.cend());
+  }
+  size_t desired_size = static_cast<size_t>(::MultiByteToWideChar(
+      CP_UTF8, 0, s.c_str(), static_cast<int>(s.size()), nullptr, 0));
+  std::wstring wstr(desired_size, '\0');
+  ::MultiByteToWideChar(CP_UTF8, 0, s.c_str(), static_cast<int>(s.size()),
+                        wstr.data(), static_cast<int>(wstr.size()));
+  return wstr;
+}
+
+std::string GetShortHashInRepo(std::string long_hash,
+                               const std::filesystem::path& file_path) {
+  std::string command = std::string(kGitGetShortHashCommand) + long_hash;
+
+  ProcessPipe process_pipe(to_wstring(command).c_str(),
+                           file_path.parent_path().c_str());
+
+  char stream_line[1024];
+  if (!fgets(stream_line, (int)std::size(stream_line),
+             process_pipe.GetStandardOutput())) {
+    return {};
+  }
+  auto len = strlen(stream_line);
+  if (len > 0 && stream_line[len - 1] == '\n')
+    stream_line[len - 1] = '\0';
+
+  return stream_line;
 }
