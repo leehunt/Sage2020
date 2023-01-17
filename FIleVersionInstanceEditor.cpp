@@ -49,8 +49,39 @@ void FileVersionInstanceEditor::AddDiff(const FileVersionDiff& diff) {
 #endif
   file_version_instance_.commit_ = diff.commit_;
 
+  /*
   for (auto& hunk : diff.hunks_) {
     AddHunk(hunk);
+  }*/
+  for (size_t hunk_index = 0; hunk_index < diff.remove_hunks_.size();
+       hunk_index++) {
+    FileVersionDiffHunk combined_hunk;
+    const auto& remove_hunk = diff.remove_hunks_[hunk_index];
+
+    combined_hunk.remove_lines_ = remove_hunk.remove_lines_;
+    combined_hunk.remove_location_ = remove_hunk.remove_location_;
+    combined_hunk.remove_line_count_ = remove_hunk.remove_line_count_;
+
+    // Add the remove hunks from diff.
+    for (size_t parent_index = 0; parent_index < diff.parents_.size();
+         parent_index++) {
+      assert(diff.remove_hunks_.size() ==
+             diff.parents_[parent_index].add_hunks_.size());
+
+      const auto& add_hunk = diff.parents_[parent_index].add_hunks_[hunk_index];
+
+      combined_hunk.line_info_to_restore_ =
+          std::move(remove_hunk.line_info_to_restore_);
+      combined_hunk.add_lines_ = add_hunk.add_lines_;
+      combined_hunk.add_location_ = add_hunk.add_location_;
+      combined_hunk.add_line_count_ = add_hunk.add_line_count_;
+
+      // Add the add hunks from diff.
+      AddHunk(combined_hunk);
+
+      remove_hunk.line_info_to_restore_ =
+          std::move(combined_hunk.line_info_to_restore_);
+    }
   }
 
   if (listener_head_ != nullptr) {
@@ -66,9 +97,36 @@ void FileVersionInstanceEditor::RemoveDiff(const FileVersionDiff& diff) {
   printf("RemoveDiff: %s at path: %s\n", sha,
          file_version_instance_.commit_path_.PathText().c_str());
 #endif
-
+  /*
   for (auto it = diff.hunks_.crbegin(); it != diff.hunks_.crend(); it++) {
     RemoveHunk(*it);
+  }*/
+  for (size_t hunk_index = diff.remove_hunks_.size(); hunk_index-- > 0;) {
+    FileVersionDiffHunk combined_hunk;
+    const auto& remove_hunk = diff.remove_hunks_[hunk_index];
+
+    combined_hunk.remove_lines_ = remove_hunk.remove_lines_;
+    combined_hunk.remove_location_ = remove_hunk.remove_location_;
+    combined_hunk.remove_line_count_ = remove_hunk.remove_line_count_;
+
+    for (size_t parent_index = diff.parents_.size(); parent_index-- > 0;) {
+      assert(diff.remove_hunks_.size() ==
+             diff.parents_[parent_index].add_hunks_.size());
+
+      const auto& add_hunk = diff.parents_[parent_index].add_hunks_[hunk_index];
+
+      combined_hunk.line_info_to_restore_ =
+          std::move(remove_hunk.line_info_to_restore_);
+      combined_hunk.add_lines_ = add_hunk.add_lines_;
+      combined_hunk.add_location_ = add_hunk.add_location_;
+      combined_hunk.add_line_count_ = add_hunk.add_line_count_;
+
+      // Remove the add hunks from diff.
+      RemoveHunk(combined_hunk);
+
+      remove_hunk.line_info_to_restore_ =
+          std::move(combined_hunk.line_info_to_restore_);
+    }
   }
 
   // Special: If we're deleting the last diff, the decrement operator will pop
@@ -306,16 +364,19 @@ void FileVersionInstanceEditor::AddHunk(const FileVersionDiffHunk& hunk) {
     // that line no longer exists in the 'to' file.
     auto remove_location_index =
         hunk.add_line_count_ ? hunk.add_location_ - 1 : hunk.add_location_;
+#if 1
     assert(std::equal(
         file_version_instance_.file_lines_.begin() + remove_location_index,
         file_version_instance_.file_lines_.begin() + remove_location_index +
             hunk.remove_line_count_,
         hunk.remove_lines_.begin()));
+#endif
     file_version_instance_.file_lines_.erase(
         file_version_instance_.file_lines_.begin() + remove_location_index,
         file_version_instance_.file_lines_.begin() + remove_location_index +
             hunk.remove_line_count_);
 
+    // TODO!!!! : This needs to be hoisted up to use both remove and add hunks.
     if (!hunk.line_info_to_restore_) {
       hunk.line_info_to_restore_ =
           std::make_unique<LineToFileVersionLineInfo>();
@@ -372,11 +433,14 @@ void FileVersionInstanceEditor::RemoveHunk(const FileVersionDiffHunk& hunk) {
   // Yes, using |add_location_| seems odd, but the add_location tracks the
   // new position of any adds/removed done by previous hunks in the diff.
   if (hunk.add_line_count_ > 0) {
+#if 1
     assert(std::equal(
         file_version_instance_.file_lines_.begin() + (hunk.add_location_ - 1),
         file_version_instance_.file_lines_.begin() +
             (hunk.add_location_ - 1 + hunk.add_line_count_),
         hunk.add_lines_.begin()));
+#endif
+    // TODO!!!! : This needs to be hoisted up to use both remove and add hunks.
     file_version_instance_.file_lines_.erase(
         file_version_instance_.file_lines_.begin() + (hunk.add_location_ - 1),
         file_version_instance_.file_lines_.begin() +

@@ -22,7 +22,7 @@ TEST(FileVersionInstanceTest, Load) {
   FileVersionInstance file_version_instance(root_diffs, std::move(some_lines),
                                             parent_commit);
   int i = 0;
-  for (const auto& line : some_lines_copy) {
+  for (const auto& line : some_lines) {
     EXPECT_EQ(line.size(), 0);
     EXPECT_STREQ(line.c_str(), "");
     EXPECT_STREQ(file_version_instance.GetLineInfo(i).commit_sha(),

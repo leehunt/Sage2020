@@ -53,6 +53,7 @@ struct FileVersionDiffTree {
 struct FileVersionDiffParent {
   GitHash commit_;  // The *newest* commit (tail of the branch that was merged
                     // back in to parent).
+  std::vector<FileVersionDiffHunk> add_hunks_;
   std::unique_ptr<std::vector<FileVersionDiff>> file_version_diffs_;
 
 #ifdef _DEBUG
@@ -110,7 +111,7 @@ struct FileVersionDiff {
                                // For a subbranch's nth entry, this points to
                                // the child branch's merge commit (i.e. up to
                                // the HEAD commit).
-  std::vector<FileVersionDiffHunk> hunks_;
+  std::vector<FileVersionDiffHunk> remove_hunks_;
   NameEmailTime author_;
   std::string diff_command_;
   NameEmailTime committer_;

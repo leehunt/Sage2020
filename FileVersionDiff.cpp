@@ -65,6 +65,8 @@ bool FileVersionDiffParent::operator==(
     return true;
   if (commit_ != other.commit_)
     return false;
+  if (add_hunks_ != other.add_hunks_)
+    return false;
   if (!file_version_diffs_ != !other.file_version_diffs_)
     return false;
   if (file_version_diffs_ &&
@@ -103,7 +105,7 @@ bool FileVersionDiff::operator==(const FileVersionDiff& other) const {
     return false;
   if (parents_ != other.parents_)
     return false;
-  if (hunks_ != other.hunks_)
+  if (remove_hunks_ != other.remove_hunks_)
     return false;
   if (author_ != other.author_)
     return false;

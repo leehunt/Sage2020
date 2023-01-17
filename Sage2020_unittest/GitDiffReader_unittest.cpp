@@ -408,9 +408,10 @@ static void PrintAllBranchesRecur(const std::vector<FileVersionDiff>& diffs,
   for (const auto& diff : diffs) {
     for (int i = 0; i < depth; i++)
       printf("  ");
-    printf("%d %s %s %s hunks:%d\n", index, GetShortHash(diff.commit_).c_str(),
-           diff.commit_.tag_.c_str(), diff.diff_tree_.action,
-           diff.hunks_.size());
+    printf("%d %s %s %s remove_hunks: %d  add_hunks: %d\n", index,
+           GetShortHash(diff.commit_).c_str(), diff.commit_.tag_.c_str(),
+           diff.diff_tree_.action, diff.remove_hunks_.size(),
+           diff.parents_[0].add_hunks_.size());
 
     for (size_t parent_index = 1; parent_index < diff.parents_.size();
          parent_index++) {
@@ -507,7 +508,16 @@ TEST(GitDiffReaderTest, BranchMergeBlame) {
       // for an identical instance to if we added the merge commit.
       auto merge_diffs = branch_to_main_merge_diff_reader.MoveDiffs();
       merge_diffs.back().file_parent_commit_ = branch_diffs.back().commit_;
-      EXPECT_EQ(merge_diffs.back().hunks_, diff.hunks_);
+      EXPECT_EQ(merge_diffs.back().remove_hunks_, diff.remove_hunks_);
+      EXPECT_EQ(merge_diffs.back().parents_.size(), diff.parents_.size());
+      for (size_t parent_index = diff.parents_.size(); parent_index-- > 0;) {
+        EXPECT_EQ(diff.remove_hunks_.size(),
+                  diff.parents_[parent_index].add_hunks_.size());
+        EXPECT_EQ(merge_diffs.back().remove_hunks_.size(),
+                  merge_diffs.back().parents_[parent_index].add_hunks_.size());
+        EXPECT_EQ(merge_diffs.back().parents_[parent_index].add_hunks_,
+                  diff.parents_[parent_index].add_hunks_);
+      }
       // branch_editor.AddDiff(merge_diffs.back());
       // editor.AddDiff(diff);
       // EXPECT_TRUE(GitDiffReaderTest::IsTheSame(branch_file_instance,
@@ -569,8 +579,8 @@ TEST(GitDiffReaderTest, LoadAndValidateTheNewWay) {
   _set_error_mode(_OUT_TO_MSGBOX);
   const std::filesystem::path file_path =
       L"C:\\Users\\leehu_000\\Source\\Repos\\libgit2\\libgit2\\.mailmap";
-      //L"C:\\Users\\leehu_000\\Source\\Repos\\Sage2020\\Sage2020_unittest\\test_"
-      //L"git_files\\base.txt";
+  // L"C:\\Users\\leehu_000\\Source\\Repos\\Sage2020\\Sage2020_unittest\\test_"
+  // L"git_files\\base.txt";
   const std::string empty_tag;
   GitDiffReader git_diff_reader(file_path, empty_tag);
   printf("Processing %s...\n", file_path.string().c_str());
