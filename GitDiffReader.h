@@ -78,6 +78,12 @@ class GitDiffReader {
   bool FReadComment(TOK* ptok);
   bool FReadGitDiffTreeColon(TOK* ptok);
 
+  bool ProcessLogDiffLine(char* line);
+  bool FReadHunkLines(TOK* ptok);
+  bool FReadCombinedHunkHeaderRange(TOK* ptok, FileVersionDiffHunkRange& range);
+  bool FReadCombinedHunkHeader(TOK* ptok);
+  bool FReadHunkDiffLine(TOK* ptok);
+
   static std::wstring GetGitCommand(const std::filesystem::path& file_path,
                                     const std::string& revision,
                                     const Opts& opts);
@@ -87,4 +93,6 @@ class GitDiffReader {
 
   std::unique_ptr<GitFileStreamCache> file_stream_cache_;
   std::filesystem::path path_;
+
+  FILE* stream_;  // Icky stream copy -- use sparingly!
 };

@@ -7,6 +7,7 @@
 class GitDiffReaderTest;
 struct FileVersionDiff;
 struct FileVersionDiffHunk;
+struct FileVersionCombinedDiffHunk;
 class Sage2020ViewDocListener;
 class FileVersionInstance;
 struct GitHash;
@@ -47,8 +48,20 @@ class FileVersionInstanceEditor {
   }
 
  private:
+#if OLD_DIFFS
   void AddHunk(const FileVersionDiffHunk& hunk);
   void RemoveHunk(const FileVersionDiffHunk& hunk);
+#else
+  void ApplyCombinedHunk(const FileVersionCombinedDiffHunk& hunk,
+                         int parent_bits,
+                         bool reverse_action);
+
+  void ApplyDiffLine(const std::string& line,
+                     int& location_index,
+                     int num_parents,
+                     int parent_bits,
+                     bool reverse_action);
+#endif
 
   const std::vector<FileVersionDiff>& GetRoot() const;
 

@@ -5,15 +5,59 @@
 #include "FileVersionLineInfo.h"
 #include "GitHash.h"
 
+#define OLD_DIFFS 0
+
 struct FileVersionDiff;
 
+struct FileVersionDiffHunkRange {
+  int location_ = 0;
+  int count_ = 0;
+#ifdef _DEBUG
+  bool operator==(const FileVersionDiffHunkRange& other) const;
+  bool operator!=(const FileVersionDiffHunkRange& other) const;
+#endif  // _DEBUG
+
+#if _DEBUG_MEM_TRACE
+  FileVersionDiffHunkRange() {
+    printf("FileVersionDiffHunkRange\t%p\n", this);
+  }
+  ~FileVersionCombinedDiffHunk() {
+    printf("~FileVersionDiffHunkRange\t%p\n", this);
+  }
+#endif
+};
+struct FileVersionCombinedDiffHunk {
+  // <from>+... <to>
+  std::vector<FileVersionDiffHunkRange> ranges_;
+  std::string start_context_;
+  // +/- * ranges_.size() - 1
+  std::vector<std::string> lines_;
+  // Keep track of any deleted line info so that remove operations will restore
+  // the current history of changes up to that point.
+  mutable std::unique_ptr<LineToFileVersionLineInfo> line_info_to_restore_;
+
+#ifdef _DEBUG
+  bool operator==(const FileVersionCombinedDiffHunk& other) const;
+  bool operator!=(const FileVersionCombinedDiffHunk& other) const;
+#endif  // _DEBUG
+
+#if _DEBUG_MEM_TRACE
+  FileVersionCombinedDiffHunk() {
+    printf("FileVersionCombinedDiffHunk\t%p\n", this);
+  }
+  ~FileVersionCombinedDiffHunk() {
+    printf("~FileVersionCombinedDiffHunk\t%p\n", this);
+  }
+#endif
+};
+
 struct FileVersionDiffHunk {
-  int add_location_ = 0;
-  int add_line_count_ = 0;
-  std::vector<std::string> add_lines_;
-  int remove_location_ = 0;
-  int remove_line_count_ = 0;
-  std::vector<std::string> remove_lines_;
+  int to_location_ = 0;
+  int to_line_count_ = 0;
+  std::vector<std::string> to_lines_;
+  int from_location_ = 0;
+  int from_line_count_ = 0;
+  std::vector<std::string> from_lines_;
   std::string start_context_;
   // Keep track of any deleted line info so that remove operations will restore
   // the current history of changes up to that point.
@@ -53,7 +97,9 @@ struct FileVersionDiffTree {
 struct FileVersionDiffParent {
   GitHash commit_;  // The *newest* commit (tail of the branch that was merged
                     // back in to parent).
+#if OLD_DIFFS
   std::vector<FileVersionDiffHunk> add_hunks_;
+#endif
   std::unique_ptr<std::vector<FileVersionDiff>> file_version_diffs_;
 
 #ifdef _DEBUG
@@ -111,7 +157,11 @@ struct FileVersionDiff {
                                // For a subbranch's nth entry, this points to
                                // the child branch's merge commit (i.e. up to
                                // the HEAD commit).
+#if OLD_DIFFS
   std::vector<FileVersionDiffHunk> remove_hunks_;
+#else
+  std::vector<FileVersionCombinedDiffHunk> hunks_;
+#endif
   NameEmailTime author_;
   std::string diff_command_;
   NameEmailTime committer_;

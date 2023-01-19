@@ -74,9 +74,12 @@ void GitFileReader::ProcessFileLines(FILE* stream) {
     } while (fgets(stream_line, (int)std::size(stream_line), stream));
   }
 
+#if NEEDTHIS  // This seems to be wrong minded -- the last line in a file indeed
+              // can be missing a '\n'.
   // REVIEW: Consider looking at the '\ No newline at end of file' message from
   // the 'git log' diff command to remove the '\n' instead (but it may be tricky
   // to figure out what diff to modify).
   if (!lines_.empty() && !lines_.back().empty() && lines_.back().back() != '\n')
     lines_.back() += '\n';
+#endif  // NEEDTHIS
 }

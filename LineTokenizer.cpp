@@ -429,6 +429,11 @@ LNextTok:
               fRet = FRestoreBuf(ptok, &tokNext);
               if (!fRet)
                 goto LDone;
+              if (fDirect) {
+                // REVIEW: This is in the case of only one backslash. Perhaps
+                // this should be tkPUNCT or tkWORD instead.
+                ptok->tk = TK::tkBSLASH;
+              }
               break;
           }
           break;

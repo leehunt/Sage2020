@@ -19,6 +19,9 @@ class GitDiffReaderTest : public testing::Test {
                         const FileVersionInstance& other_ref) {
     return this_ref == other_ref;
   }
+
+  protected:
+    void SetUp() override { _set_error_mode(_OUT_TO_MSGBOX); }
 };
 
 static void CompareFileInstanceToHead(
@@ -85,7 +88,7 @@ static void CompareFileInstanceToCommit(
   }
 }
 
-TEST(GitDiffReaderTest, LoadAndCompareWithFile) {
+TEST_F(GitDiffReaderTest, LoadAndCompareWithFile) {
   std::filesystem::path file_path = __FILE__;
   std::string tag;
   GitDiffReader git_diff_reader(file_path, tag);
@@ -101,14 +104,14 @@ TEST(GitDiffReaderTest, LoadAndCompareWithFile) {
   for (const auto& diff : diffs) {
     editor.AddDiff(diff);
     EXPECT_EQ(file_version_instance.GetCommit(), diff.commit_);
+    CompareFileInstanceToHead(file_path, diff, file_version_instance);
   }
-
-  CompareFileInstanceToHead(file_path, diffs.back(), file_version_instance);
 
   // Now go backwards in time (but forward in the diffs vector) down to nothing,
   // or at least the first known version.
   for (auto it = diffs.crbegin(); it != diffs.crend(); it++) {
     const auto& diff = *it;
+    CompareFileInstanceToHead(file_path, diff, file_version_instance);
     editor.RemoveDiff(diff);
     EXPECT_EQ(file_version_instance.GetCommit(), diff.file_parent_commit_);
   }
@@ -357,8 +360,7 @@ static void LoadFileAndCompareAllBranches(
 #endif
 }
 
-TEST(GitDiffReaderTest, LoadAndCompareWithFileAllBranches) {
-  _set_error_mode(_OUT_TO_MSGBOX);
+TEST_F(GitDiffReaderTest, LoadAndCompareWithFileAllBranches) {
   const std::filesystem::path anchor_file_path =
       L"C:\\Users\\leehu_000\\Source\\Repos\\libgit2\\libgit2";  //__FILE__;
 #if 0
@@ -408,10 +410,16 @@ static void PrintAllBranchesRecur(const std::vector<FileVersionDiff>& diffs,
   for (const auto& diff : diffs) {
     for (int i = 0; i < depth; i++)
       printf("  ");
-    printf("%d %s %s %s remove_hunks: %d  add_hunks: %d\n", index,
+#if OLD_DIFFS
+    printf("%d %s %s %s remove_hunks: %zu  add_hunks: %zu\n", index,
            GetShortHash(diff.commit_).c_str(), diff.commit_.tag_.c_str(),
            diff.diff_tree_.action, diff.remove_hunks_.size(),
            diff.parents_[0].add_hunks_.size());
+#else
+    printf("%d %s %s %s  hunks: %zu\n", index,
+           GetShortHash(diff.commit_).c_str(), diff.commit_.tag_.c_str(),
+           diff.diff_tree_.action, diff.hunks_.size());
+#endif
 
     for (size_t parent_index = 1; parent_index < diff.parents_.size();
          parent_index++) {
@@ -440,8 +448,7 @@ static void LoadFileAndPrintAllBranches(
   PrintAllBranchesRecur(diffs_root, depth);
 }
 
-TEST(GitDiffReaderTest, LoadFileAndPrintAllBranches) {
-  _set_error_mode(_OUT_TO_MSGBOX);
+TEST_F(GitDiffReaderTest, LoadFileAndPrintAllBranches) {
   const std::filesystem::path file_path =
       L"C:\\Users\\leehu_000\\Source\\Repos\\libgit2\\libgit2\\.mailmap";
   // L"C:\\Users\\leehu_000\\Source\\Repos\\Sage2020\\Sage2020_unittest\\test_"
@@ -455,8 +462,7 @@ TEST(GitDiffReaderTest, LoadFileAndPrintAllBranches) {
   }
 }
 
-TEST(GitDiffReaderTest, BranchMergeBlame) {
-  _set_error_mode(_OUT_TO_MSGBOX);
+TEST_F(GitDiffReaderTest, BranchMergeBlame) {
   const std::filesystem::path file_path =
       // L"C:\\Users\\leehu_000\\Source\\Repos\\libgit2\\libgit2\\.mailmap";
       L"C:\\Users\\leehu_000\\Source\\Repos\\Sage2020\\Sage2020_unittest\\test_"
@@ -508,8 +514,17 @@ TEST(GitDiffReaderTest, BranchMergeBlame) {
       // for an identical instance to if we added the merge commit.
       auto merge_diffs = branch_to_main_merge_diff_reader.MoveDiffs();
       merge_diffs.back().file_parent_commit_ = branch_diffs.back().commit_;
+
+#ifdef _DEBUG
+#if OLD_DIFFS
       EXPECT_EQ(merge_diffs.back().remove_hunks_, diff.remove_hunks_);
+#else
+      EXPECT_EQ(merge_diffs.back().hunks_, diff.hunks_);
+#endif
+#endif  // _DEBUG
+
       EXPECT_EQ(merge_diffs.back().parents_.size(), diff.parents_.size());
+#if OLD_DIFFS
       for (size_t parent_index = diff.parents_.size(); parent_index-- > 0;) {
         EXPECT_EQ(diff.remove_hunks_.size(),
                   diff.parents_[parent_index].add_hunks_.size());
@@ -518,6 +533,7 @@ TEST(GitDiffReaderTest, BranchMergeBlame) {
         EXPECT_EQ(merge_diffs.back().parents_[parent_index].add_hunks_,
                   diff.parents_[parent_index].add_hunks_);
       }
+#endif
       // branch_editor.AddDiff(merge_diffs.back());
       // editor.AddDiff(diff);
       // EXPECT_TRUE(GitDiffReaderTest::IsTheSame(branch_file_instance,
@@ -575,8 +591,7 @@ static void TraverseAndVerifyAllBranchesTheNewWayRecur(
                               last_commit);
 }
 
-TEST(GitDiffReaderTest, LoadAndValidateTheNewWay) {
-  _set_error_mode(_OUT_TO_MSGBOX);
+TEST_F(GitDiffReaderTest, LoadAndValidateTheNewWay) {
   const std::filesystem::path file_path =
       L"C:\\Users\\leehu_000\\Source\\Repos\\libgit2\\libgit2\\.mailmap";
   // L"C:\\Users\\leehu_000\\Source\\Repos\\Sage2020\\Sage2020_unittest\\test_"

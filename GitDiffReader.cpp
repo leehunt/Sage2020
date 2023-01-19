@@ -212,6 +212,7 @@ bool GitDiffReader::FReadComment(TOK* ptok) {
 
   if (!FGetTok(ptok))
     return false;
+
   current_diff_->comment_.append(GetTextToEndOfLine(ptok));
 
   return true;
@@ -325,6 +326,153 @@ bool GitDiffReader::FReadGitDiffTreeColon(TOK* ptok) {
 // That means "removed 1 lines starting at line 66" + "added zero lines at 65"
 // <and trailing context line>
 
+// @@@ <from-file-range>+ <to-file-range> @@@
+
+#if !OLD_DIFFS
+
+bool GitDiffReader::FReadHunkDiffLine(TOK* ptok) {
+  auto line = GetTextToEndOfLine(ptok);
+  current_diff_->hunks_.back().lines_.push_back(std::move(line));
+
+  return true;
+}
+
+bool GitDiffReader::ProcessLogDiffLine(char* line) {
+  bool is_done = false;
+  TOK tok;
+  AttachTokToLine(&tok, line);
+  if (!FGetTokDirect(&tok)) {
+    is_done = true;
+    goto LDone;
+  }
+
+  switch (tok.tk) {
+    case TK::tkATSIGN: {
+      is_done = !FReadCombinedHunkHeader(&tok);
+      break;
+    }
+    case TK::tkBSLASH: {
+      auto line = GetTextToEndOfLine(&tok);
+      if (line == "\\ No newline at end of file\n") {
+        auto& last_line = current_diff_->hunks_.back().lines_.back();
+        if (last_line.back() == '\n') {
+          last_line.pop_back();
+          assert(last_line.back() != '\n');
+        }
+      }
+      break;
+    }
+
+    default: {
+      is_done = !FReadHunkDiffLine(&tok);
+      break;
+    }
+  }
+
+LDone:
+  UnattachTok(&tok);
+  return !is_done;
+}
+
+bool GitDiffReader::FReadHunkLines(TOK* ptok) {
+  // Diff block in ended by EOF or empty line
+
+  if (!FReadCombinedHunkHeader(ptok))
+    return false;
+
+  char stream_line[1024];
+  while (fgets(stream_line, (int)std::size(stream_line), stream_)) {
+    if (!stream_line[0] || stream_line[0] == '\n')
+      return true;
+    if (!ProcessLogDiffLine(stream_line))
+      break;
+  }
+
+  return false;  // EOF
+}
+
+bool GitDiffReader::FReadCombinedHunkHeaderRange(
+    TOK* ptok,
+    FileVersionDiffHunkRange& range) {
+  if (!FGetTok(ptok))
+    return false;
+  if (ptok->tk != TK::tkINTEGER)
+    return false;
+  range.location_ = atol(ptok->szVal);
+
+  if (!FGetTok(ptok))
+    return false;
+  if (ptok->tk == TK::tkCOMMA) {
+    if (!FGetTok(ptok))
+      return false;
+    if (ptok->tk != TK::tkINTEGER)
+      return false;
+    range.count_ = atol(ptok->szVal);
+
+    if (!FGetTok(ptok))
+      return false;
+  } else {
+    range.count_ = 1;
+  }
+
+  return true;
+}
+
+// @ [@ <from-file-range>]+ <to-file-range> @@@
+bool GitDiffReader::FReadCombinedHunkHeader(TOK* ptok) {
+  if (ptok->tk != TK::tkATSIGN)
+    return false;
+
+  if (!FGetTok(ptok))
+    return false;
+  if (ptok->tk != TK::tkATSIGN)
+    return false;
+
+  FileVersionCombinedDiffHunk hunk;
+
+  int num_parents = 1;
+  while (FGetTok(ptok)) {
+    if (ptok->tk != TK::tkATSIGN)
+      break;
+    num_parents++;
+  }
+
+  // Read "from" range(s).
+  for (int i = 0; i < num_parents; i++) {
+    if (ptok->tk != TK::tkMINUS)
+      return false;
+    FileVersionDiffHunkRange from_range;
+    if (!FReadCombinedHunkHeaderRange(ptok, from_range))
+      return false;
+
+    hunk.ranges_.push_back(from_range);
+  }
+
+  // Read "to" range.
+  if (ptok->tk != TK::tkPLUS)
+    return false;
+  FileVersionDiffHunkRange to_range;
+  if (!FReadCombinedHunkHeaderRange(ptok, to_range))
+    return false;
+
+  hunk.ranges_.push_back(to_range);
+
+  // Ensure ending '@@...' match the starting number.
+  for (int i = 0; i < num_parents + 1; i++) {
+    if (ptok->tk != TK::tkATSIGN)
+      return false;
+    if (!FGetTok(ptok))
+      return false;
+  }
+
+  hunk.start_context_ = GetTextToEndOfLine(ptok);
+
+  current_diff_->hunks_.push_back(std::move(hunk));
+
+  return true;
+}
+
+#else
 bool GitDiffReader::FReadHunkHeader(TOK* ptok) {
   if (ptok->tk != TK::tkATSIGN)
     return false;
@@ -340,7 +488,7 @@ bool GitDiffReader::FReadHunkHeader(TOK* ptok) {
   FileVersionDiffHunk remove_hunk;
   FileVersionDiffHunk add_hunk;
 
-  // Get removed lines.
+  // Get removal lines.
   if (ptok->tk != TK::tkMINUS)
     return false;
 
@@ -348,7 +496,7 @@ bool GitDiffReader::FReadHunkHeader(TOK* ptok) {
     return false;
   if (ptok->tk != TK::tkINTEGER)
     return false;
-  remove_hunk.remove_location_ = atol(ptok->szVal);
+  remove_hunk.from_location_ = atol(ptok->szVal);
 
   if (!FGetTok(ptok))
     return false;
@@ -357,15 +505,15 @@ bool GitDiffReader::FReadHunkHeader(TOK* ptok) {
       return false;
     if (ptok->tk != TK::tkINTEGER)
       return false;
-    remove_hunk.remove_line_count_ = atol(ptok->szVal);
+    remove_hunk.from_line_count_ = atol(ptok->szVal);
 
     if (!FGetTok(ptok))
       return false;
   } else {
-    remove_hunk.remove_line_count_ = 1;
+    remove_hunk.from_line_count_ = 1;
   }
 
-  // Get added lines.
+  // Get addition lines.
   if (ptok->tk != TK::tkPLUS)
     return false;
 
@@ -373,7 +521,7 @@ bool GitDiffReader::FReadHunkHeader(TOK* ptok) {
     return false;
   if (ptok->tk != TK::tkINTEGER)
     return false;
-  add_hunk.add_location_ = atol(ptok->szVal);
+  add_hunk.to_location_ = atol(ptok->szVal);
 
   if (!FGetTok(ptok))
     return false;
@@ -382,12 +530,12 @@ bool GitDiffReader::FReadHunkHeader(TOK* ptok) {
       return false;
     if (ptok->tk != TK::tkINTEGER)
       return false;
-    add_hunk.add_line_count_ = atol(ptok->szVal);
+    add_hunk.to_line_count_ = atol(ptok->szVal);
 
     if (!FGetTok(ptok))
       return false;
   } else {
-    add_hunk.add_line_count_ = 1;
+    add_hunk.to_line_count_ = 1;
   }
 
   if (ptok->tk != TK::tkATSIGN)
@@ -408,7 +556,9 @@ bool GitDiffReader::FReadHunkHeader(TOK* ptok) {
 
   return true;
 }
+#endif
 
+#if OLD_DIFFS
 bool GitDiffReader::FReadAddLine(TOK* ptok) {
   if (ptok->tk != TK::tkPLUS)
     return false;
@@ -419,7 +569,7 @@ bool GitDiffReader::FReadAddLine(TOK* ptok) {
 
   // If size() == 0, this is due to the '+++' line.
   if (current_diff_->parents_[0].add_hunks_.size() > 0) {
-    current_diff_->parents_[0].add_hunks_.back().add_lines_.push_back(
+    current_diff_->parents_[0].add_hunks_.back().to_lines_.push_back(
         GetTextToEndOfLine(ptok));
   } else {
     if (ptok->tk != TK::tkPLUS)
@@ -433,7 +583,9 @@ bool GitDiffReader::FReadAddLine(TOK* ptok) {
 
   return true;
 }
+#endif  // OLD_DIFFS
 
+#if OLD_DIFFS
 bool GitDiffReader::FReadRemoveLine(TOK* ptok) {
   if (ptok->tk != TK::tkMINUS)
     return false;
@@ -442,7 +594,7 @@ bool GitDiffReader::FReadRemoveLine(TOK* ptok) {
 
   // If size() == 0, this is due to the '---' line.
   if (current_diff_->remove_hunks_.size() > 0) {
-    current_diff_->remove_hunks_.back().remove_lines_.push_back(
+    current_diff_->remove_hunks_.back().from_lines_.push_back(
         GetTextToEndOfLine(ptok));
   } else {
     if (ptok->tk != TK::tkMINUS)
@@ -456,6 +608,7 @@ bool GitDiffReader::FReadRemoveLine(TOK* ptok) {
 
   return true;
 }
+#endif  // OLD_DIFFS
 
 bool GitDiffReader::FParseNamedLine(TOK* ptok) {
   if (ptok->tk != TK::tkWORD)
@@ -501,6 +654,7 @@ bool GitDiffReader::ProcessLogLine(char* line) {
       is_done = !FReadComment(&tok);
       break;
     }
+#if OLD_DIFFS
     case TK::tkATSIGN: {
       is_done = !FReadHunkHeader(&tok);
       break;
@@ -521,6 +675,12 @@ bool GitDiffReader::ProcessLogLine(char* line) {
       is_done = !FReadRemoveLine(&tok);
       break;
     }
+#else
+    case TK::tkATSIGN: {
+      is_done = !FReadHunkLines(&tok);
+      break;
+    }
+#endif  // OLD_DIFFS
 #if NEEDTHIS
     case TK::tkBSLASH: {
       // "\ No newline at end of file"
@@ -722,6 +882,7 @@ void GitDiffReader::ProcessDiffLines(FILE* stream) {
   assert(!current_diff_ ^ diffs_.size());
   diffs_.clear();
   current_diff_ = nullptr;
+  stream_ = stream;
 
   char stream_line[1024];
   while (fgets(stream_line, (int)std::size(stream_line), stream)) {
