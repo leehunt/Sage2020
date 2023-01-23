@@ -2,8 +2,7 @@
 
 #include <filesystem>
 
-typedef std::unique_ptr<FILE, decltype(&fclose)> AUTO_CLOSE_FILE_POINTER;
-// std::ifstream
+#include "Utility.h"
 
 class GitFileStreamCache {
  public:

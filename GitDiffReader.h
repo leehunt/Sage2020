@@ -69,6 +69,7 @@ class GitDiffReader {
   bool FReadGitHash(TOK* ptok, GitHash& hash);
   bool FReadCommit(TOK* ptok);
   bool FReadTree(TOK* ptok);
+  bool FReadGitDiffTreeColonFileMode(TOK* ptok, int& file_mode);
   bool FReadNameEmailAndTime(TOK* ptok, NameEmailTime& name_email_time);
   bool FReadParent(TOK* ptok);
   bool FReadAuthor(TOK* ptok);

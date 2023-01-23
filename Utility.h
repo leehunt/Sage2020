@@ -27,6 +27,14 @@ class ProcessPipe {
   FILE* file_;
 };
 
+//typedef std::unique_ptr<FILE, decltype(&fclose)> AUTO_CLOSE_FILE_POINTER;
+class AUTO_CLOSE_FILE_POINTER
+    : public std::unique_ptr<FILE, decltype(&fclose)> {
+ public:
+  AUTO_CLOSE_FILE_POINTER(FILE* file = nullptr)
+      : std::unique_ptr<FILE, decltype(&fclose)>(file, &fclose) {}
+};
+
 class SmartWindowsHandle
     : public std::unique_ptr<std::remove_pointer<HANDLE>::type,
                              void (*)(HANDLE)> {
@@ -41,7 +49,7 @@ class SmartWindowsHandle
  private:
   static void close(HANDLE handle) {
     if (handle != INVALID_HANDLE_VALUE)
-      CloseHandle(handle);
+      ::CloseHandle(handle);
   }
 };
 

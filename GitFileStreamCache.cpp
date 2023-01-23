@@ -21,11 +21,12 @@ GitFileStreamCache::GitFileStreamCache(const std::filesystem::path& file_path)
     //    : file_path_(std::filesystem::canonical(file_path)){}
     : file_path_(file_path) {}
 
-AUTO_CLOSE_FILE_POINTER GitFileStreamCache::GetStream(const std::wstring& git_command) {
+AUTO_CLOSE_FILE_POINTER GitFileStreamCache::GetStream(
+    const std::wstring& git_command) {
   const auto cache_file_path = GetItemCachePath(git_command);
   const auto& native_file_path = cache_file_path.native();
   AUTO_CLOSE_FILE_POINTER file_cache_stream(
-      _wfopen(native_file_path.c_str(), L"r"), &fclose);
+      _wfopen(native_file_path.c_str(), L"r"));
 
   if (!file_cache_stream) {
     return file_cache_stream;
@@ -57,7 +58,7 @@ AUTO_CLOSE_FILE_POINTER GitFileStreamCache::SaveStream(
   std::filesystem::create_directories(cache_file_path.parent_path());
   // Create output file, failing if it already exists.
   AUTO_CLOSE_FILE_POINTER file_cache_stream(
-      _wfopen(cache_file_path.native().c_str(), L"w+"), &fclose);
+      _wfopen(cache_file_path.native().c_str(), L"w+"));
 
   fpos_t pos;
   if (fgetpos(file_cache_stream.get(), &pos)) {

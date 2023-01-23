@@ -20,22 +20,97 @@ class GitDiffReaderTest : public testing::Test {
     return this_ref == other_ref;
   }
 
-  protected:
-    void SetUp() override { _set_error_mode(_OUT_TO_MSGBOX); }
+ protected:
+  void SetUp() override {
+#if _DEBUG
+    _set_error_mode(_OUT_TO_MSGBOX);
+#endif
+  }
 };
+
+static AUTO_CLOSE_FILE_POINTER CreateTmpFile(std::filesystem::path& new_path) {
+  TCHAR dos_file_dir[MAX_PATH];
+  if (!::GetTempPath(std::size(dos_file_dir), dos_file_dir)) {
+    assert(false);
+    return {};
+  }
+  TCHAR dos_file_path[MAX_PATH];
+  FILE* tmp_file_pointer = nullptr;
+  for (UINT name_seed = 0; name_seed < 16; name_seed++) {
+    constexpr TCHAR temp_file_prefix[] = L"s2k";
+    if (!::GetTempFileName(dos_file_dir, temp_file_prefix, name_seed,
+                           dos_file_path)) {
+      continue;
+    }
+    // Open the file w/o sharing such that we get a unique file. NOTE: the 'D'
+    // makes the file delete on close.
+    tmp_file_pointer = _wfsopen(dos_file_path, L"wD+", _SH_DENYRW);
+    if (tmp_file_pointer) {
+      break;
+    }
+  }
+  if (!tmp_file_pointer) {
+    assert(false);
+    return {};
+  }
+
+  new_path = dos_file_path;
+
+  return tmp_file_pointer;
+}
+
+static std::filesystem::path DumpToTmpFile(
+    const FileVersionInstance& file_version_instance) {
+  std::filesystem::path tmp_file_path;
+  AUTO_CLOSE_FILE_POINTER tmp_file = CreateTmpFile(tmp_file_path);
+  if (!tmp_file) {
+    assert(false);
+    return {};
+  }
+
+  for (const auto& line : file_version_instance.GetLines()) {
+    if (fputs(line.c_str(), tmp_file.get()) < 0) {
+      assert(false);
+      return {};
+    }
+  }
+
+  return tmp_file_path;
+}
+
+static void ShowDiffOfFiles(const FileVersionInstance& file_version_instance1,
+                            const FileVersionInstance& file_version_instance2) {
+  auto tmp_file_path1 = DumpToTmpFile(file_version_instance1);
+  auto tmp_file_path2 = DumpToTmpFile(file_version_instance2);
+
+  std::wstring command = std::wstring(L"c:\\tools\\windiff.exe ") +
+                         tmp_file_path1.wstring() + std::wstring(L" ") +
+                         tmp_file_path2.wstring();
+  std::wstring starting_dir = tmp_file_path1.parent_path().wstring();
+  ProcessPipe pipe(command.c_str(), starting_dir.c_str());
+}
 
 static void CompareFileInstanceToHead(
     const std::filesystem::path& file_path,
-    const FileVersionDiff& diff,
+    const GitHash& commit,
     const FileVersionInstance& file_version_instance_from_diffs) {
-  std::string blob_hash = diff.diff_tree_.new_hash_string;
   // REVIEW: We could also use a revision of
-  // |<commit>:<releative-git-file-path>|, which may be more clean/orthogonal as
+  // |<commit>:<relative-git-file-path>|, which may be more clean/orthogonal as
   // we don't use blob hashes elsewhere.
-  GitFileReader git_file_reader_latest{file_path.parent_path(), blob_hash};
-  auto file_version_instance_loaded = std::make_unique<FileVersionInstance>(
-      file_version_instance_from_diffs.commit_path_.GetRoot(),
-      std::move(git_file_reader_latest.GetLines()), diff.commit_);
+  std::unique_ptr<FileVersionInstance> file_version_instance_loaded;
+  if (commit.IsValid()) {
+    const std::string file_revision =
+        commit.sha_ + std::string(":./") + file_path.filename().string();
+    GitFileReader git_file_reader_latest{file_path.parent_path(),
+                                         file_revision};
+    file_version_instance_loaded = std::make_unique<FileVersionInstance>(
+        file_version_instance_from_diffs.commit_path_.GetRoot(),
+        std::move(git_file_reader_latest.GetLines()), commit);
+  } else {
+    file_version_instance_loaded = std::make_unique<FileVersionInstance>(
+        file_version_instance_from_diffs.commit_path_.GetRoot());
+  }
+#if 0
   EXPECT_EQ(file_version_instance_loaded->GetLines().size(),
             file_version_instance_from_diffs.GetLines().size());
   for (size_t i = 0; i < file_version_instance_from_diffs.GetLines().size();
@@ -47,6 +122,28 @@ static void CompareFileInstanceToHead(
     EXPECT_STREQ(file_version_line_loaded.c_str(),
                  file_version_line_from_diffs.c_str());
   }
+#else
+  if (file_version_instance_loaded->GetLines().size() !=
+      file_version_instance_from_diffs.GetLines().size()) {
+    ShowDiffOfFiles(*file_version_instance_loaded,
+                    file_version_instance_from_diffs);
+    assert(false);
+    return;
+  }
+  for (size_t i = 0; i < file_version_instance_from_diffs.GetLines().size();
+       i++) {
+    const auto& file_version_line_loaded =
+        file_version_instance_loaded->GetLines()[i];
+    const auto& file_version_line_from_diffs =
+        file_version_instance_from_diffs.GetLines()[i];
+    if (file_version_line_loaded != file_version_line_from_diffs) {
+      ShowDiffOfFiles(*file_version_instance_loaded,
+                      file_version_instance_from_diffs);
+      assert(false);
+      return;
+    }
+  }
+#endif
 }
 
 static void CompareFileInstanceToCommit(
@@ -61,17 +158,8 @@ static void CompareFileInstanceToCommit(
   // consider passing in the diff file tree hash instead.
 
   // Read file (aside: git oddly doesn't have a clean way to find binary files).
-  const auto git_directory_root = GetGitRoot(file_path);
-  const auto relative_path_native =
-      file_path.lexically_relative(git_directory_root);
-  // HACK: Convert to Git-friendly forward slashes.
-  std::string git_releative_path = relative_path_native.string();
-  for (auto& ch : git_releative_path) {
-    if (ch == '\\')
-      ch = '/';
-  }
-  std::string file_revision =
-      commit.sha_ + std::string(":./") + git_releative_path;
+  const std::string file_revision =
+      commit.sha_ + std::string(":./") + file_path.filename().string();
   GitFileReader git_file_reader_commit{file_path.parent_path(), file_revision};
 
   // Check for same number of lines.
@@ -89,7 +177,11 @@ static void CompareFileInstanceToCommit(
 }
 
 TEST_F(GitDiffReaderTest, LoadAndCompareWithFile) {
-  std::filesystem::path file_path = __FILE__;
+  std::filesystem::path file_path =  //__FILE__;
+      "C:\\Users\\leehu_000\\Source\\Repos\\Sage2020\\FileVersionInstance.cpp";
+  // "C:\\Users\\leehu_000\\Source\\Repos\\Sage2020\\Sage2020_unittest\\test_"
+  // "git_files\\base.txt";
+  // L"C:\\Users\\leehu_000\\Source\\Repos\\libgit2\\libgit2";  //__FILE__;
   std::string tag;
   GitDiffReader git_diff_reader(file_path, tag);
 
@@ -104,16 +196,20 @@ TEST_F(GitDiffReaderTest, LoadAndCompareWithFile) {
   for (const auto& diff : diffs) {
     editor.AddDiff(diff);
     EXPECT_EQ(file_version_instance.GetCommit(), diff.commit_);
-    CompareFileInstanceToHead(file_path, diff, file_version_instance);
+    CompareFileInstanceToHead(file_path, diff.commit_, file_version_instance);
   }
 
   // Now go backwards in time (but forward in the diffs vector) down to nothing,
   // or at least the first known version.
   for (auto it = diffs.crbegin(); it != diffs.crend(); it++) {
     const auto& diff = *it;
-    CompareFileInstanceToHead(file_path, diff, file_version_instance);
+    // assert(
+    //     strcmp("bc6ac55902423560f1677172c08085ead6bcedc8",
+    //     diff.commit_.sha_));
     editor.RemoveDiff(diff);
     EXPECT_EQ(file_version_instance.GetCommit(), diff.file_parent_commit_);
+    CompareFileInstanceToHead(file_path, diff.file_parent_commit_,
+                              file_version_instance);
   }
 
   EXPECT_EQ(file_version_instance.GetLines().size(), 0);
@@ -167,8 +263,10 @@ static GitHash GetBranchsBaseCommitFromGit(
 
   const auto& diff_to_head_diffs = git_branch_to_head_diff_reader.GetDiffs();
   // This can legitimately be empty() if this is the adding diff.
-  assert(!diff_to_head_diffs.empty() || base_diff.diff_tree_.action[0] == 'A' ||
-         base_diff.diff_tree_.action[0] == 0);
+  assert(!diff_to_head_diffs.empty() ||
+         base_diff.diff_tree_.old_files.empty() ||
+         base_diff.diff_tree_.old_files[0].action[0] == 'A' ||
+         base_diff.diff_tree_.old_files[0].action[0] == 0);
 
   GitHash branches_base_commit;
   if (!diff_to_head_diffs.empty()) {
@@ -418,7 +516,7 @@ static void PrintAllBranchesRecur(const std::vector<FileVersionDiff>& diffs,
 #else
     printf("%d %s %s %s  hunks: %zu\n", index,
            GetShortHash(diff.commit_).c_str(), diff.commit_.tag_.c_str(),
-           diff.diff_tree_.action, diff.hunks_.size());
+           diff.diff_tree_.new_file.action, diff.hunks_.size());
 #endif
 
     for (size_t parent_index = 1; parent_index < diff.parents_.size();

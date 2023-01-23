@@ -27,8 +27,8 @@ static std::string GetTextToWhitespace(TOK* ptok) {
   std::string text;
   char* szStart = ptok->szVal;
 
-  while (ptok->tk != TK::tkWSPC && ptok->tk != TK::tkNEWLINE &&
-         ptok->tk != TK::tkNil) {
+  while (ptok->tk != TK::tkWSPC && ptok->tk != TK::tkTAB &&
+         ptok->tk != TK::tkNEWLINE && ptok->tk != TK::tkNil) {
     if (!FGetTokDirect(ptok))
       break;
   }
@@ -39,6 +39,15 @@ static std::string GetTextToWhitespace(TOK* ptok) {
   text = szStart;
 
   ptok->szVal[0] = chSav;
+
+  if (ptok->tk == TK::tkWSPC || ptok->tk == TK::tkTAB) {
+    // Get next whilespace token.
+#if _DEBUG
+    bool ret =
+#endif
+        FGetTok(ptok);
+    assert(ret);
+  }
 
   return text;
 }
@@ -69,16 +78,14 @@ static std::string GetTextToEndOfLine(TOK* ptok) {
 }
 
 bool GitDiffReader::FReadGitHash(TOK* ptok, GitHash& hash) {
-  if (!FGetTok(ptok))
-    return false;
-  if (ptok->tk == TK::tkNil)
+  if (ptok->tk == TK::tkNil || ptok->tk == TK::tkNEWLINE)
     return false;
   strcpy_s(hash.sha_, GetTextToWhitespace(ptok).c_str());
 
   // Read optional tag.
   // REVIEW: Consider doing this more cleanly, looking
   // for a tag with balenced parentheses, i.e. "(<tag>)".
-  if (FGetTok(ptok) && ptok->tk == TK::tkLPAREN) {
+  if (ptok->tk == TK::tkLPAREN) {
     hash.tag_ = GetTextToWhitespace(ptok);
   }
 
@@ -90,23 +97,40 @@ bool GitDiffReader::FReadCommit(TOK* ptok) {
     return false;
   assert(!strcmp(ptok->szVal, "commit"));
 
-  // Start new diff.  REVIEW: is there a better way to determine diff edges?
-  diffs_.push_back({});
-  current_diff_ = &diffs_.back();
+  FileVersionDiff diff;
 
-  current_diff_->path_ = path_;
+  if (!FGetTok(ptok)) {
+    assert(false);
+    return false;
+  }
 
   // Format: "commit <sha1> (<tag>)".
-  if (!FReadGitHash(ptok, current_diff_->commit_))
+  if (!FReadGitHash(ptok, diff.commit_)) {
+    assert(false);
     return false;
-
-  // Read any children.
-  // Format: "[commit <sha1> (<tag>)]*".
-  GitHash child_hash;
-  while (FReadGitHash(ptok, child_hash)) {
-    FileVersionDiffChild child = {child_hash};
-    current_diff_->children_.push_back(child);
   }
+
+  if (ptok->tk != TK::tkNEWLINE) {
+    // Read any children.
+    // Format: "[commit <sha1> (<tag>)]*".
+    GitHash child_hash;
+    while (FReadGitHash(ptok, child_hash)) {
+      FileVersionDiffChild child;
+      child.commit_ = std::move(child_hash);
+      diff.children_.push_back(std::move(child));
+    }
+  }
+
+  if (ptok->tk != TK::tkNEWLINE) {
+    assert(false);
+    return false;
+  }
+
+  // Start new diff.  REVIEW: is there a better way to determine diff edges?
+  diff.path_ = path_;
+  diffs_.push_back(std::move(diff));
+
+  current_diff_ = &diffs_.back();
 
   return true;
 }
@@ -118,7 +142,12 @@ bool GitDiffReader::FReadTree(TOK* ptok) {
 
   if (!FGetTok(ptok))
     return false;
-  current_diff_->tree_ = GetTextToEndOfLine(ptok);
+  current_diff_->tree_ = GetTextToWhitespace(ptok);
+
+  if (ptok->tk != TK::tkNEWLINE) {
+    assert(false);
+    return false;
+  }
 
   return true;
 }
@@ -128,10 +157,25 @@ bool GitDiffReader::FReadParent(TOK* ptok) {
     return false;
   assert(!strcmp(ptok->szVal, "parent"));
 
-  // REVIEW: If there are no parents, should |parents_| just stay as an empty
-  // vector?
-  current_diff_->parents_.push_back({});
-  return FReadGitHash(ptok, current_diff_->parents_.back().commit_);
+  if (!FGetTok(ptok)) {
+    assert(false);
+    return false;
+  }
+
+  FileVersionDiffParent parent;
+  if (!FReadGitHash(ptok, parent.commit_)) {
+    assert(false);
+    return false;
+  }
+
+  if (ptok->tk != TK::tkNEWLINE) {
+    assert(false);
+    return false;
+  }
+
+  current_diff_->parents_.push_back(std::move(parent));
+
+  return true;
 }
 
 bool GitDiffReader::FReadNameEmailAndTime(TOK* ptok,
@@ -253,54 +297,155 @@ rewrites.
 
 <sha1> is shown as all 0’s if a file is new on the filesystem and it is out of
 sync with the index.
+
+
+For merges we get https://git-scm.com/docs/diff-format#_diff_format_for_merges
+
+- there is a colon for each parent
+- there are more "src" modes and "src" sha1
+- status is concatenated status characters for each parent
+- no optional "score" number
+- tab-separated pathname(s) of the file [if '--combined-all-paths' is set, there
+can be more that one file]
+
+E.g.:
+   ::100644 100644 100644 bbf2455 6617bf6 c0a81df MM FileVersionInstance.cpp
+  srcmode1 srcmode2 dstmode srchash1 srchash2 dsthash S1S2 dest path
 */
+
 bool GitDiffReader::FReadGitDiffTreeColon(TOK* ptok) {
   if (ptok->tk != TK::tkCOLON)
     return false;
 
-  if (!FGetTok(ptok))
+  if (!FGetTok(ptok)) {
+    assert(false);
     return false;
+  }
 
-  // e.g. "100644 100644 285ecec5de92e c90011667b640 M chrome/app/chrome_exe.rc"
-  // N.n. For rename, we just pick up the new file name.
-  //      :100644 100644 22e7ba82b 5660a1dc4 R072	src/branch.c
-  //      src/libgit2/branch.c
-  auto diff_tree_line = GetTextToEndOfLine(ptok);
-  char old_path[FILENAME_MAX];
-  int num_args = sscanf_s(
-      diff_tree_line.c_str(), "%o %o %s %s %s %s %s",
-      &current_diff_->diff_tree_.old_mode,                             // %o
-      &current_diff_->diff_tree_.new_mode,                             // %o
-      current_diff_->diff_tree_.old_hash_string,                       // %s
-      (unsigned)std::size(current_diff_->diff_tree_.old_hash_string),  // %s len
-      current_diff_->diff_tree_.new_hash_string,                       // %s
-      (unsigned)std::size(current_diff_->diff_tree_.new_hash_string),  // %s len
-      current_diff_->diff_tree_.action,                                // %s
-      (unsigned)sizeof(current_diff_->diff_tree_.action),              // %s len
-      current_diff_->diff_tree_.file_path,                             // %s
-      (unsigned)std::size(current_diff_->diff_tree_.file_path),        // %s len
-      old_path,                                                        // %s
-      (unsigned)std::size(old_path)                                    // %s len
-  );
-  if (num_args < 6)
+  int num_parents = 1;
+  while (ptok->tk == TK::tkCOLON) {
+    num_parents++;
+    if (!FGetTok(ptok)) {
+      assert(false);
+      return false;
+    }
+  }
+
+  // Read src mod(es).
+  for (int i = 0; i < num_parents; i++) {
+    FileVersionDiffTreeFile tree_file;
+    if (!FReadGitDiffTreeColonFileMode(ptok, tree_file.mode)) {
+      assert(false);
+      return false;
+    }
+
+    current_diff_->diff_tree_.old_files.push_back(tree_file);
+  }
+
+  // Read dst mode.
+  if (!FReadGitDiffTreeColonFileMode(ptok,
+                                     current_diff_->diff_tree_.new_file.mode)) {
+    assert(false);
     return false;
+  }
+
+  // Read src hash(es).
+  for (int i = 0; i < num_parents; i++) {
+    const auto src_hash = GetTextToWhitespace(ptok);
+    if (src_hash.empty()) {
+      assert(false);
+      return false;
+    }
+    strcpy(current_diff_->diff_tree_.old_files[i].hash_string,
+           src_hash.c_str());
+  }
+
+  // Read dst hash.
+  const auto dst_hash = GetTextToWhitespace(ptok);
+  if (dst_hash.empty()) {
+    assert(false);
+    return false;
+  }
+  strcpy(current_diff_->diff_tree_.new_file.hash_string, dst_hash.c_str());
+
+  // Read actions.
+  if (ptok->tk != TK::tkWORD) {
+    assert(false);
+    return false;
+  }
+
+  for (int i = 0; i < num_parents; i++) {
+    const auto action = ptok->szVal[i];
+    if (!action) {
+      assert(false);
+      return false;
+    }
+    assert(action == 'A' || action == 'C' || action == 'D' || action == 'M' ||
+           action == 'R' || action == 'T' ||
+           action == 'U');  // N.B. Disallow 'X' since this is a bug.
+
+    const char action_string[2] = {action};
+    strcpy(current_diff_->diff_tree_.old_files[i].action, action_string);
+  }
+
+  if (!FGetTok(ptok)) {
+    assert(false);
+    return false;
+  }
+
+  // Read src file name(s).
+  for (int i = 0; i < num_parents; i++) {
+    const auto src_file_name = GetTextToWhitespace(ptok);
+    assert(!src_file_name.empty());  // REVIEW: will this be legitimately empty
+                                     // on
+                                     // file delete?
+    strcpy(current_diff_->diff_tree_.old_files[i].file_path,
+           src_file_name.c_str());
+  }
+
+  if (ptok->tk != TK::tkNEWLINE) {
+    // Read optional dest file name (e.g. if a rename).
+    const auto dst_file_name = GetTextToWhitespace(ptok);
+    assert(!dst_file_name.empty());
+    strcpy(current_diff_->diff_tree_.new_file.file_path, dst_file_name.c_str());
+  }
+
+  if (ptok->tk != TK::tkNEWLINE) {
+    assert(false);
+    return false;
+  }
 
   // Handle rename.
-  if (current_diff_->diff_tree_.action[0] == 'R') {
-    assert(num_args == 7);
-    if (num_args == 7) {
+  for (int i = 0; i < num_parents; i++) {
+    if (current_diff_->diff_tree_.old_files[i].action[0] == 'R') {
       std::string new_path_string = path_.generic_string();
-      auto path_base_pos = new_path_string.rfind(old_path);
+      auto path_base_pos = new_path_string.rfind(
+          current_diff_->diff_tree_.old_files[i].file_path);
       // This can not match if we're reading unfiltered (i.e. not per-file) diff
       // entires.
       if (path_base_pos != new_path_string.npos) {
         new_path_string.resize(path_base_pos);
-        new_path_string.append(current_diff_->diff_tree_.file_path);
+        new_path_string.append(current_diff_->diff_tree_.new_file.file_path);
         path_ = new_path_string;
         current_diff_->path_ = new_path_string;
+        break;
       }
     }
   }
+
+  return true;
+}
+// Reads octal file mode.
+bool GitDiffReader::FReadGitDiffTreeColonFileMode(TOK* ptok, int& file_mode) {
+  if (ptok->tk != TK::tkINTEGER)
+    return false;
+
+  char* end_ptr = nullptr;
+  constexpr int octal_radix = 8;
+  file_mode = strtoul(ptok->szVal, &end_ptr, octal_radix);
+
+  if (!FGetTok(ptok))
+    return false;
 
   return true;
 }
@@ -717,7 +862,7 @@ std::wstring GitDiffReader::GetGitCommand(
     //      '-c'  --> '--diff-merges=combined'
     //      '-p'  --> '--patch'
     //      '-U0' --> '--unified=0'
-    opt_str += L"--first-parent -c ";
+    opt_str += L"--first-parent -c --combined-all-paths ";
   // This must go last.
   if (!opts.HasOpts(Opt::NO_FILTER_TO_FILE)) {
     if (opts.HasOpts(Opt::FOLLOW))

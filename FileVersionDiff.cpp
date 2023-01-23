@@ -79,20 +79,34 @@ bool FileVersionDiffHunk::operator!=(const FileVersionDiffHunk& other) const {
 #endif  // _DEBUG
 
 #ifdef _DEBUG
+bool FileVersionDiffTreeFile::operator ==
+    (const FileVersionDiffTreeFile& other) const {
+  if (this == &other)
+    return true;
+  if (mode != other.mode)
+    return false;
+  if (strcmp(hash_string, other.hash_string))
+    return false;
+  if (strcmp(file_path, other.file_path))
+    return false;
+  if (strcmp(action, other.action))
+    return false;
+
+  return true;
+}
+bool FileVersionDiffTreeFile::operator !=
+    (const FileVersionDiffTreeFile& other) const {
+  return !(*this == other);
+}
+#endif  // _DEBUG
+
+#ifdef _DEBUG
 bool FileVersionDiffTree::operator==(const FileVersionDiffTree& other) const {
   if (this == &other)
     return true;
-  if (old_mode != other.old_mode)
+  if (old_files != other.old_files)
     return false;
-  if (strcmp(old_hash_string, other.old_hash_string))
-    return false;
-  if (new_mode != other.new_mode)
-    return false;
-  if (strcmp(new_hash_string, other.new_hash_string))
-    return false;
-  if (action != other.action)
-    return false;
-  if (strcmp(file_path, other.file_path))
+  if (new_file != other.new_file)
     return false;
 
   return true;

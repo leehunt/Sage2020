@@ -20,7 +20,7 @@ FileVersionInstance::FileVersionInstance(
   if (commit_.IsValid()) {
     LineToFileVersionLineInfo infos;
     infos.emplace_back(FileVersionLineInfo(commit_.sha_));
-    AddLineInfo(1, static_cast<int>(lines.size()), infos);
+    AddLineInfo(1, static_cast<int>(lines.size()), std::move(infos));
     file_lines_ = std::move(lines);
   } else {
     assert(lines.empty());
@@ -79,6 +79,13 @@ void FileVersionInstance::AddLineInfo(
     int line_num,
     int line_count,
     const LineToFileVersionLineInfo& line_infos) {
+  auto line_infos_copy = line_infos;
+  AddLineInfo(line_num, line_count, std::move(line_infos_copy));
+}
+
+void FileVersionInstance::AddLineInfo(int line_num,
+                                      int line_count,
+                                      LineToFileVersionLineInfo&& line_infos) {
   assert(line_num > 0);
   assert(line_count >= 0);  // N.b. When adding a null parent commit, the number
   // of lines can be zero.
@@ -114,6 +121,17 @@ void FileVersionInstance::RemoveLineInfo(int line_num, int line_count) {
   auto itBegin = file_lines_info_.begin() + (line_num - 1);
   file_lines_info_.erase(itBegin, itBegin + line_count);
 #endif
+}
+
+std::unique_ptr<LineToFileVersionLineInfo>
+FileVersionInstance::SnapshotLineInfo(int line_num, int line_count) const {
+  auto line_info = std::make_unique<LineToFileVersionLineInfo>();
+
+  auto from_location_index = line_num - 1;
+  line_info->insert(
+      line_info->begin(), file_lines_info_.begin() + from_location_index,
+      file_lines_info_.begin() + from_location_index + line_count);
+  return line_info;
 }
 
 const LineToFileVersionLineInfo& FileVersionInstance::GetLinesInfo() const {

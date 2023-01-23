@@ -33,12 +33,18 @@ class FileVersionInstance {
                                                      int iEnd) const;
 
   const FileVersionLineInfo& GetLineInfo(int line_index) const;
+  std::unique_ptr<LineToFileVersionLineInfo> SnapshotLineInfo(
+      int line_num,
+      int line_count) const;
 
  private:
   // Updates/replaces info for [line_num, line_num + line_count).
   void AddLineInfo(int line_num,
                    int line_count,
                    const LineToFileVersionLineInfo& line_infos);
+  void AddLineInfo(int line_num,
+                   int line_count,
+                   LineToFileVersionLineInfo&& line_infos);
 
   // Updates/replaces info for [line_num, line_num + line_count).
   void RemoveLineInfo(int line_num, int line_count);

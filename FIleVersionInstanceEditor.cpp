@@ -39,7 +39,7 @@ void FileVersionInstanceEditor::AddDiff(const FileVersionDiff& diff) {
   // Check that we're applying the diff to the expected base commit.
   assert(file_version_instance_.commit_ == diff.file_parent_commit_ ||
          !diff.file_parent_commit_.IsValid() &&
-             diff.diff_tree_.action[0] == 'A');
+             diff.diff_tree_.old_files[0].action[0] == 'A');
 
 #ifdef _DEBUG
   const char* sha = diff.commit_.sha_;
@@ -86,9 +86,10 @@ void FileVersionInstanceEditor::AddDiff(const FileVersionDiff& diff) {
   }
 #else
   for (auto& hunk : diff.hunks_) {
-    const int num_parents = hunk.ranges_.size() - 1;
     // Apply change to all parents (parent_bits all set to 1).
-    int parent_bits = (1 << num_parents) - 1;
+    // TODO!!! Figure out correct way to account for parent.
+    //int parent_bits = (1 << num_parents) - 1;
+    int parent_bits = 1;
     constexpr bool reverse_action = false;
     ApplyCombinedHunk(hunk, parent_bits, reverse_action);
   }
@@ -143,9 +144,11 @@ void FileVersionInstanceEditor::RemoveDiff(const FileVersionDiff& diff) {
 #else
   for (auto it = diff.hunks_.crbegin(); it != diff.hunks_.crend(); it++) {
     const auto& hunk = *it;
-    const int num_parents = hunk.ranges_.size() - 1;
     // Apply change to all parents (parent_bits all set to 1).
-    int parent_bits = (1 << num_parents) - 1;
+    // TODO: Fix for other parents!
+    // const int num_parents = hunk.ranges_.size() - 1;
+    // int parent_bits = (1 << num_parents) - 1;
+    int parent_bits = 1;
     constexpr bool reverse_action = true;
     ApplyCombinedHunk(hunk, parent_bits, reverse_action);
   }
@@ -398,14 +401,10 @@ void FileVersionInstanceEditor::AddHunk(const FileVersionDiffHunk& hunk) {
             hunk.from_line_count_);
 
     // TODO!!!! : This needs to be hoisted up to use both remove and add hunks.
+    // Stash away line info.
     if (!hunk.line_info_to_restore_) {
-      hunk.line_info_to_restore_ =
-          std::make_unique<LineToFileVersionLineInfo>();
-      hunk.line_info_to_restore_->insert(
-          hunk.line_info_to_restore_->begin(),
-          file_version_instance_.file_lines_info_.begin() + from_location_index,
-          file_version_instance_.file_lines_info_.begin() +
-              from_location_index + hunk.from_line_count_);
+      hunk.line_info_to_restore_ = file_version_instance_.SnapshotLineInfo(
+          from_location_index + 1, hunk.from_line_count_);
     }
     file_version_instance_.RemoveLineInfo(from_location_index + 1,
                                           hunk.from_line_count_);
@@ -544,21 +543,51 @@ void FileVersionInstanceEditor::ApplyDiffLine(const std::string& line,
   }
 
   switch (action) {
-    case '+':
+    case '+': {
       file_version_instance_.file_lines_.insert(
           file_version_instance_.file_lines_.begin() + location_index,
           line.substr(num_parents));
+
+      // Add new line info.
+      auto file_version_line_info =
+          FileVersionLineInfo{file_version_instance_.commit_.sha_};
+      LineToFileVersionLineInfo single_infos;
+      single_infos.push_front(std::move(file_version_line_info));
+      file_version_instance_.AddLineInfo(location_index + 1, 1,
+                                         std::move(single_infos));
+
+      assert(line.back() == '\n');
       location_index++;
       break;
-    case '-':
+    }
+    case '-': {
       // Check that the existing "from" lines are as expected.
       assert(file_version_instance_.file_lines_[location_index] ==
              line.substr(num_parents));
       file_version_instance_.file_lines_.erase(
           file_version_instance_.file_lines_.begin() + location_index);
+
+      file_version_instance_.RemoveLineInfo(location_index + 1, 1);
       break;
+    }
     case ' ':
-      location_index++;
+      // This is a total guess.
+      // Increment index if any branch adds any line.
+      if (reverse_action && 0) {
+        for (i = 0; i < num_parents; i++) {
+          if (line[i] == '-') {
+            location_index++;
+            break;
+          }
+        }
+      } else {
+        for (i = 0; i < num_parents; i++) {
+          if (line[i] == '+') {
+            location_index++;
+            break;
+          }
+        }
+      }
       break;
     default:
       assert(false);
@@ -570,36 +599,70 @@ void FileVersionInstanceEditor::ApplyCombinedHunk(
     int parent_bits,
     bool reverse_action) {
   const auto& to_range = hunk.ranges_.back();
+#if 1
   const int to_location_index =
-      to_range.count_ ? to_range.location_ - 1 : to_range.location_;
+          to_range.count_ ? to_range.location_ - 1 : to_range.location_;
+      //to_range.location_ - 1;
+  // This is necessary because of diffs like this**. Note how the to start index is one less after deleting the line. Sigh.
+  /*
+index bca98bd..d4ec793 100644
+--- a/FileVersionInstance.cpp
++++ b/FileVersionInstance.cpp
+@@ -6 +6 @@
+-FileVersionInstance::FileVersionInstance() : commit_index_(-1) {}
++FileVersionInstance::FileVersionInstance() {}
+@@ -10,2 +10,2 @@
+FileVersionInstance::FileVersionInstance(std::deque<std::string>& lines,
+-    : commit_index_(-1),
+-      commit_(parent_commit) {  // N.b. parent_commit has a -1 index.
++    : commit_(parent_commit) {  // N.b. When set to the parent_commit
++                                // |commit_index_| is empty.
+@@ -47 +46,0 @@ void FileVersionInstance::AddLineInfo(**
+-    }
+@@ -50,0 +50 @@ void FileVersionInstance::AddLineInfo(
++}
+@@ -52 +52 @@ void FileVersionInstance::AddLineInfo(
+-  void FileVersionInstance::RemoveLineInfo(int line_num, int line_count) {
++void FileVersionInstance::RemoveLineInfo(int line_num, int line_count) {
+  */
+#else
+  const int to_location_index =
+      hunk.ranges_.size() > 2
+          ? to_range.location_ - 1
+          : (to_range.count_ ? to_range.location_ - 1 : to_range.location_);
+#endif
+  assert(to_location_index >= 0);
 
+#if 0
   // Track line info.
   const auto& from_range =
-      hunk.ranges_.front();  // TODO: need to have one of these per parent.
-  if (from_range.count_) {
-    if (reverse_action) {
-      // Restore line info.
-      assert(hunk.line_info_to_restore_);
-      file_version_instance_.AddLineInfo(to_location_index + 1,
-                                         from_range.count_,
-                                         *hunk.line_info_to_restore_);
-    } else {
-      // Stash away line info.
-      if (!hunk.line_info_to_restore_) {
-        hunk.line_info_to_restore_ =
-            std::make_unique<LineToFileVersionLineInfo>();
+      hunk.ranges_.front();  // TODO: We need to have one of these per parent.
+#endif
 
-        hunk.line_info_to_restore_->insert(
-            hunk.line_info_to_restore_->begin(),
-            file_version_instance_.file_lines_info_.begin() + to_location_index,
-            file_version_instance_.file_lines_info_.begin() +
-                to_location_index + from_range.count_);
-      }
-      // Remove older line info.
+#if 0
+  if (reverse_action) {
+    if (to_range.count_ > 0) {
+      // TODO!!!! : This needs to be hoisted up to use both remove and add
+      // hunks.
+
+      // REVIEW: Shouldn't this be |from_location_index + 1|?
       file_version_instance_.RemoveLineInfo(to_location_index + 1,
-                                            from_range.count_);
+                                            to_range.count_);
     }
+  } else {
+    // Stash away line info.
+    if (!hunk.line_info_to_restore_) {
+      // REVIEW: Shouldn't this be |from_location_index + 1|?
+      hunk.line_info_to_restore_ = file_version_instance_.SnapshotLineInfo(
+          to_location_index + 1, from_range.count_);
+    }
+
+    // Remove older line info (necessary since we may delete lines).
+    // REVIEW: Shouldn't this be |from_location_index + 1|?
+    file_version_instance_.RemoveLineInfo(to_location_index + 1,
+                                          from_range.count_);
   }
+#endif  // 0
 
   // Apply diff edits.
   int running_to_location_index = to_location_index;
@@ -609,9 +672,16 @@ void FileVersionInstanceEditor::ApplyCombinedHunk(
                   reverse_action);
   }
 
-  // Add newer line info.  REVIEW: Can we combine with above block?
+#if 0
   if (to_range.count_) {
-    if (!reverse_action) {
+    // Add newer line info.  REVIEW: Can we combine with above block?
+    if (reverse_action) {
+      // Restore line info.
+      assert(hunk.line_info_to_restore_);
+      file_version_instance_.AddLineInfo(to_location_index + 1,
+                                         from_range.count_,
+                                         *hunk.line_info_to_restore_);
+    } else {
       // Add new line info.
       auto file_version_line_info =
           FileVersionLineInfo{file_version_instance_.commit_.sha_};
@@ -622,6 +692,7 @@ void FileVersionInstanceEditor::ApplyCombinedHunk(
                                          single_infos);  // REVIEW: std::move().
     }
   }
+#endif  // 0
 
   if (listener_head_ != nullptr) {
     listener_head_->NotifyAllListenersOfEdit(to_location_index,
@@ -658,7 +729,7 @@ DiffTreePath FileVersionInstanceEditor::GetDiffTreeBranchPathRecur(
         // If there is no |file_parent_commit_| then we're at the root.
         assert(subroot == GetRoot());
         // If there is no |file_parent_commit_| then we're adding the file.
-        // assert(subroot.front().diff_tree_.action[0] == 'A');
+        // assert(subroot.front().diff_tree_.old_files[0].action[0] == 'A');
         DiffTreePath path{GetRoot()};
         path.push_back(std::move(item));
         return path;

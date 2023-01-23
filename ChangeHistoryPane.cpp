@@ -286,8 +286,9 @@ static void SetTreeItemData(CTreeCtrl& tree,
   VERIFY(tree.SetItemData(htreeitem,
                           reinterpret_cast<DWORD_PTR>(&file_version_diff)));
 
-  switch (file_version_diff.diff_tree_.action[0]) {
-    case 'A':  // add
+  switch (file_version_diff.diff_tree_.old_files[0]
+              .action[0]) {  // REVIEW: How to handle multiple parents?
+    case 'A':                // Add.
     {
       VERIFY(tree.SetItemImage(htreeitem, VERSION_IMAGELIST_ADD,
                                VERSION_IMAGELIST_ADD));
@@ -303,7 +304,7 @@ static void SetTreeItemData(CTreeCtrl& tree,
       break;
     }
 #if 0
-	case 'b':  // branch
+	case 'b':  // Branch.
 	{
 		VERIFY(tree.SetItemImage(htreeitem, VERSION_IMAGELIST_BRANCH,
 			VERSION_IMAGELIST_BRANCH));
@@ -313,11 +314,11 @@ static void SetTreeItemData(CTreeCtrl& tree,
 		break;
 	}
 #endif
-    case 'C':  // copy
+    case 'C':  // Copy.
       VERIFY(tree.SetItemImage(htreeitem, VERSION_IMAGELIST_COPY,
                                VERSION_IMAGELIST_INTEGRATE));
       break;
-    case 'D':  // delete
+    case 'D':  // Delete.
     {
       VERIFY(tree.SetItemImage(htreeitem, VERSION_IMAGELIST_DELETE,
                                VERSION_IMAGELIST_DELETE));
@@ -327,7 +328,7 @@ static void SetTreeItemData(CTreeCtrl& tree,
         tree.DeleteItem(htreeitemChild);
       break;
     }
-    case 'M':  // modificion
+    case 'M':  // Modify.
     {
       VERIFY(tree.SetItemImage(htreeitem, VERSION_IMAGELIST_PLAIN,
                                VERSION_IMAGELIST_PLAIN));
@@ -345,16 +346,16 @@ static void SetTreeItemData(CTreeCtrl& tree,
     }
 #if 0
 	case 'i':
-		if (dr.szAction[1] == 'n')  // integrate
+		if (dr.szAction[1] == 'n')  // Integrate.
 			VERIFY(tree.SetItemImage(htreeitem, VERSION_IMAGELIST_INTEGRATE,
 				VERSION_IMAGELIST_INTEGRATE));
 		else {
-			assert(dr.szAction[1] == 'g');  // ignore
+			assert(dr.szAction[1] == 'g');  // Ignore.
 			VERIFY(tree.SetItemImage(htreeitem, VERSION_IMAGELIST_INTEGRATE,
 				VERSION_IMAGELIST_INTEGRATE));
 		}
 		break;
-	case 'm':  // merge
+	case 'm':  // Merge.
 		VERIFY(tree.SetItemImage(htreeitem, VERSION_IMAGELIST_INTEGRATE,
 			VERSION_IMAGELIST_INTEGRATE));
 		break;

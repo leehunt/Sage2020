@@ -100,12 +100,12 @@ void CSage2020Doc::Serialize(CArchive& ar) {
 
     // REVIEW: Is this now necessary since adds will sometimes come from
     // the branch diff?
-    if (file_diffs_.front().diff_tree_.action[0] != 'A') {
+    if (file_diffs_.front().diff_tree_.old_files[0].action[0] != 'A') {
       // if the first commit is not an add, then get the file at that point.
       std::filesystem::path parent_path = file_path;
 
       std::string initial_file_id =
-          file_diffs_.front().diff_tree_.new_hash_string;
+          file_diffs_.front().diff_tree_.new_file.hash_string;
       GitFileReader git_file_reader{file_path.parent_path(), initial_file_id,
                                     pwndOutput};
       file_version_instance_ = std::make_unique<FileVersionInstance>(

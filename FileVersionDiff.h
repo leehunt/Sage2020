@@ -73,25 +73,42 @@ struct FileVersionDiffHunk {
   ~FileVersionDiffHunk() { printf("~FileVersionDiffHunk\t%p\n", this); }
 #endif
 };
-struct FileVersionDiffTree {
-  FileVersionDiffTree() : old_mode(0), new_mode(0) {
-    old_hash_string[0] = '\0';
-    new_hash_string[0] = '\0';
+
+struct FileVersionDiffTreeFile {
+  FileVersionDiffTreeFile() : mode(0) {
+    hash_string[0] = '\0';
     file_path[0] = '\0';
     action[0] = '\0';
   }
-  int old_mode;
-  char old_hash_string[14];
-  int new_mode;
-  char new_hash_string[14];
-  char action[5];  // The action (see FReadGitDiffTreeColon()) plus any
-                   // similarity percentage.
+  int mode;
+  char hash_string[14];
   char file_path[FILENAME_MAX];
+  char action[5];  // The action for the from file (see FReadGitDiffTreeColon()) plus any
+                   // similarity percentage.
+#ifdef _DEBUG
+  bool operator==(const FileVersionDiffTreeFile& other) const;
+  bool operator!=(const FileVersionDiffTreeFile& other) const;
+#endif  // _DEBUG
+
+#if _DEBUG_MEM_TRACE
+  FileVersionDiffParent() { printf("FileVersionDiffTreeFile\t%p\n", this); }
+  ~FileVersionDiffParent() { printf("~FileVersionDiffTreeFile\t%p\n", this); }
+#endif
+};
+
+struct FileVersionDiffTree {
+  std::vector<FileVersionDiffTreeFile> old_files;
+  FileVersionDiffTreeFile new_file;
 
 #ifdef _DEBUG
   bool operator==(const FileVersionDiffTree& other) const;
   bool operator!=(const FileVersionDiffTree& other) const;
 #endif  // _DEBUG
+
+#if _DEBUG_MEM_TRACE
+  FileVersionDiffParent() { printf("FileVersionDiffTree\t%p\n", this); }
+  ~FileVersionDiffParent() { printf("~FileVersionDiffTree\t%p\n", this); }
+#endif
 };
 
 struct FileVersionDiffParent {
