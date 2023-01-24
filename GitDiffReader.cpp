@@ -861,7 +861,7 @@ std::wstring GitDiffReader::GetGitCommand(
     // the longer equivalents.
     //      '-c'  --> '--diff-merges=combined'
     //      '-p'  --> '--patch'
-    //      '-U0' --> '--unified=0'
+    //      '-U1' --> '--unified=1'
     opt_str += L"--first-parent -c --combined-all-paths ";
   // This must go last.
   if (!opts.HasOpts(Opt::NO_FILTER_TO_FILE)) {
@@ -872,7 +872,7 @@ std::wstring GitDiffReader::GetGitCommand(
 
   std::wstring command =
       std::wstring(L"git --no-pager log ") + to_wstring(revision) +
-      L" -p -U0 --raw --format=raw --no-color --children " + opt_str;
+      L" -p -U1 --raw --format=raw --no-color --children " + opt_str;
 
   return command;
 }

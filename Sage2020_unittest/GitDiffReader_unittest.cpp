@@ -42,9 +42,8 @@ static AUTO_CLOSE_FILE_POINTER CreateTmpFile(std::filesystem::path& new_path) {
                            dos_file_path)) {
       continue;
     }
-    // Open the file w/o sharing such that we get a unique file. NOTE: the 'D'
-    // makes the file delete on close.
-    tmp_file_pointer = _wfsopen(dos_file_path, L"wD+", _SH_DENYRW);
+    // Open the file w/o sharing such that we get a unique file.
+    tmp_file_pointer = _wfsopen(dos_file_path, L"w+", _SH_DENYRW);
     if (tmp_file_pointer) {
       break;
     }
@@ -94,9 +93,6 @@ static void CompareFileInstanceToHead(
     const std::filesystem::path& file_path,
     const GitHash& commit,
     const FileVersionInstance& file_version_instance_from_diffs) {
-  // REVIEW: We could also use a revision of
-  // |<commit>:<relative-git-file-path>|, which may be more clean/orthogonal as
-  // we don't use blob hashes elsewhere.
   std::unique_ptr<FileVersionInstance> file_version_instance_loaded;
   if (commit.IsValid()) {
     const std::string file_revision =
@@ -110,7 +106,7 @@ static void CompareFileInstanceToHead(
     file_version_instance_loaded = std::make_unique<FileVersionInstance>(
         file_version_instance_from_diffs.commit_path_.GetRoot());
   }
-#if 0
+#if 1
   EXPECT_EQ(file_version_instance_loaded->GetLines().size(),
             file_version_instance_from_diffs.GetLines().size());
   for (size_t i = 0; i < file_version_instance_from_diffs.GetLines().size();
@@ -122,7 +118,7 @@ static void CompareFileInstanceToHead(
     EXPECT_STREQ(file_version_line_loaded.c_str(),
                  file_version_line_from_diffs.c_str());
   }
-#else
+#else  // ENABLE THIS FOR DEEP DEBUGGING (SHOWS DIFF OF FILES ON MISMATCH).
   if (file_version_instance_loaded->GetLines().size() !=
       file_version_instance_from_diffs.GetLines().size()) {
     ShowDiffOfFiles(*file_version_instance_loaded,
@@ -178,7 +174,7 @@ static void CompareFileInstanceToCommit(
 
 TEST_F(GitDiffReaderTest, LoadAndCompareWithFile) {
   std::filesystem::path file_path =  //__FILE__;
-      "C:\\Users\\leehu_000\\Source\\Repos\\Sage2020\\FileVersionInstance.cpp";
+      "C:\\Users\\leehu_000\\Source\\Repos\\Sage2020\\ChangeHistoryPane.cpp";
   // "C:\\Users\\leehu_000\\Source\\Repos\\Sage2020\\Sage2020_unittest\\test_"
   // "git_files\\base.txt";
   // L"C:\\Users\\leehu_000\\Source\\Repos\\libgit2\\libgit2";  //__FILE__;

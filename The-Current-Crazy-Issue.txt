@@ -1,0 +1,138 @@
+** Issue:
+The file's "C:\Users\leehu_000\AppData\Local\Sage2020Test\git --no-pager log  -p -U0 --raw --format=raw --no-color --children --first-parent -c --combined-all-paths -- FileVersionInstance.cpp\FileVersionInstance.cpp"'s merge commit 57a32a736241ce8139410ba04fec34f60a49f729 is weird. It shows this** which seems correct:
+
+commit 57a32a736241ce8139410ba04fec34f60a49f729 (git_test_branch_a~42) 86a9cebc0529642c84358f03d38c5e7e9198b7ad (git_test_branch_a~41)
+tree 45d411a7f09190f6406651a17f68ca6b7f6ecc28
+parent ffec81e7be307ba5761c521ffa685d45607a9036 (git_test_branch_a~43)
+parent c922ebb27b5eb80a789231123cd1aefedf878818 (git_test_branch_a~42^2)
+author Lee Hunt <leehu@microsoft.com> 1609900252 -0800
+committer Lee Hunt <leehu@microsoft.com> 1609900252 -0800
+
+    resolved merge
+
+::100644 100644 100644 32425bb 25995df 2b5d39e MM	FileVersionInstance.cpp	FileVersionInstance.cpp	FileVersionInstance.cpp
+
+diff --combined FileVersionInstance.cpp
+index 32425bb,25995df..2b5d39e
+--- a/FileVersionInstance.cpp
+--- a/FileVersionInstance.cpp
++++ b/FileVersionInstance.cpp
+@@@ -11,2 -11,3 +11,3 @@@ FileVersionInstance::FileVersionInstanc
+-   AddLineInfo(1, static_cast<int>(lines.size()),
+-               FileVersionLineInfo(commit_index_));
++   LineToFileVersionLineInfo infos;
++   infos.push_back(FileVersionLineInfo(commit_index_));
++   AddLineInfo(1, static_cast<int>(lines.size()), infos);
+@@@ -18,3 -19,4 +19,4 @@@
+- void FileVersionInstance::AddLineInfo(int line_num,
+-                                       int line_count,
+-                                       const FileVersionLineInfo& info) {
++ void FileVersionInstance::AddLineInfo(**
++     int line_num,
++     int line_count,
++     const LineToFileVersionLineInfo& line_infos) {
+@@@ -25,0 -27,2 +27,2 @@@
++ 
++   if (line_infos.size() == 1) {
+
+
+** But `git diff -p 57a32a736241ce8139410ba04fec34f60a49f729 ffec81e7be307ba5761c521ffa685d45607a9036 c922ebb27b5eb80a789231123cd1aefedf878818 -- FileVersionInstance.cpp` shows this:
+diff --cc FileVersionInstance.cpp
+index 32425bb,25995df..2b5d39e
+--- a/FileVersionInstance.cpp
++++ b/FileVersionInstance.cpp
+@@@ -40,164 -56,156 +56,156 @@@ void FileVersionInstance::RemoveLineInf
+    auto itBegin = file_lines_info_.begin() + (line_num - 1);
+    file_lines_info_.erase(itBegin, itBegin + line_count);
+  #endif
+- }
+-
+- std::set<FileVersionLineInfo> FileVersionInstance::GetVersionsFromLines(
+-     int iStart,
+-     int iEnd) const {
+-   std::set<FileVersionLineInfo> line_info;
+-   for (int iLine = iStart; iLine < iEnd; iLine++) {
+-     line_info.insert(GetLineInfo(iLine));
+    }
+
+-   return line_info;
+- }
++   std::set<FileVersionLineInfo> FileVersionInstance::GetVersionsFromLines(
++       int iStart, int iEnd) const {
++     std::set<FileVersionLineInfo> line_info;
++     for (int iLine = iStart; iLine < iEnd; iLine++) {
++       line_info.insert(GetLineInfo(iLine));
+
+...
+Which COMPLETELY ignores the ** change.
+
+To make this patch, run "git diff -c 57a32a736241ce8139410ba04fec34f60a49f729 ffec81e7be307ba5761c521ffa685d45607a9036 c922ebb27b5eb80a789231123cd1aefedf878818 -- FileVersionInstance.cpp > \temp\the-gnarly-patch.txt"
+
+
+** Final diff:
+commit 57a32a736241ce8139410ba04fec34f60a49f729 (git_test_branch_a~42) 86a9cebc0529642c84358f03d38c5e7e9198b7ad (git_test_branch_a~41)
+tree 45d411a7f09190f6406651a17f68ca6b7f6ecc28
+parent ffec81e7be307ba5761c521ffa685d45607a9036 (git_test_branch_a~43)
+parent c922ebb27b5eb80a789231123cd1aefedf878818 (git_test_branch_a~42^2)
+...
+::100644 100644 100644 32425bb 25995df 2b5d39e MM	FileVersionInstance.cpp	FileVersionInstance.cpp	FileVersionInstance.cpp
+
+Pre diff:
+commit ffec81e7be307ba5761c521ffa685d45607a9036 (git_test_branch_a~43) 57a32a736241ce8139410ba04fec34f60a49f729 (git_test_branch_a~42)
+tree afd935d256814e78f7bebfe853922e0e7a5b5a82
+parent 671af7ee8ff63e76c18d4f347585b1870ae73528 (git_test_branch_a~44)
+author Lee Hunt <leehu@microsoft.com> 1609899025 -0800
+committer Lee Hunt <leehu@microsoft.com> 1609899025 -0800
+
+    - Code Analysis fixes
+    - Comments
+    - Made GitDiffReader take full path
+
+:100644 100644 306183c 32425bb M	FileVersionInstance.cpp
+
+
+NOTE THAT IF YOU DON'T USE COMBINED (-c) DIFFS, ALL IS WELL BETWEEN THE TWO ABOVE COMMITS.  That is, 
+BAD --> `git diff -c -U0 57a32a736241ce8139410ba04fec34f60a49f729 ffec81e7be307ba5761c521ffa685d45607a9036 c922ebb27b5eb80a789231123cd1aefedf878818 -- FileVersionInstance.cpp`
+GOOD --> `git diff -U0  ffec81e7be307ba5761c521ffa685d45607a9036 57a32a736241ce8139410ba04fec34f60a49f729 -- FileVersionInstance.cpp`
+
+Good vs. Bad line edit places between these two patches (all bad lines are "@@@"):
+1. @@ -24,0 +27,2 @@ void FileVersionInstance::AddLineInfo(int line_num,
+   @@@ -25,0 -27,2 +27,2 @@@
+2. @@ -33,0 +47 @@ void FileVersionInstance::AddLineInfo(int line_num,
+   @@@ -34,0 -47,1 +47,1 @@@
+3. @@ -43,8 +58,0 @@ void FileVersionInstance::RemoveLineInfo(int line_num, int line_count) {
+   @@@ -43,8 -59,0 +59,0 @@@
+4. @@ -69,2 +69,0 @@ SparseIndexArray::const_iterator SparseIndexArray::LowerFloor(
+   @@@ -69,5 -70,15 +70,15 @@@
+5. @@ -173 +179,0 @@ void SparseIndexArray::Remove(size_t line_index, size_t line_count) {
+   @@@ -173,12 -180,7 +180,7 @@@
+6. @@ -199 +207,0 @@ void SparseIndexArray::Remove(size_t line_index, size_t line_count) {
+   @@@ -199,4 -208,3 +208,3 @@@
+
+
+WORKAROUND FOUND! : Use '-U1' instead of '-U0'. 
+
+Code is in https://github.com/git/git/blob/8a4e8f6a67e7fc97048d4666eec38399b88e0e3b/combine-diff.c. In fact there's a suspicious** block of code here that might explain the off by one counts in |rlines| when output here##:
+		if (!context) {**
+			/*
+			 * Even when running with --unified=0, all
+			 * lines in the hunk needs to be processed in
+			 * the loop below in order to show the
+			 * deletion recorded in lost_head.  However,
+			 * we do not want to show the resulting line
+			 * with all blank context markers in such a
+			 * case.  Compensate.
+			 */
+			unsigned long j;
+			for (j = lno; j < hunk_end; j++)
+				if (!(sline[j].flag & (mark-1)))
+					null_context++;
+			rlines -= null_context;
+		}
+
+		printf("%s%s", line_prefix, c_frag);
+		for (i = 0; i <= num_parent; i++) putchar(combine_marker);
+		for (i = 0; i < num_parent; i++)
+			show_parent_lno(sline, lno, hunk_end, i, null_context);
+		printf(" +%lu,%lu ", lno+1, rlines);##
+		for (i = 0; i <= num_parent; i++) putchar(combine_marker);
