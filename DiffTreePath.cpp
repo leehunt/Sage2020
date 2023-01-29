@@ -117,6 +117,11 @@ DiffTreePath::operator int() const {
 }
 
 int DiffTreePath::operator++() {
+  if (empty()) {
+    DiffTreePathItem item;
+    item.setCurrentBranchIndex(-1);
+    push_back(item);
+  }
   int ret = back().currentBranchIndex();
   ret++;
   assert(ret >= 0);  // This can be -1 if there is no parent branch (e.g.

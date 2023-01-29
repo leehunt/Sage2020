@@ -12,7 +12,7 @@ class GitFileReader {
                 COutputWnd* pwndOutput = nullptr);
   virtual ~GitFileReader();
 
-  void ProcessFileLines(FILE* stream);
+  int ProcessFileLines(FILE* stream);
 
   std::deque<std::string>& GetLines() { return lines_; }
 

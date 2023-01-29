@@ -37,25 +37,34 @@ GitFileReader::GitFileReader(const std::filesystem::path& directory,
   }
   ProcessPipe process_pipe(to_wstring(command).c_str(), directory.c_str());
 
-  ProcessFileLines(process_pipe.GetStandardOutput());
+  int error = ProcessFileLines(process_pipe.GetStandardOutput());
   if (pwndOutput != nullptr) {
     CString message;
-    message.FormatMessage(_T("   Done."));
+    if (!error)
+      message.FormatMessage(_T("   Done."));
+    else
+      message.FormatMessage(_T("   Error reading (%d)."), error);
+
     pwndOutput->AppendDebugTabMessage(message);
   }
 }
 
 GitFileReader::~GitFileReader() {}
 
-void GitFileReader::ProcessFileLines(FILE* stream) {
+int GitFileReader::ProcessFileLines(FILE* stream) {
   char stream_line[1024 * 2];
   bool is_utf16 = false;
 
   // Read first line to check for any BOM.
-  if (fgets(stream_line, (int)std::size(stream_line), stream)) {
-    if ((unsigned char)stream_line[0] == 0xFF &&
-        (unsigned char)stream_line[1] == 0xFE)  // UTF-16 little-endian
-      is_utf16 = true;
+  if (!fgets(stream_line, (int)std::size(stream_line), stream)) {
+    if (!feof(stream)) {
+      return ferror(stream);
+    }
+    return 0;  // Success (empty file).
+  }
+  if ((unsigned char)stream_line[0] == 0xFF &&
+      (unsigned char)stream_line[1] == 0xFE) {  // UTF-16 little-endian
+    is_utf16 = true;
   }
 
   if (is_utf16) {
@@ -74,12 +83,9 @@ void GitFileReader::ProcessFileLines(FILE* stream) {
     } while (fgets(stream_line, (int)std::size(stream_line), stream));
   }
 
-#if NEEDTHIS  // This seems to be wrong minded -- the last line in a file indeed
-              // can be missing a '\n'.
-  // REVIEW: Consider looking at the '\ No newline at end of file' message from
-  // the 'git log' diff command to remove the '\n' instead (but it may be tricky
-  // to figure out what diff to modify).
-  if (!lines_.empty() && !lines_.back().empty() && lines_.back().back() != '\n')
-    lines_.back() += '\n';
-#endif  // NEEDTHIS
+  if (!feof(stream)) {
+    return ferror(stream);
+  }
+
+  return 0;  // Success.
 }

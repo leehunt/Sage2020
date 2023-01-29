@@ -190,6 +190,7 @@ struct FileVersionDiff {
   FileVersionDiffTree diff_tree_;
   std::string index_;
   std::filesystem::path path_;
+  bool is_binary_ = false;
 
 #ifdef _DEBUG
   bool operator==(const FileVersionDiff& other) const;

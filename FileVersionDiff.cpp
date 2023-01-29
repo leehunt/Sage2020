@@ -206,6 +206,8 @@ bool FileVersionDiff::operator==(const FileVersionDiff& other) const {
     return false;
   if (path_ != other.path_)
     return false;
+  if (is_binary_ != other.is_binary_)
+    return false;
 
   return true;
 }

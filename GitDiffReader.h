@@ -74,10 +74,14 @@ class GitDiffReader {
   bool FReadParent(TOK* ptok);
   bool FReadAuthor(TOK* ptok);
   bool FReadCommitter(TOK* ptok);
+
+  bool FReadGitDiffTreeColon(TOK* ptok);
+
+  bool FReadComment(TOK* ptok);
+
   bool FReadDiff(TOK* ptok);
   bool FReadIndex(TOK* ptok);
-  bool FReadComment(TOK* ptok);
-  bool FReadGitDiffTreeColon(TOK* ptok);
+  bool FReadBinary(TOK* ptok);
 
   bool ProcessLogDiffLine(char* line);
   bool FReadHunkLines(TOK* ptok);

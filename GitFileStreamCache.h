@@ -6,7 +6,7 @@
 
 class GitFileStreamCache {
  public:
-  GitFileStreamCache(const std::filesystem::path& file_path);
+  GitFileStreamCache();
 
   AUTO_CLOSE_FILE_POINTER GetStream(const std::wstring& git_command);
   AUTO_CLOSE_FILE_POINTER SaveStream(FILE* stream,
@@ -15,6 +15,5 @@ class GitFileStreamCache {
   std::filesystem::path GetItemCachePath(const std::wstring& git_command);
 
  private:
-  const std::filesystem::path file_path_;
   const std::string profile_name_;
 };

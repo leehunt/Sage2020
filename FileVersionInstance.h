@@ -66,7 +66,7 @@ class FileVersionInstance {
  private:
   std::deque<std::string> file_lines_;
   LineToFileVersionLineInfo file_lines_info_;
-  GitHash commit_;  // TODO: This may be reududant; it could possibly be derived
+  GitHash commit_;  // TODO: This may be redundant; it could possibly be derived
                     // from the current |commit_path_|.
 
   // REVIEW: Is there a better way to express this relationship?

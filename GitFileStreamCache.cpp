@@ -14,12 +14,10 @@
 
 extern CSage2020App theApp;
 
-constexpr char kFileCacheVersionLine[] = "Cache file version: 9\n";
+constexpr char kFileCacheVersionLine[] = "Cache file version: 10\n";
 
 // TODO!: Add in current opts line to the branch cache dir entries.
-GitFileStreamCache::GitFileStreamCache(const std::filesystem::path& file_path)
-    //    : file_path_(std::filesystem::canonical(file_path)){}
-    : file_path_(file_path) {}
+GitFileStreamCache::GitFileStreamCache() {}
 
 AUTO_CLOSE_FILE_POINTER GitFileStreamCache::GetStream(
     const std::wstring& git_command) {
@@ -56,9 +54,13 @@ AUTO_CLOSE_FILE_POINTER GitFileStreamCache::SaveStream(
     const std::wstring& git_command) {
   const auto cache_file_path = GetItemCachePath(git_command);
   std::filesystem::create_directories(cache_file_path.parent_path());
-  // Create output file, failing if it already exists.
+  // Create output file, clearing it if it already exists.
   AUTO_CLOSE_FILE_POINTER file_cache_stream(
       _wfopen(cache_file_path.native().c_str(), L"w+"));
+  if (!file_cache_stream) {
+    // Error.
+    return file_cache_stream;
+  }
 
   fpos_t pos;
   if (fgetpos(file_cache_stream.get(), &pos)) {
@@ -85,6 +87,14 @@ AUTO_CLOSE_FILE_POINTER GitFileStreamCache::SaveStream(
     }
   }
 
+  if (!feof(stream)) {
+    // Read (fputs) error.
+    file_cache_stream.reset();
+    std::filesystem::remove(cache_file_path);
+    return file_cache_stream;
+  }
+
+  // Reset stream to right after header line.
   if (fsetpos(file_cache_stream.get(), &pos)) {
     // Error.
     file_cache_stream.reset();
@@ -100,11 +110,6 @@ std::filesystem::path GitFileStreamCache::GetItemCachePath(
   // Look for file in
   // "CSIDL_LOCAL_APPDATA/Sage2020/type_name/git_command/object(s)_relative_path.
 
-  // Get relative file path of |file_path_| relative to the git root.
-  assert(file_path_.is_absolute());
-  auto git_root = std::filesystem::canonical(GetGitRoot(file_path_));
-  auto git_relative_path = file_path_.lexically_relative(git_root);
-
   TCHAR local_app_data[MAX_PATH];
 #if _DEBUG
   HRESULT result =
@@ -113,10 +118,11 @@ std::filesystem::path GitFileStreamCache::GetItemCachePath(
                         local_app_data);
   assert(SUCCEEDED(result));
 
-  std::filesystem::path item_cache_path(local_app_data);
+  std::filesystem::path item_cache_path{local_app_data};
 
-  item_cache_path /= theApp.m_pszProfileName /
-                     std::filesystem::path(git_command) / git_relative_path;
+  item_cache_path /=
+      theApp.m_pszProfileName / std::filesystem::path(git_command);
+  item_cache_path += ".log";
 
   return item_cache_path;
 }

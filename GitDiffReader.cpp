@@ -226,42 +226,6 @@ bool GitDiffReader::FReadCommitter(TOK* ptok) {
   return FReadNameEmailAndTime(ptok, current_diff_->committer_);
 }
 
-bool GitDiffReader::FReadDiff(TOK* ptok) {
-  if (ptok->tk != TK::tkWORD)
-    return false;
-  assert(!strcmp(ptok->szVal, "diff"));
-
-  if (!FGetTok(ptok))
-    return false;
-  current_diff_->diff_command_ = GetTextToEndOfLine(ptok);
-
-  return true;
-}
-
-bool GitDiffReader::FReadIndex(TOK* ptok) {
-  if (ptok->tk != TK::tkWORD)
-    return false;
-  assert(!strcmp(ptok->szVal, "index"));
-
-  if (!FGetTok(ptok))
-    return false;
-  current_diff_->index_ = GetTextToEndOfLine(ptok);
-
-  return true;
-}
-
-bool GitDiffReader::FReadComment(TOK* ptok) {
-  if (ptok->tk != TK::tkWSPC)
-    return false;
-
-  if (!FGetTok(ptok))
-    return false;
-
-  current_diff_->comment_.append(GetTextToEndOfLine(ptok));
-
-  return true;
-}
-
 // See https://git-scm.com/docs/diff-format
 /*
 An output line is formatted this way:
@@ -450,6 +414,54 @@ bool GitDiffReader::FReadGitDiffTreeColonFileMode(TOK* ptok, int& file_mode) {
   return true;
 }
 
+bool GitDiffReader::FReadComment(TOK* ptok) {
+  if (ptok->tk != TK::tkWSPC)
+    return false;
+
+  if (!FGetTok(ptok))
+    return false;
+
+  current_diff_->comment_.append(GetTextToEndOfLine(ptok));
+
+  return true;
+}
+
+bool GitDiffReader::FReadDiff(TOK* ptok) {
+  if (ptok->tk != TK::tkWORD)
+    return false;
+  assert(!strcmp(ptok->szVal, "diff"));
+
+  if (!FGetTok(ptok))
+    return false;
+  current_diff_->diff_command_ = GetTextToEndOfLine(ptok);
+
+  return true;
+}
+
+bool GitDiffReader::FReadIndex(TOK* ptok) {
+  if (ptok->tk != TK::tkWORD)
+    return false;
+  assert(!strcmp(ptok->szVal, "index"));
+
+  if (!FGetTok(ptok))
+    return false;
+  current_diff_->index_ = GetTextToEndOfLine(ptok);
+
+  return true;
+}
+
+bool GitDiffReader::FReadBinary(TOK* ptok) {
+  if (ptok->tk != TK::tkWORD)
+    return false;
+  assert(!strcmp(ptok->szVal, "Binary"));
+
+  if (!FGetTok(ptok))
+    return false;
+  current_diff_->is_binary_ = true;
+
+  return true;
+}
+
 // https://en.wikipedia.org/wiki/Diff (Unified Format)
 //@@ <from-file-range> <to-file-range> @@
 //
@@ -563,7 +575,7 @@ bool GitDiffReader::FReadCombinedHunkHeaderRange(
   return true;
 }
 
-// @ [@ <from-file-range>]+ <to-file-range> @@@
+// @ [@ <from-file-range>]+ <to-file-range> @[@]+
 bool GitDiffReader::FReadCombinedHunkHeader(TOK* ptok) {
   if (ptok->tk != TK::tkATSIGN)
     return false;
@@ -770,9 +782,13 @@ bool GitDiffReader::FParseNamedLine(TOK* ptok) {
   } else if (!strcmp(ptok->szVal, "committer")) {
     return FReadCommitter(ptok);
   } else if (!strcmp(ptok->szVal, "diff")) {
+    // TODO- change this into "FReadDiffSection()" and then sub-parse "new file
+    // mode", "index", "Binary files" etc.
     return FReadDiff(ptok);
   } else if (!strcmp(ptok->szVal, "index")) {
     return FReadIndex(ptok);
+  } else if (!strcmp(ptok->szVal, "Binary")) {
+    return FReadBinary(ptok);
   }
 
   return true;
@@ -848,31 +864,40 @@ std::wstring GitDiffReader::GetGitCommand(
     const std::string& revision,
     const Opts& opts) {
   std::wstring opt_str;
+  assert(file_path.is_absolute());
+  const auto git_root = std::filesystem::canonical(GetGitRoot(file_path));
+  const auto git_relative_path = file_path.lexically_relative(git_root);
+  std::wstring git_relative_path_forward_slash = git_relative_path;
+  // Turn the relative path into forward slashes; those are still accepted by
+  // Git and then can be made part of the cache file name.
+  for (auto& ch : git_relative_path_forward_slash) {
+    if (ch == '\\')
+      ch = ' ';
+  }
   if (!opts.HasOpts(Opt::NO_FIRST_PARENT))
     // <-- TODO: Check the effects of `--diff-merges=combined` (it removes
     // extra diff on root of add merges -- I think it then means that a
     // commits parent's must be diff merged first to correctly express the
-    // state of the merged branch). We also might benefit from adding
-    // `--combined-all-paths` too. Also we might need to use
+    // state of the merged branch). Also we might need to use
     // `--diff-merges=dense-combined` which supposedly only show *merge
     // conflicts* in the resulting merge commit.
     //
     // N.b. We're using short args to save on cache file path length. Here are
     // the longer equivalents.
     //      '-c'  --> '--diff-merges=combined'
-    //      '-p'  --> '--patch'
-    //      '-U1' --> '--unified=1'
+    //      '-U1' --> '--unified=1' (implies '--patch' aka '-p')
     opt_str += L"--first-parent -c --combined-all-paths ";
   // This must go last.
   if (!opts.HasOpts(Opt::NO_FILTER_TO_FILE)) {
     if (opts.HasOpts(Opt::FOLLOW))
       opt_str += L"--follow ";
-    opt_str += std::wstring(L"-- ") + file_path.filename().wstring().c_str();
+    opt_str += std::wstring(L"-- ") + git_relative_path_forward_slash;
   }
 
-  std::wstring command =
-      std::wstring(L"git --no-pager log ") + to_wstring(revision) +
-      L" -p -U1 --raw --format=raw --no-color --children " + opt_str;
+  std::wstring command = std::wstring(L"git --no-pager log ") +
+                         to_wstring(revision.empty() ? "" : revision + " ") +
+                         L"-U1 --raw --format=raw --no-color --children " +
+                         opt_str;
 
   return command;
 }
@@ -950,7 +975,7 @@ GitDiffReader::GitDiffReader(const std::filesystem::path& file_path,
     file_cache_revision = tag_no_parentheses;
   }
 
-  file_stream_cache_ = std::make_unique<GitFileStreamCache>(file_path);
+  file_stream_cache_ = std::make_unique<GitFileStreamCache>();
 
   const auto wcommand = GetGitCommand(file_path, tag_no_parentheses, opts);
   auto cache_stream = file_stream_cache_->GetStream(wcommand);

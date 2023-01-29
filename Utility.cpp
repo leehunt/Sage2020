@@ -138,6 +138,9 @@ std::wstring to_wstring(const std::string& s) {
 
 std::string GetShortHashInRepo(std::string long_hash,
                                const std::filesystem::path& file_path) {
+  static int hash_len_;
+  if (hash_len_)
+    return long_hash.substr(hash_len_);
   std::string command = std::string(kGitGetShortHashCommand) + long_hash;
 
   ProcessPipe process_pipe(to_wstring(command).c_str(),
@@ -152,5 +155,7 @@ std::string GetShortHashInRepo(std::string long_hash,
   if (len > 0 && stream_line[len - 1] == '\n')
     stream_line[len - 1] = '\0';
 
+  if (stream_line[0])
+    hash_len_ = strlen(stream_line);
   return stream_line;
 }

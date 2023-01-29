@@ -7,6 +7,7 @@
 
 #define CCH_MAX_MACRO 1024
 
+#define NL 5
 #define SYM 9
 
 // clang-format off
@@ -16,8 +17,7 @@ const int _vchtblAnsi[256] =
 	//  nul soh stx etx eot enq ack bel bs  tab lf  vt  np  cr  so  si 0
 	// FUTURE:  The Ox000b entry is bogus because we lose keyword lookup on
 	// SYM
-	//            Change was made for W96 bug#127554
-	7, 7, 7, SYM, SYM, 7, SYM, 7, 7, 8, 5, 6, 5, 5, 5, SYM,
+	7, 7, 7, SYM, SYM, 7, SYM, 7, 7, 8, NL, 6, NL, NL, NL, SYM,
 
 	//  dle dc1 dc2 dc3 dc4 nak syn etb can em  eof esc fs  gs  rs  us 1
 	SYM, 7, SYM, 7, 7, 7, SYM, SYM, SYM, SYM, SYM, SYM, SYM, SYM, SYM, SYM,
@@ -53,7 +53,7 @@ const int _vchtblAnsi[256] =
 	SYM,
 
 	//                                                                        b
-	SYM, SYM, SYM, SYM, SYM, SYM, 5, 7, SYM, SYM, SYM, 6, SYM, SYM, SYM,
+	SYM, SYM, SYM, SYM, SYM, SYM, NL, 7, SYM, SYM, SYM, 6, SYM, SYM, SYM,
 	SYM,
 
 	//                                                                        c
@@ -141,7 +141,9 @@ static enum tkCH _TkchLexText(
   while (true) {
     unsigned char ch = *pch;
     /* Read and translate a character into a column in psttblStateTable */
-    int isttCol = _vchtblAnsi[ch];
+    //int isttCol = _vchtblAnsi[ch];
+    // Sage2020: Values >= 128 in UTF should just be considered symbols.
+    int isttCol = ch < 128 ? _vchtblAnsi[ch] : SYM;
 
     /* Find new state (or final state) from current state and column */
     if ((iuState = rgsttblWs[iuState][isttCol]) > WSttblNumRows) {
