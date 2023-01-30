@@ -11,17 +11,16 @@
 
 #include "GitFileStreamCache.h"
 #include "GitHash.h"
+#include "GitRevFilter.h"
 #include "LineTokenizer.h"
 #include "OutputWnd.h"
 #include "Utility.h"
 
-#define ADD_TAGS 1
+//#define ADD_TAGS 1
 
 constexpr TCHAR kGitMostRecentCommitForFileCommand[] =
     _T("git --no-pager log %S -n 1 -- %s");
 // N.b. See GitDiffReader::GetGitCommand() for what was |kGitDiffCommand|.
-constexpr TCHAR kGitLogNameTagCommandFromStdIn[] =
-    _T("git --no-pager name-rev --annotate-stdin");
 
 static std::string GetTextToWhitespace(TOK* ptok) {
   std::string text;
@@ -1006,19 +1005,21 @@ GitDiffReader::GitDiffReader(const std::filesystem::path& file_path,
     }
     ProcessPipe process_pipe_git_log(command, file_path.parent_path().c_str());
 
-    if (pwndOutput != nullptr) {
-      CString message;
-      message.FormatMessage(_T("   Processing tags from last command: '%1!s!'"),
-                            kGitLogNameTagCommandFromStdIn);
-      pwndOutput->AppendDebugTabMessage(message);
-    }
 #if ADD_TAGS
+#if 0 
     ProcessPipe process_pipe_git_tag(kGitLogNameTagCommandFromStdIn,
                                      file_path.parent_path().c_str(),
                                      process_pipe_git_log.GetStandardOutput());
 
     auto file_stream = file_stream_cache_->SaveStream(
         process_pipe_git_tag.GetStandardOutput(), wcommand);
+#else
+    GitRevFilter git_rev_filter(file_path.parent_path().wstring().c_str(),
+                                process_pipe_git_log.GetStandardOutput(),
+                                pwndOutput);
+    auto file_stream = file_stream_cache_->SaveStream(
+        git_rev_filter.GetFilteredStream(), wcommand);
+#endif
 #else
     auto file_stream = file_stream_cache_->SaveStream(
         process_pipe_git_log.GetStandardOutput(), wcommand);

@@ -212,6 +212,7 @@
     <ClInclude Include="GitFileReader.h" />
     <ClInclude Include="GitFileStreamCache.h" />
     <ClInclude Include="GitHash.h" />
+    <ClInclude Include="GitRevFilter.h" />
     <ClInclude Include="LineTokenizer.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="MainFrm.h" />
@@ -235,6 +236,7 @@
     <ClCompile Include="FileVersionInstance.cpp" />
     <ClCompile Include="GitFileReader.cpp" />
     <ClCompile Include="GitFileStreamCache.cpp" />
+    <ClCompile Include="GitRevFilter.cpp" />
     <ClCompile Include="LineTokenizer.cpp" />
     <ClCompile Include="MainFrm.cpp" />
     <ClCompile Include="OutputWnd.cpp" />

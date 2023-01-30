@@ -85,7 +85,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
       <AdditionalLibraryDirectories>$(OutDir)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>Uafxcwd.lib;Libcmtd.lib;Utility.obj;GitFileStreamCache.obj;Sage2020ViewDocListener.obj;GitFileReader.obj;GitDiffReader.obj;LineTokenizer.obj;FileVersionInstance.obj;FileVersionInstanceEditor.obj;FileVersionDiff.obj;DiffTreePath.obj;pch.obj;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Uafxcwd.lib;Libcmtd.lib;Utility.obj;GitFileStreamCache.obj;Sage2020ViewDocListener.obj;GitFileReader.obj;GitDiffReader.obj;LineTokenizer.obj;FileVersionInstance.obj;FileVersionInstanceEditor.obj;FileVersionDiff.obj;DiffTreePath.obj;pch.obj;GitRevFilter.obj;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>Uafxcwd.lib;Libcmtd.lib</IgnoreSpecificDefaultLibraries>
     </Link>
   </ItemDefinitionGroup>
@@ -103,7 +103,7 @@
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>Uafxcwd.lib;Libcmtd.lib;Utility.obj;GitFileStreamCache.obj;Sage2020ViewDocListener.obj;GitFileReader.obj;GitDiffReader.obj;LineTokenizer.obj;FileVersionInstance.obj;FileVersionInstanceEditor.obj;FileVersionDiff.obj;DiffTreePath.obj;pch.obj;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Uafxcwd.lib;Libcmtd.lib;Utility.obj;GitFileStreamCache.obj;Sage2020ViewDocListener.obj;GitFileReader.obj;GitDiffReader.obj;LineTokenizer.obj;FileVersionInstance.obj;FileVersionInstanceEditor.obj;FileVersionDiff.obj;DiffTreePath.obj;pch.obj;GitRevFilter.obj;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(OutDir)</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>Uafxcwd.lib;Libcmtd.lib</IgnoreSpecificDefaultLibraries>
     </Link>

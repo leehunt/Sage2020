@@ -1,14 +1,15 @@
 #include "pch.h"
 
+#include "Utility.h"
+
 #include <fcntl.h>  // _O_NOINHERIT, _O_TEXT
-#include <io.h>     // pipe(), _close()
+#include <io.h>     // pipe(), _close(), _mktemp_s()
+#include <tchar.h>
 #include <algorithm>
 #include <cassert>
 #include <codecvt>
 #include <locale>
 #include <map>
-
-#include "Utility.h"
 
 constexpr char kGitGetRootCommand[] = "git rev-parse --show-toplevel";
 
@@ -158,4 +159,47 @@ std::string GetShortHashInRepo(std::string long_hash,
   if (stream_line[0])
     hash_len_ = strlen(stream_line);
   return stream_line;
+}
+
+AUTO_CLOSE_FILE_POINTER CreateTmpFile(std::filesystem::path& new_path,
+                                      const TCHAR* file_name) {
+  TCHAR dos_file_path[MAX_PATH];
+  dos_file_path[0] = 0;
+  if (!::GetTempPath(static_cast<DWORD>(std::size(dos_file_path)),
+                     dos_file_path)) {
+    assert(false);
+    return {};
+  }
+  FILE* tmp_file_pointer = nullptr;
+  if (file_name != nullptr) {
+    _tcscat_s(dos_file_path, file_name);
+  } else {
+    bool success = false;
+    for (int attempt = 0; attempt < 32; attempt++) {
+      const UINT wUnique = 0;  // Use the system time.
+      TCHAR new_file_path[MAX_PATH];
+      if (::GetTempFileName(dos_file_path, __T("Sag"), wUnique,
+                            new_file_path)) {
+        success = true;
+        _tcscpy_s(dos_file_path, new_file_path);
+        break;
+      }
+    }
+    if (!success) {
+      assert(false);
+      return {};
+    }
+  }
+
+  // Open the file w/o write all sharing, destroying any
+  // previous file.
+  tmp_file_pointer = _wfsopen(dos_file_path, L"w+", _SH_DENYNO);
+  if (!tmp_file_pointer) {
+    assert(false);
+    return {};
+  }
+
+  new_path = dos_file_path;
+
+  return tmp_file_pointer;
 }

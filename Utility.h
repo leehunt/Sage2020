@@ -27,7 +27,7 @@ class ProcessPipe {
   FILE* file_;
 };
 
-//typedef std::unique_ptr<FILE, decltype(&fclose)> AUTO_CLOSE_FILE_POINTER;
+// typedef std::unique_ptr<FILE, decltype(&fclose)> AUTO_CLOSE_FILE_POINTER;
 class AUTO_CLOSE_FILE_POINTER
     : public std::unique_ptr<FILE, decltype(&fclose)> {
  public:
@@ -59,3 +59,8 @@ std::wstring my_to_wstring(const std::string& stringToConvert);
 
 std::string GetShortHashInRepo(std::string long_hash,
                                const std::filesystem::path& file_path);
+
+// Creates and opens a temp file, optionally using |file_name| for the name. If
+// the file aleady exists it will be cleared.
+AUTO_CLOSE_FILE_POINTER CreateTmpFile(std::filesystem::path& new_path,
+                                      const TCHAR* file_name = nullptr);

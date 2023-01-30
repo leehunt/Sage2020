@@ -38,37 +38,22 @@ static std::string GetShortHash(const GitHash& hash) {
 }
 
 // REVIEW: Consider putting this in Utility.cpp.
-static AUTO_CLOSE_FILE_POINTER CreateTmpFile(std::filesystem::path& new_path,
-                                             const GitHash& hash,
-                                             bool is_base_file) {
-  TCHAR dos_file_path[MAX_PATH];
-  dos_file_path[0] = 0;
-  if (!::GetTempPath(static_cast<DWORD>(std::size(dos_file_path)), dos_file_path)) {
-    assert(false);
-    return {};
-  }
-  FILE* tmp_file_pointer = nullptr;
-  _tcscat_s(dos_file_path, is_base_file ? _T("base-") : _T("diff-"));
-  _tcscat_s(dos_file_path, to_wstring(GetShortHash(hash)).c_str());
-
-  // Open the file w/o sharing such that we get a unique file, destroying any
-  // previous file.
-  tmp_file_pointer = _wfsopen(dos_file_path, L"w+", _SH_DENYRW);
-  if (!tmp_file_pointer) {
-    assert(false);
-    return {};
-  }
-
-  new_path = dos_file_path;
-
-  return tmp_file_pointer;
+static AUTO_CLOSE_FILE_POINTER CreateTmpDiffFile(
+    std::filesystem::path& new_path,
+    const GitHash& hash,
+    bool is_base_file) {
+  TCHAR file_prefix[MAX_PATH];
+  file_prefix[0] = 0;
+  _tcscat_s(file_prefix, is_base_file ? _T("base-") : _T("diff-"));
+  _tcscat_s(file_prefix, to_wstring(GetShortHash(hash)).c_str());
+  return CreateTmpFile(new_path, file_prefix);
 }
 
 static std::filesystem::path DumpToTmpFile(
     const FileVersionInstance& file_version_instance,
     bool is_base_file) {
   std::filesystem::path tmp_file_path;
-  AUTO_CLOSE_FILE_POINTER tmp_file = CreateTmpFile(
+  AUTO_CLOSE_FILE_POINTER tmp_file = CreateTmpDiffFile(
       tmp_file_path, file_version_instance.GetCommit(), is_base_file);
   if (!tmp_file) {
     assert(false);

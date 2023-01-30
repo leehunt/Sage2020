@@ -81,6 +81,9 @@
     <ClInclude Include="DiffTreePath.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="GitRevFilter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Sage2020.cpp">
@@ -135,6 +138,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="DiffTreePath.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GitRevFilter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
