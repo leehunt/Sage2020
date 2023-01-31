@@ -222,12 +222,17 @@ void CSage2020App::OnAppAbout() {
 // CSage2020App customization load/save methods
 
 void CSage2020App::PreLoadState() {
-  BOOL bNameValid;
   CString strName;
-  bNameValid = strName.LoadString(IDS_EDIT_MENU);
+#if _DEBUG
+  BOOL bNameValid = 
+#endif
+      strName.LoadString(IDS_EDIT_MENU);
   ASSERT(bNameValid);
   GetContextMenuManager()->AddMenu(strName, IDR_POPUP_EDIT);
-  bNameValid = strName.LoadString(IDS_EXPLORER);
+#if _DEBUG
+  bNameValid =
+#endif
+    strName.LoadString(IDS_EXPLORER);
   ASSERT(bNameValid);
   GetContextMenuManager()->AddMenu(strName, IDR_POPUP_EXPLORER);
 }

@@ -123,7 +123,7 @@
       <SubSystem>Console</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
-      <AdditionalDependencies>Uafxcw.lib;Libcmt.lib;Utility.obj;GitFileStreamCache.obj;Sage2020ViewDocListener.obj;GitFileReader.obj;GitDiffReader.obj;LineTokenizer.obj;FileVersionInstance.obj;FileVersionInstanceEditor.obj;FileVersionDiff.obj;DiffTreePath.obj;pch.obj;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Uafxcw.lib;Libcmt.lib;Utility.obj;GitFileStreamCache.obj;Sage2020ViewDocListener.obj;GitFileReader.obj;GitDiffReader.obj;LineTokenizer.obj;FileVersionInstance.obj;FileVersionInstanceEditor.obj;FileVersionDiff.obj;DiffTreePath.obj;pch.obj;GitRevFilter.obj;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(OutDir)</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>Uafxcw.lib;Libcmt.lib</IgnoreSpecificDefaultLibraries>
     </Link>
@@ -143,7 +143,7 @@
       <SubSystem>Console</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
-      <AdditionalDependencies>Uafxcw.lib;Libcmt.lib;Utility.obj;GitFileStreamCache.obj;Sage2020ViewDocListener.obj;GitFileReader.obj;GitDiffReader.obj;LineTokenizer.obj;FileVersionInstance.obj;FileVersionInstanceEditor.obj;FileVersionDiff.obj;DiffTreePath.obj;pch.obj;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Uafxcw.lib;Libcmt.lib;Utility.obj;GitFileStreamCache.obj;Sage2020ViewDocListener.obj;GitFileReader.obj;GitDiffReader.obj;LineTokenizer.obj;FileVersionInstance.obj;FileVersionInstanceEditor.obj;FileVersionDiff.obj;DiffTreePath.obj;pch.obj;GitRevFilter.obj;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(OutDir)</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>Uafxcw.lib;Libcmt.lib</IgnoreSpecificDefaultLibraries>
     </Link>

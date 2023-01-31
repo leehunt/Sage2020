@@ -16,7 +16,7 @@
 #include "OutputWnd.h"
 #include "Utility.h"
 
-//#define ADD_TAGS 1
+#define ADD_TAGS 1
 
 constexpr TCHAR kGitMostRecentCommitForFileCommand[] =
     _T("git --no-pager log %S -n 1 -- %s");
@@ -865,13 +865,14 @@ std::wstring GitDiffReader::GetGitCommand(
   std::wstring opt_str;
   assert(file_path.is_absolute());
   const auto git_root = std::filesystem::canonical(GetGitRoot(file_path));
-  const auto git_relative_path = file_path.lexically_relative(git_root);
+  const auto git_relative_path =
+      std::filesystem::canonical(file_path).lexically_relative(git_root);
   std::wstring git_relative_path_forward_slash = git_relative_path;
   // Turn the relative path into forward slashes; those are still accepted by
   // Git and then can be made part of the cache file name.
   for (auto& ch : git_relative_path_forward_slash) {
     if (ch == '\\')
-      ch = ' ';
+      ch = '/';
   }
   if (!opts.HasOpts(Opt::NO_FIRST_PARENT))
     // <-- TODO: Check the effects of `--diff-merges=combined` (it removes

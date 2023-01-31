@@ -355,7 +355,7 @@ TEST_F(GitDiffReaderTest, LoadAndCompareWithFile) {
   // last recorded in the git log) forward.
   const std::filesystem::path anchor_file_path =
       //"C:\\Users\\leehu_000\\Source\\Repos\\libgit2\\libgit2";  //__FILE__;
-      "C:\\Users\\leehu_000\\Source\\Repos\\Sage2020";  //__FILE__;
+      "C:\\Users\\leehu\\Source\\Repos\\LeeHunt\\Sage2020";  //__FILE__;
 
   for (auto i = std::filesystem::recursive_directory_iterator{anchor_file_path};
        i != std::filesystem::recursive_directory_iterator(); i++) {
@@ -604,7 +604,7 @@ TEST_F(GitDiffReaderTest, LoadAndCompareWithFileAllBranches) {
   }
 #else
   const std::filesystem::path file_path =
-      L"C:\\Users\\leehu_000\\Source\\Repos\\libgit2\\libgit2\\.mailmap";
+      L"C:\\Users\\leehu\\Source\\Repos\\libgit2\\.mailmap XXX";
   //"Sage2020_unittest/FileVersionInstance_unittest.cpp";
   //"FileVersionDiff.h";  // "ChangeHistoryPane.cpp";
   std::string empty_tag;

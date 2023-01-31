@@ -40,14 +40,15 @@ GitRevFilter::GitRevFilter(const _TCHAR git_file_dir[],
   }
 
   char stream_line[1024];
-  bool in_header = false;
+  bool in_header = true;
   std::vector<int> seam_offsets;
   int line_index = 0;
   while (fgets(stream_line, (int)std::size(stream_line), stream)) {
     if (!strncmp(stream_line, "commit ", 7)) {
-      assert(!in_header);
-      in_header = true;
-      seam_offsets.push_back(line_index);
+      if (!in_header) {
+        in_header = true;
+        seam_offsets.push_back(line_index);
+      }
     } else if (!strncmp(stream_line, "diff ", 5)) {
       assert(in_header);
       in_header = false;
@@ -63,8 +64,6 @@ GitRevFilter::GitRevFilter(const _TCHAR git_file_dir[],
   seam_offsets.push_back(line_index);  // Finish current range.
   fflush(filtered_file.get());
   fflush(unfiltered_file.get());
-
-  in_header = false;
 
   // Filter the file.
   if (pwndOutput != nullptr) {
@@ -97,6 +96,8 @@ GitRevFilter::GitRevFilter(const _TCHAR git_file_dir[],
     rewind(unfiltered_file.get());
     char stream_filtered_line[1024];
 
+    in_header = true;
+
     int seam_vector_index = 0;
     for (int i = 0; i < line_index; i++) {
       if (seam_vector_index == seam_offsets.size()) {
@@ -121,9 +122,9 @@ GitRevFilter::GitRevFilter(const _TCHAR git_file_dir[],
         return;
       }
     }
+    //assert(feof(unfiltered_file.get()));
   }
   //assert(feof(stream));
-  assert(feof(unfiltered_file.get()));
 
   fflush(dest_filtered_file_.get());
   rewind(dest_filtered_file_.get());

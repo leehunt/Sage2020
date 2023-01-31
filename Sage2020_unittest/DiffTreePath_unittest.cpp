@@ -4,7 +4,7 @@
 #include "..\FileVersionDiff.h"
 
 // Gtest 'friend' forwarders.
-class DiffTreePathTest : public testing::Test {
+  class DiffTreePathTest : public testing::Test {
  public:
   ;
 };
